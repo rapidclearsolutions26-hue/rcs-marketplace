@@ -59,19 +59,21 @@ export default function AdminDriversPage() {
     setLoading(true);
     setErrorMessage("");
 
-   const { data, error } = await supabase
-  .from("drivers")
-  .select("*")
-  .order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("drivers")
+      .select("*")
+      .order("created_at", {
+        ascending: false,
+      });
 
-console.log("DRIVERS FROM SUPABASE:", data);
-console.log("DRIVER ERROR:", error);
+    console.log("DRIVERS FROM SUPABASE:", data);
+    console.log("DRIVER ERROR:", error);
 
     if (error) {
       console.error(error);
       setErrorMessage(error.message);
     } else {
-      setDrivers(data || []);
+      setDrivers((data || []) as Driver[]);
     }
 
     setLoading(false);
@@ -99,15 +101,19 @@ console.log("DRIVER ERROR:", error);
       return;
     }
 
-    await loadDrivers();
-
-    const updatedDriver = drivers.find(
+    /*
+     * Find the driver from the current state BEFORE
+     * refreshing the list.
+     */
+    const currentDriver = drivers.find(
       (driver) => driver.id === driverId
     );
 
-    if (updatedDriver) {
+    await loadDrivers();
+
+    if (currentDriver) {
       setSelectedDriver({
-        ...updatedDriver,
+        ...currentDriver,
         application_status: status,
         approved: status === "approved",
       });
@@ -117,15 +123,18 @@ console.log("DRIVER ERROR:", error);
   }
 
   const pendingDrivers = drivers.filter(
-    (driver) => driver.application_status === "pending"
+    (driver) =>
+      driver.application_status === "pending"
   );
 
   const approvedDrivers = drivers.filter(
-    (driver) => driver.application_status === "approved"
+    (driver) =>
+      driver.application_status === "approved"
   );
 
   const rejectedDrivers = drivers.filter(
-    (driver) => driver.application_status === "rejected"
+    (driver) =>
+      driver.application_status === "rejected"
   );
 
   return (
@@ -217,6 +226,7 @@ console.log("DRIVER ERROR:", error);
             </h2>
 
             <button
+              type="button"
               onClick={loadDrivers}
               className="rounded-xl border border-[#cbd5c5] bg-white px-4 py-2 text-sm font-bold text-[#315c18] hover:bg-[#f5f7f4]"
             >
@@ -248,7 +258,9 @@ console.log("DRIVER ERROR:", error);
                 <DriverCard
                   key={driver.id}
                   driver={driver}
-                  onView={() => setSelectedDriver(driver)}
+                  onView={() =>
+                    setSelectedDriver(driver)
+                  }
                 />
               ))}
             </div>
@@ -275,7 +287,10 @@ console.log("DRIVER ERROR:", error);
               </div>
 
               <button
-                onClick={() => setSelectedDriver(null)}
+                type="button"
+                onClick={() =>
+                  setSelectedDriver(null)
+                }
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f7f4] text-xl font-bold text-[#555555] hover:bg-[#e7f1df]"
               >
                 ×
@@ -347,17 +362,23 @@ console.log("DRIVER ERROR:", error);
               <DetailSection title="Business Details">
                 <Detail
                   label="Business name"
-                  value={selectedDriver.company_name}
+                  value={
+                    selectedDriver.company_name
+                  }
                 />
 
                 <Detail
                   label="Trading name"
-                  value={selectedDriver.trading_name}
+                  value={
+                    selectedDriver.trading_name
+                  }
                 />
 
                 <Detail
                   label="Company number"
-                  value={selectedDriver.company_number}
+                  value={
+                    selectedDriver.company_number
+                  }
                 />
 
                 <Detail
@@ -447,7 +468,9 @@ console.log("DRIVER ERROR:", error);
               <DetailSection title="Vehicle">
                 <Detail
                   label="Vehicle type"
-                  value={selectedDriver.vehicle_type}
+                  value={
+                    selectedDriver.vehicle_type
+                  }
                 />
 
                 <Detail
@@ -459,17 +482,23 @@ console.log("DRIVER ERROR:", error);
 
                 <Detail
                   label="Make"
-                  value={selectedDriver.vehicle_make}
+                  value={
+                    selectedDriver.vehicle_make
+                  }
                 />
 
                 <Detail
                   label="Model"
-                  value={selectedDriver.vehicle_model}
+                  value={
+                    selectedDriver.vehicle_model
+                  }
                 />
 
                 <Detail
                   label="Capacity"
-                  value={selectedDriver.vehicle_capacity}
+                  value={
+                    selectedDriver.vehicle_capacity
+                  }
                 />
               </DetailSection>
 
@@ -483,7 +512,9 @@ console.log("DRIVER ERROR:", error);
                 <div className="mt-4 overflow-hidden rounded-2xl border border-[#dde5d8] bg-[#f5f7f4]">
                   {selectedDriver.van_photo_url ? (
                     <DriverImage
-                      path={selectedDriver.van_photo_url}
+                      path={
+                        selectedDriver.van_photo_url
+                      }
                       alt="Driver vehicle"
                     />
                   ) : (
@@ -503,6 +534,7 @@ console.log("DRIVER ERROR:", error);
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <button
+                    type="button"
                     disabled={updating}
                     onClick={() =>
                       updateDriverStatus(
@@ -516,6 +548,7 @@ console.log("DRIVER ERROR:", error);
                   </button>
 
                   <button
+                    type="button"
                     disabled={updating}
                     onClick={() =>
                       updateDriverStatus(
@@ -529,6 +562,7 @@ console.log("DRIVER ERROR:", error);
                   </button>
 
                   <button
+                    type="button"
                     disabled={updating}
                     onClick={() =>
                       updateDriverStatus(
@@ -550,9 +584,9 @@ console.log("DRIVER ERROR:", error);
   );
 }
 
-/* ----------------------------- */
-/* DRIVER CARD                    */
-/* ----------------------------- */
+/* ========================================================= */
+/* DRIVER CARD                                               */
+/* ========================================================= */
 
 function DriverCard({
   driver,
@@ -579,7 +613,9 @@ function DriverCard({
             </p>
 
             <p className="mt-1 text-sm font-semibold text-[#555555]">
-              {driver.vehicle_type || "Vehicle not specified"}
+              {driver.vehicle_type ||
+                "Vehicle not specified"}
+
               {driver.vehicle_registration
                 ? ` • ${driver.vehicle_registration}`
                 : ""}
@@ -589,10 +625,13 @@ function DriverCard({
 
         <div className="flex flex-col items-start gap-3 md:items-end">
           <StatusBadge
-            status={driver.application_status}
+            status={
+              driver.application_status
+            }
           />
 
           <button
+            type="button"
             onClick={onView}
             className="rounded-xl bg-[#529027] px-5 py-3 font-bold text-white hover:bg-[#315c18]"
           >
@@ -604,9 +643,9 @@ function DriverCard({
   );
 }
 
-/* ----------------------------- */
-/* STATUS                         */
-/* ----------------------------- */
+/* ========================================================= */
+/* STATUS                                                    */
+/* ========================================================= */
 
 function StatusBadge({
   status,
@@ -649,9 +688,9 @@ function StatusBadge({
   );
 }
 
-/* ----------------------------- */
-/* STAT CARD                      */
-/* ----------------------------- */
+/* ========================================================= */
+/* STAT CARD                                                 */
+/* ========================================================= */
 
 function StatCard({
   title,
@@ -679,9 +718,9 @@ function StatCard({
   );
 }
 
-/* ----------------------------- */
-/* DETAIL SECTION                 */
-/* ----------------------------- */
+/* ========================================================= */
+/* DETAIL SECTION                                            */
+/* ========================================================= */
 
 function DetailSection({
   title,
@@ -703,16 +742,20 @@ function DetailSection({
   );
 }
 
-/* ----------------------------- */
-/* DETAIL                         */
-/* ----------------------------- */
+/* ========================================================= */
+/* DETAIL                                                    */
+/* ========================================================= */
 
 function Detail({
   label,
   value,
 }: {
   label: string;
-  value: string | number | null | undefined;
+  value:
+    | string
+    | number
+    | null
+    | undefined;
 }) {
   return (
     <div>
@@ -727,9 +770,9 @@ function Detail({
   );
 }
 
-/* ----------------------------- */
-/* DOCUMENT                       */
-/* ----------------------------- */
+/* ========================================================= */
+/* DOCUMENT LINK                                             */
+/* ========================================================= */
 
 function DocumentLink({
   path,
@@ -738,17 +781,36 @@ function DocumentLink({
   path: string | null;
   label: string;
 }) {
-  const [url, setUrl] = useState<string | null>(null);
+  const [url, setUrl] =
+    useState<string | null>(null);
 
   useEffect(() => {
-    if (!path) return;
+    if (!path) {
+      setUrl(null);
+      return;
+    }
+
+    /*
+     * Create a non-null local copy.
+     *
+     * This fixes the Vercel TypeScript error:
+     *
+     * string | null is not assignable to string
+     */
+    const filePath = path;
 
     async function createUrl() {
       const supabase = createClient();
 
-      const { data, error } = await supabase.storage
+      const {
+        data,
+        error,
+      } = await supabase.storage
         .from("driver-documents")
-        .createSignedUrl(path, 60 * 10);
+        .createSignedUrl(
+          filePath,
+          60 * 10
+        );
 
       if (!error && data?.signedUrl) {
         setUrl(data.signedUrl);
@@ -796,9 +858,9 @@ function DocumentLink({
   );
 }
 
-/* ----------------------------- */
-/* DRIVER IMAGE                   */
-/* ----------------------------- */
+/* ========================================================= */
+/* DRIVER IMAGE                                              */
+/* ========================================================= */
 
 function DriverImage({
   path,
@@ -807,15 +869,28 @@ function DriverImage({
   path: string;
   alt: string;
 }) {
-  const [url, setUrl] = useState<string | null>(null);
+  const [url, setUrl] =
+    useState<string | null>(null);
 
   useEffect(() => {
+    /*
+     * path is already guaranteed to be a string
+     * by the component type.
+     */
+    const filePath = path;
+
     async function createUrl() {
       const supabase = createClient();
 
-      const { data, error } = await supabase.storage
+      const {
+        data,
+        error,
+      } = await supabase.storage
         .from("driver-documents")
-        .createSignedUrl(path, 60 * 10);
+        .createSignedUrl(
+          filePath,
+          60 * 10
+        );
 
       if (!error && data?.signedUrl) {
         setUrl(data.signedUrl);
@@ -842,10 +917,12 @@ function DriverImage({
   );
 }
 
-/* ----------------------------- */
-/* DATE                           */
-/* ----------------------------- */
+/* ========================================================= */
+/* DATE                                                      */
+/* ========================================================= */
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString("en-GB");
+  return new Date(
+    date
+  ).toLocaleDateString("en-GB");
 }
