@@ -1,0 +1,152 @@
+"use client";
+
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+export default function CustomerRegister() {
+  const supabase = createClient();
+
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+
+    setLoading(true);
+    setMessage("");
+
+    const { data, error } = await supabase.auth.signUp({
+  email,
+  password,
+  options: {
+    data: {
+      full_name: fullName,
+      phone: phone,
+    },
+  },
+});
+
+    if (error) {
+      setMessage(error.message);
+      setLoading(false);
+      return;
+    }
+
+   
+
+    setMessage(
+      "Account created. Check your email if confirmation is required."
+    );
+
+    setLoading(false);
+  }
+
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-12">
+      <div className="mx-auto max-w-md">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Create your account
+          </h1>
+
+          <p className="mt-2 text-gray-600">
+            Post jobs and receive quotes from drivers.
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleRegister}
+          className="space-y-5 rounded-2xl bg-white p-8 shadow-sm"
+        >
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              Full name
+            </label>
+
+            <input
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+              placeholder="Your full name"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              Phone
+            </label>
+
+            <input
+              required
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+              placeholder="07..."
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              Email
+            </label>
+
+            <input
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              Password
+            </label>
+
+            <input
+              required
+              type="password"
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+              placeholder="At least 6 characters"
+            />
+          </div>
+
+          {message && (
+            <div className="rounded-xl bg-gray-100 p-4 text-sm text-gray-700">
+              {message}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white disabled:opacity-50"
+          >
+            {loading ? "Creating account..." : "Create Account"}
+          </button>
+
+          <p className="text-center text-sm text-gray-500">
+            Already have an account?{" "}
+            <a
+              href="/customer/login"
+              className="font-semibold text-green-600"
+            >
+              Log in
+            </a>
+          </p>
+        </form>
+      </div>
+    </main>
+  );
+}
