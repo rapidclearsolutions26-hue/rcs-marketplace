@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -27,38 +27,6 @@ type Job = {
   created_at: string;
 };
 
-type Bid = {
-  id: number;
-  job_id: number;
-  driver_id: string;
-  amount: number;
-  message: string | null;
-  status: string | null;
-};
-
-type Driver = {
-  id: string;
-  full_name: string | null;
-  approved: boolean | null;
-  application_status: string | null;
-};
-
-/*
- * =========================================================
- * RCS MARKETPLACE SETTINGS
- * =========================================================
- *
- * RCS takes 10% from the driver's bid.
- *
- * Example:
- *
- * Driver bids £100
- * RCS commission = £10
- * Driver receives = £90
- */
-
-const RCS_FEE_PERCENT = 10;
-
 const JOB_SELECT = `
   id,
   reference,
@@ -81,74 +49,13 @@ const JOB_SELECT = `
   created_at
 `;
 
-export default function DriverDashboard() {
+export default function CustomerDashboard() {
   const router = useRouter();
-  const supabase = createClient();
 
-  const [driver, setDriver] = useState<Driver | null>(null);
-
-  const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
-  const [pendingBids, setPendingBids] = useState<Bid[]>([]);
-  const [activeJobs, setActiveJobs] = useState<Job[]>([]);
-  const [acceptedJobs, setAcceptedJobs] = useState<Job[]>([]);
-  const [acceptedBids, setAcceptedBids] = useState<Bid[]>([]);
-
-  const [newAssignment, setNewAssignment] =
-    useState<Job | null>(null);
-
-  const previousAssignedJobIds =
-    useRef<number[] | null>(null);
-
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
-  /*
-   * =========================================================
-   * MONEY CALCULATIONS
-   * =========================================================
-   */
-
-  function getBidForJob(jobId: number) {
-    return acceptedBids.find(
-      (bid) =>
-        Number(bid.job_id) === Number(jobId) &&
-        bid.status === "accepted"
-    );
-  }
-
-  function getCustomerPrice(jobId: number) {
-    const bid = getBidForJob(jobId);
-
-    return Number(bid?.amount || 0);
-  }
-
-  function getRcsFee(jobId: number) {
-    const customerPrice =
-      getCustomerPrice(jobId);
-
-    return (
-      customerPrice *
-      (RCS_FEE_PERCENT / 100)
-    );
-  }
-
-  function getDriverPayout(jobId: number) {
-    const customerPrice =
-      getCustomerPrice(jobId);
-
-    const commission =
-      customerPrice *
-      (RCS_FEE_PERCENT / 100);
-
-    return customerPrice - commission;
-  }
-
-  /*
-   * =========================================================
-   * LOAD DASHBOARD
-   * =========================================================
-   */
 
   const loadDashboard = useCallback(
     async (silent = false) => {
@@ -161,10 +68,12 @@ export default function DriverDashboard() {
       setErrorMessage("");
 
       try {
+        const supabase = createClient();
+
         /*
-         * -----------------------------------------------------
-         * GET LOGGED IN USER
-         * -----------------------------------------------------
+         * ================================================
+         * GET LOGGED IN CUSTOMER
+         * ================================================
          */
 
         const {
@@ -173,328 +82,67 @@ export default function DriverDashboard() {
         } = await supabase.auth.getUser();
 
         if (authError) {
-          console.error(
-            "Authentication error:",
-            authError
-          );
-
+          console.error("Customer auth error:", authError);
           setErrorMessage(
-            "We couldn't verify your driver account."
+            "We couldn't verify your customer account."
           );
-
           return;
         }
 
         if (!user) {
-          router.replace("/driver/login");
+          router.replace("/customer/login");
           return;
         }
 
         /*
-         * -----------------------------------------------------
-         * GET DRIVER
-         * -----------------------------------------------------
+         * ================================================
+         * LOAD CUSTOMER JOBS
+         * ================================================
          */
 
-        const {
-          data: driverData,
-          error: driverError,
-        } = await supabase
-          .from("drivers")
-          .select(
-            "id, full_name, approved, application_status"
-          )
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (driverError) {
-          console.error(
-            "Driver loading error:",
-            driverError
-          );
-
-          setErrorMessage(
-            driverError.message ||
-              "We couldn't load your driver account."
-          );
-
-          return;
-        }
-
-        if (!driverData) {
-          setDriver(null);
-
-          setErrorMessage(
-            "Your driver account could not be found. Please contact Rapid Clear Solutions."
-          );
-
-          return;
-        }
-
-        const currentDriver =
-          driverData as Driver;
-
-        setDriver(currentDriver);
-
-        /*
-         * -----------------------------------------------------
-         * DRIVER NOT APPROVED
-         * -----------------------------------------------------
-         */
-
-        if (
-          !currentDriver.approved ||
-          currentDriver.application_status !==
-            "approved"
-        ) {
-          setAvailableJobs([]);
-          setPendingBids([]);
-          setActiveJobs([]);
-          setAcceptedJobs([]);
-          setAcceptedBids([]);
-
-          return;
-        }
-
-        /*
-         * -----------------------------------------------------
-         * LOAD DRIVER BIDS
-         * -----------------------------------------------------
-         */
-
-        const {
-          data: bidsData,
-          error: bidsError,
-        } = await supabase
-          .from("bids")
-          .select(
-            `
-              id,
-              job_id,
-              driver_id,
-              amount,
-              message,
-              status
-            `
-          )
-          .eq("driver_id", user.id)
-          .order("id", {
-            ascending: false,
-          });
-
-        let driverBids: Bid[] = [];
-
-        if (bidsError) {
-          console.error(
-            "Driver bids error:",
-            bidsError
-          );
-        } else {
-          driverBids =
-            (bidsData || []) as Bid[];
-
-          setPendingBids(
-            driverBids.filter(
-              (bid) =>
-                !bid.status ||
-                bid.status === "pending"
-            )
-          );
-
-          setAcceptedBids(
-            driverBids.filter(
-              (bid) =>
-                bid.status === "accepted"
-            )
-          );
-        }
-
-        /*
-         * -----------------------------------------------------
-         * LOAD AVAILABLE JOBS
-         * -----------------------------------------------------
-         */
-
-        const {
-          data: availableData,
-          error: availableError,
-        } = await supabase
+        const { data, error } = await supabase
           .from("jobs")
           .select(JOB_SELECT)
-          .in("status", [
-            "open",
-            "bidding",
-          ])
+          .eq("customer_id", user.id)
           .order("created_at", {
             ascending: false,
           });
 
-        if (availableError) {
-          console.error(
-            "Available jobs error:",
-            availableError
-          );
+        if (error) {
+          console.error("Customer jobs error:", error);
 
           setErrorMessage(
-            availableError.message ||
-              "We couldn't load available jobs."
-          );
-        } else {
-          const jobs =
-            (availableData || []) as Job[];
-
-          setAvailableJobs(
-            jobs.filter(
-              (job) =>
-                !job.assigned_driver_id &&
-                job.status !== "completed" &&
-                job.status !== "cancelled"
-            )
-          );
-        }
-
-        /*
-         * -----------------------------------------------------
-         * LOAD ASSIGNED JOBS
-         * -----------------------------------------------------
-         */
-
-        const {
-          data: assignedData,
-          error: assignedError,
-        } = await supabase
-          .from("jobs")
-          .select(JOB_SELECT)
-          .eq(
-            "assigned_driver_id",
-            user.id
-          )
-          .order("preferred_date", {
-            ascending: true,
-          });
-
-        if (assignedError) {
-          console.error(
-            "Assigned jobs error:",
-            assignedError
-          );
-
-          setErrorMessage(
-            assignedError.message ||
-              "We couldn't load your assigned jobs."
+            error.message ||
+              "We couldn't load your jobs."
           );
 
           return;
         }
 
-        const assignedJobs =
-          (assignedData || []) as Job[];
-
-        /*
-         * -----------------------------------------------------
-         * NEW ASSIGNMENT
-         * -----------------------------------------------------
-         */
-
-        const currentAssignedIds =
-          assignedJobs.map(
-            (job) => job.id
-          );
-
-        const previousIds =
-          previousAssignedJobIds.current;
-
-        if (previousIds === null) {
-          previousAssignedJobIds.current =
-            currentAssignedIds;
-        } else {
-          const newlyAssigned =
-            assignedJobs.find(
-              (job) =>
-                !previousIds.includes(
-                  job.id
-                ) &&
-                job.status === "assigned"
-            );
-
-          if (newlyAssigned) {
-            setNewAssignment(
-              newlyAssigned
-            );
-
-            if (
-              typeof window !==
-                "undefined" &&
-              "Notification" in window &&
-              Notification.permission ===
-                "granted"
-            ) {
-              new Notification(
-                "RCS — New Job Assigned",
-                {
-                  body: `${
-                    newlyAssigned.reference ||
-                    `Job #${newlyAssigned.id}`
-                  } has been paid for and assigned to you.`,
-                }
-              );
-            }
-          }
-
-          previousAssignedJobIds.current =
-            currentAssignedIds;
-        }
-
-        /*
-         * -----------------------------------------------------
-         * ACCEPTED JOBS
-         * -----------------------------------------------------
-         */
-
-        setAcceptedJobs(
-          assignedJobs.filter(
-            (job) =>
-              job.status === "assigned" ||
-              job.status === "accepted"
-          )
-        );
-
-        /*
-         * -----------------------------------------------------
-         * ACTIVE JOBS
-         * -----------------------------------------------------
-         */
-
-        setActiveJobs(
-          assignedJobs.filter(
-            (job) =>
-              job.status ===
-              "in_progress"
-          )
-        );
+        setJobs((data || []) as Job[]);
       } catch (error) {
         console.error(
-          "Dashboard error:",
+          "Customer dashboard error:",
           error
         );
 
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Something went wrong loading the dashboard."
+            : "Something went wrong loading your dashboard."
         );
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [router, supabase]
+    [router]
   );
 
   /*
-   * =========================================================
+   * ================================================
    * INITIAL LOAD
-   * =========================================================
+   * ================================================
    */
 
   useEffect(() => {
@@ -502,61 +150,97 @@ export default function DriverDashboard() {
   }, [loadDashboard]);
 
   /*
-   * =========================================================
+   * ================================================
    * AUTO REFRESH
-   * =========================================================
+   * ================================================
+   *
+   * This checks for new bids / status changes.
    */
 
   useEffect(() => {
-    const interval =
-      window.setInterval(() => {
-        loadDashboard(true);
-      }, 15000);
+    const interval = window.setInterval(() => {
+      loadDashboard(true);
+    }, 15000);
 
-    return () =>
+    return () => {
       window.clearInterval(interval);
+    };
   }, [loadDashboard]);
 
   /*
-   * =========================================================
-   * NOTIFICATIONS
-   * =========================================================
+   * ================================================
+   * LOGOUT
+   * ================================================
    */
 
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      !("Notification" in window)
-    ) {
-      return;
-    }
+  async function handleLogout() {
+    try {
+      const supabase = createClient();
 
-    if (
-      Notification.permission ===
-      "default"
-    ) {
-      Notification.requestPermission().catch(
-        () => {}
+      await supabase.auth.signOut();
+
+      router.replace("/customer/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout error:", error);
+
+      setErrorMessage(
+        "Unable to log out. Please try again."
       );
     }
-  }, []);
-
-  /*
-   * =========================================================
-   * LOGOUT
-   * =========================================================
-   */
-
-  async function logout() {
-    await supabase.auth.signOut();
-
-    router.replace("/driver/login");
   }
 
   /*
-   * =========================================================
-   * LOADING
-   * =========================================================
+   * ================================================
+   * JOB FILTERS
+   * ================================================
+   */
+
+  const pendingJobs = jobs.filter((job) => {
+    const status = normaliseStatus(job.status);
+
+    return (
+      status === "pending" ||
+      status === "open" ||
+      status === "bidding" ||
+      status === "new"
+    );
+  });
+
+  const quotedJobs = jobs.filter((job) => {
+    const status = normaliseStatus(job.status);
+
+    return (
+      status === "bidding" ||
+      status === "open"
+    );
+  });
+
+  const activeJobs = jobs.filter((job) => {
+    const status = normaliseStatus(job.status);
+
+    return (
+      status === "assigned" ||
+      status === "accepted" ||
+      status === "booked" ||
+      status === "in_progress" ||
+      status === "in progress"
+    );
+  });
+
+  const completedJobs = jobs.filter((job) => {
+    const status = normaliseStatus(job.status);
+
+    return (
+      status === "completed" ||
+      status === "complete"
+    );
+  });
+
+  /*
+   * ================================================
+   * LOADING SCREEN
+   * ================================================
    */
 
   if (loading) {
@@ -567,11 +251,11 @@ export default function DriverDashboard() {
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[#17382b] border-t-[#1BBB8C]" />
 
             <p className="mt-5 text-lg font-black">
-              Loading driver dashboard...
+              Loading your dashboard...
             </p>
 
             <p className="mt-2 text-sm text-[#71867c]">
-              Checking your jobs and bids
+              Checking your jobs and quotes
             </p>
           </div>
         </div>
@@ -580,130 +264,9 @@ export default function DriverDashboard() {
   }
 
   /*
-   * =========================================================
-   * DRIVER NOT FOUND
-   * =========================================================
-   */
-
-  if (!driver && errorMessage) {
-    return (
-      <main className="min-h-screen bg-[#06100c] text-white">
-        <header className="border-b border-[#17382b] bg-[#081710]">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
-            <Link
-              href="/"
-              className="text-xl font-black"
-            >
-              RAPID CLEAR{" "}
-              <span className="text-[#1BBB8C]">
-                SOLUTIONS
-              </span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold"
-            >
-              Log out
-            </button>
-          </div>
-        </header>
-
-        <div className="mx-auto max-w-3xl px-5 py-16">
-          <div className="rounded-3xl border border-red-900/50 bg-[#0b1b14] p-8 text-center">
-            <h1 className="text-3xl font-black">
-              Driver account problem
-            </h1>
-
-            <p className="mt-4 text-[#8fa39a]">
-              {errorMessage}
-            </p>
-
-            <button
-              type="button"
-              onClick={() =>
-                loadDashboard()
-              }
-              className="mt-7 rounded-xl bg-[#1BBB8C] px-6 py-3 font-black text-[#06100c]"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  /*
-   * =========================================================
-   * DRIVER NOT APPROVED
-   * =========================================================
-   */
-
-  if (
-    driver &&
-    (!driver.approved ||
-      driver.application_status !==
-        "approved")
-  ) {
-    return (
-      <main className="min-h-screen bg-[#06100c] text-white">
-        <header className="border-b border-[#17382b] bg-[#081710]">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
-            <Link
-              href="/"
-              className="text-xl font-black"
-            >
-              RAPID CLEAR{" "}
-              <span className="text-[#1BBB8C]">
-                SOLUTIONS
-              </span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold"
-            >
-              Log out
-            </button>
-          </div>
-        </header>
-
-        <div className="mx-auto max-w-3xl px-5 py-16">
-          <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-8 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#123529] text-2xl font-black text-[#1BBB8C]">
-              !
-            </div>
-
-            <h1 className="mt-6 text-3xl font-black">
-              Application under review
-            </h1>
-
-            <p className="mx-auto mt-4 max-w-xl leading-7 text-[#8fa39a]">
-              Your driver account needs to be
-              approved before you can view and
-              bid on available work.
-            </p>
-
-            <button
-              type="button"
-              onClick={logout}
-              className="mt-7 rounded-xl bg-[#1BBB8C] px-6 py-3 font-black text-[#06100c]"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  /*
-   * =========================================================
+   * ================================================
    * MAIN DASHBOARD
-   * =========================================================
+   * ================================================
    */
 
   return (
@@ -711,8 +274,10 @@ export default function DriverDashboard() {
 
       {/* HEADER */}
 
-      <header className="sticky top-0 z-30 border-b border-[#17382b] bg-[#081710]">
+      <header className="sticky top-0 z-30 border-b border-[#17382b] bg-[#081710]/95 backdrop-blur">
+
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+
           <Link
             href="/"
             className="text-lg font-black sm:text-xl"
@@ -724,317 +289,238 @@ export default function DriverDashboard() {
           </Link>
 
           <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-xs text-[#687d73]">
-                Driver
-              </p>
 
-              <p className="text-sm font-bold">
-                {driver?.full_name ||
-                  "Driver"}
-              </p>
-            </div>
+            <Link
+              href="/customer/post-job"
+              className="hidden rounded-xl bg-[#1BBB8C] px-5 py-2.5 text-sm font-black text-[#06100c] hover:bg-[#16a77c] sm:block"
+            >
+              + Post a Job
+            </Link>
 
             <button
               type="button"
-              onClick={logout}
-              className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold text-[#c5d1cb] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+              onClick={handleLogout}
+              className="rounded-xl border border-[#29483a] px-4 py-2.5 text-sm font-bold text-[#c5d1cb] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
             >
               Log out
             </button>
+
           </div>
+
         </div>
+
       </header>
 
       <div className="mx-auto max-w-7xl px-5 py-8 sm:py-10">
 
-        {/* ================================================= */}
-        {/* NEW ASSIGNMENT */}
-        {/* ================================================= */}
+        {/* ============================================ */}
+        {/* MOBILE POST JOB */}
+        {/* ============================================ */}
 
-        {newAssignment && (
-          <div className="mb-8 overflow-hidden rounded-3xl border border-[#3f8d24] bg-[#10230f] shadow-2xl">
-            <div className="p-6 sm:p-7">
+        <Link
+          href="/customer/post-job"
+          className="mb-6 flex w-full items-center justify-center rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] sm:hidden"
+        >
+          + POST A NEW JOB
+        </Link>
 
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[#1BBB8C]">
-                    NEW PAID JOB
-                  </p>
-
-                  <h2 className="mt-1 text-2xl font-black">
-                    You've been assigned a job
-                  </h2>
-
-                  <p className="mt-2 text-sm text-[#91a99e]">
-                    Payment has been completed
-                    and this job is now yours.
-                  </p>
-                </div>
-
-                <Link
-                  href={`/driver/jobs/${newAssignment.id}`}
-                  onClick={() =>
-                    setNewAssignment(null)
-                  }
-                  className="rounded-xl bg-[#1BBB8C] px-6 py-3 text-center font-black text-[#06100c]"
-                >
-                  View Job
-                </Link>
-              </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <MoneyBox
-                  label="Customer paid"
-                  value={getCustomerPrice(
-                    newAssignment.id
-                  )}
-                />
-
-                <MoneyBox
-                  label={`RCS ${RCS_FEE_PERCENT}%`}
-                  value={getRcsFee(
-                    newAssignment.id
-                  )}
-                />
-
-                <MoneyBox
-                  label="Your payout"
-                  value={getDriverPayout(
-                    newAssignment.id
-                  )}
-                  highlight
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ================================================= */}
+        {/* ============================================ */}
         {/* TITLE */}
-        {/* ================================================= */}
+        {/* ============================================ */}
 
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+
           <div>
+
             <p className="text-xs font-black uppercase tracking-[0.2em] text-[#1BBB8C]">
-              RCS Marketplace
+              Customer Portal
             </p>
 
             <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-              Driver Dashboard
+              Your Dashboard
             </h1>
 
-            <p className="mt-2 text-[#82958c]">
-              Find work, submit bids and
-              manage your accepted jobs.
+            <p className="mt-2 max-w-2xl text-[#82958c]">
+              Manage your waste collection jobs,
+              compare driver quotes and track your
+              bookings.
             </p>
+
           </div>
 
           <button
             type="button"
-            onClick={() =>
-              loadDashboard()
-            }
+            onClick={() => loadDashboard()}
             disabled={refreshing}
-            className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold text-[#aabbb4] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+            className="rounded-xl border border-[#29483a] px-4 py-2.5 text-sm font-bold text-[#aabbb4] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
           >
             {refreshing
               ? "Refreshing..."
               : "Refresh"}
           </button>
+
         </div>
 
+        {/* ============================================ */}
         {/* ERROR */}
+        {/* ============================================ */}
 
         {errorMessage && (
-          <div className="mb-7 rounded-2xl border border-red-900/60 bg-[#230e0e] p-5">
+          <div className="mt-7 rounded-2xl border border-red-900/60 bg-[#230e0e] p-5">
+
             <p className="font-semibold text-red-300">
               {errorMessage}
             </p>
 
             <button
               type="button"
-              onClick={() =>
-                loadDashboard()
-              }
+              onClick={() => loadDashboard()}
               className="mt-3 text-sm font-bold text-red-200 underline"
             >
               Try again
             </button>
+
           </div>
         )}
 
-        {/* ================================================= */}
+        {/* ============================================ */}
         {/* STATS */}
-        {/* ================================================= */}
+        {/* ============================================ */}
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
           <StatCard
-            title="Available Jobs"
-            value={availableJobs.length}
-            description="Jobs available to bid on"
+            title="Total Jobs"
+            value={jobs.length}
+            description="All your jobs"
           />
 
           <StatCard
-            title="My Pending Bids"
-            value={pendingBids.length}
-            description="Bids awaiting customer decision"
+            title="Awaiting Quotes"
+            value={pendingJobs.length}
+            description="Jobs waiting for action"
           />
 
           <StatCard
             title="Active Jobs"
             value={activeJobs.length}
-            description="Jobs currently in progress"
+            description="Booked or in progress"
           />
 
           <StatCard
-            title="Accepted Work"
-            value={acceptedJobs.length}
-            description="Paid jobs assigned to you"
+            title="Completed"
+            value={completedJobs.length}
+            description="Finished collections"
           />
 
         </div>
 
-        {/* ================================================= */}
-        {/* ASSIGNED JOBS */}
-        {/* ================================================= */}
+        {/* ============================================ */}
+        {/* QUICK ACTIONS */}
+        {/* ============================================ */}
 
         <section className="mt-10">
 
           <SectionHeading
-            eyebrow="Paid & Assigned"
-            title="Your Assigned Jobs"
+            eyebrow="Quick Actions"
+            title="What would you like to do?"
           />
 
-          {acceptedJobs.length === 0 ? (
-            <EmptyState
-              title="No assigned jobs"
-              description="When a customer pays for one of your bids, the job will appear here."
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+            <ActionCard
+              icon="+"
+              title="Post a New Job"
+              description="Tell drivers what needs collecting."
+              href="/customer/post-job"
+              primary
             />
-          ) : (
-            <div className="grid gap-5 lg:grid-cols-2">
 
-              {acceptedJobs.map(
-                (job) => (
-                  <AssignedJobCard
-                    key={job.id}
-                    job={job}
-                    customerPrice={getCustomerPrice(
-                      job.id
-                    )}
-                    rcsFee={getRcsFee(
-                      job.id
-                    )}
-                    driverPayout={getDriverPayout(
-                      job.id
-                    )}
-                  />
-                )
-              )}
+            <ActionCard
+              icon="£"
+              title="View My Quotes"
+              description="Compare driver bids and choose one."
+              href="/customer/quotes"
+            />
 
-            </div>
-          )}
+            <ActionCard
+              icon="→"
+              title="View My Jobs"
+              description="See all your collection requests."
+              href="#my-jobs"
+            />
+
+          </div>
 
         </section>
 
-        {/* ================================================= */}
-        {/* ACTIVE JOBS */}
-        {/* ================================================= */}
+        {/* ============================================ */}
+        {/* NEED ATTENTION */}
+        {/* ============================================ */}
 
-        <section className="mt-10">
+        {quotedJobs.length > 0 && (
+          <section className="mt-10">
 
-          <SectionHeading
-            eyebrow="In Progress"
-            title="Active Jobs"
-          />
+            <div className="overflow-hidden rounded-3xl border border-[#3f8d24] bg-[#0b1b14]">
 
-          {activeJobs.length === 0 ? (
-            <EmptyState
-              title="No active jobs"
-              description="Jobs you start will appear here until they are completed."
-            />
-          ) : (
-            <div className="grid gap-5 lg:grid-cols-2">
+              <div className="border-b border-[#214333] bg-[#10230f] p-6">
 
-              {activeJobs.map(
-                (job) => (
-                  <AcceptedJobCard
-                    key={job.id}
-                    job={job}
-                    driverPayout={getDriverPayout(
-                      job.id
-                    )}
-                  />
-                )
-              )}
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+                  Action Required
+                </p>
 
-            </div>
-          )}
+                <h2 className="mt-1 text-2xl font-black">
+                  Driver quotes may be available
+                </h2>
 
-        </section>
+                <p className="mt-2 text-sm text-[#82958c]">
+                  Check your quotes and select the
+                  driver you want to complete your job.
+                </p>
 
-        {/* ================================================= */}
-        {/* AVAILABLE JOBS */}
-        {/* ================================================= */}
+              </div>
 
-        <section className="mt-10">
+              <div className="p-6">
 
-          <SectionHeading
-            eyebrow="Marketplace"
-            title="Available Jobs"
-          />
+                <Link
+                  href="/customer/quotes"
+                  className="inline-flex rounded-xl bg-[#1BBB8C] px-6 py-3 font-black text-[#06100c] hover:bg-[#16a77c]"
+                >
+                  View Driver Quotes →
+                </Link>
 
-          {availableJobs.length === 0 ? (
-            <EmptyState
-              title="No jobs available"
-              description="New customer jobs will appear here when they are available to bid on."
-            />
-          ) : (
-            <div className="grid gap-5 lg:grid-cols-2">
-
-              {availableJobs.map(
-                (job) => (
-                  <AvailableJobCard
-                    key={job.id}
-                    job={job}
-                  />
-                )
-              )}
+              </div>
 
             </div>
-          )}
 
-        </section>
+          </section>
+        )}
 
-        {/* ================================================= */}
-        {/* PENDING BIDS */}
-        {/* ================================================= */}
+        {/* ============================================ */}
+        {/* MY JOBS */}
+        {/* ============================================ */}
 
-        <section className="mt-10 pb-12">
+        <section
+          id="my-jobs"
+          className="mt-10 pb-12"
+        >
 
           <SectionHeading
-            eyebrow="Your Bids"
-            title="My Pending Bids"
+            eyebrow="Your Activity"
+            title="Your Jobs"
           />
 
-          {pendingBids.length === 0 ? (
-            <EmptyState
-              title="No pending bids"
-              description="Jobs you bid on will appear here while the customer is deciding."
-            />
+          {jobs.length === 0 ? (
+            <EmptyJobs />
           ) : (
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="space-y-4">
 
-              {pendingBids.map(
-                (bid) => (
-                  <PendingBidCard
-                    key={bid.id}
-                    bid={bid}
-                  />
-                )
-              )}
+              {jobs.map((job) => (
+                <CustomerJobCard
+                  key={job.id}
+                  job={job}
+                />
+              ))}
 
             </div>
           )}
@@ -1043,514 +529,6 @@ export default function DriverDashboard() {
 
       </div>
     </main>
-  );
-}
-
-/* ========================================================= */
-/* MONEY BOX                                                 */
-/* ========================================================= */
-
-function MoneyBox({
-  label,
-  value,
-  highlight = false,
-}: {
-  label: string;
-  value: number;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        highlight
-          ? "border-[#3f8d24] bg-[#162b13]"
-          : "border-[#214333] bg-[#08150f]"
-      }`}
-    >
-
-      <p className="text-xs font-black uppercase tracking-wide text-[#71867c]">
-        {label}
-      </p>
-
-      <p
-        className={`mt-1 text-2xl font-black ${
-          highlight
-            ? "text-[#1BBB8C]"
-            : "text-white"
-        }`}
-      >
-        £{Number(value || 0).toFixed(2)}
-      </p>
-
-    </div>
-  );
-}
-
-/* ========================================================= */
-/* ASSIGNED JOB CARD                                         */
-/* ========================================================= */
-
-function AssignedJobCard({
-  job,
-  customerPrice,
-  rcsFee,
-  driverPayout,
-}: {
-  job: Job;
-  customerPrice: number;
-  rcsFee: number;
-  driverPayout: number;
-}) {
-  return (
-    <div className="overflow-hidden rounded-3xl border border-[#3f8d24] bg-[#0b1b14] shadow-xl">
-
-      <div className="border-b border-[#214333] bg-[#10230f] p-6">
-
-        <div className="flex items-start justify-between gap-4">
-
-          <div>
-
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
-              {job.reference ||
-                `RC-${String(
-                  job.id
-                ).padStart(6, "0")}`}
-            </p>
-
-            <h3 className="mt-2 text-xl font-black">
-              {job.job_type ||
-                "Waste Collection"}
-            </h3>
-
-          </div>
-
-          <span className="rounded-full border border-[#3f8d24] bg-[#183017] px-3 py-1 text-xs font-black text-[#1BBB8C]">
-            {job.status ===
-            "in_progress"
-              ? "IN PROGRESS"
-              : "PAID & ASSIGNED"}
-          </span>
-
-        </div>
-
-      </div>
-
-      <div className="space-y-5 p-6">
-
-        <div className="grid gap-3 sm:grid-cols-3">
-
-          <MoneyBox
-            label="Customer paid"
-            value={customerPrice}
-          />
-
-          <MoneyBox
-            label={`RCS ${RCS_FEE_PERCENT}%`}
-            value={rcsFee}
-          />
-
-          <MoneyBox
-            label="Your payout"
-            value={driverPayout}
-            highlight
-          />
-
-        </div>
-
-        <div className="rounded-2xl border border-[#214333] bg-[#07130e] p-4">
-
-          <p className="text-sm font-black text-white">
-            Payment confirmed
-          </p>
-
-          <p className="mt-1 text-sm text-[#82958c]">
-            The customer has paid and the
-            job has been assigned to you.
-          </p>
-
-        </div>
-
-        <div className="space-y-4">
-
-          <JobLine
-            label="Location"
-            value={
-              job.postcode ||
-              "Not provided"
-            }
-          />
-
-          <JobLine
-            label="Collection date"
-            value={
-              job.preferred_date
-                ? formatDate(
-                    job.preferred_date
-                  )
-                : "Not provided"
-            }
-          />
-
-          <JobLine
-            label="Collection time"
-            value={
-              job.preferred_time ||
-              "Not specified"
-            }
-          />
-
-          <JobLine
-            label="Load size"
-            value={
-              job.load_size ||
-              "Not specified"
-            }
-          />
-
-        </div>
-
-        <Link
-          href={`/driver/jobs/${job.id}`}
-          className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
-        >
-          Manage Job
-        </Link>
-
-      </div>
-
-    </div>
-  );
-}
-
-/* ========================================================= */
-/* AVAILABLE JOB CARD                                        */
-/* ========================================================= */
-
-function AvailableJobCard({
-  job,
-}: {
-  job: Job;
-}) {
-  return (
-    <div className="overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl">
-
-      <div className="border-b border-[#17382b] p-6">
-
-        <div className="flex items-start justify-between gap-4">
-
-          <div>
-
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
-              {job.reference ||
-                `RC-${String(
-                  job.id
-                ).padStart(6, "0")}`}
-            </p>
-
-            <h3 className="mt-2 text-xl font-black">
-              {job.job_type ||
-                "Waste Collection"}
-            </h3>
-
-          </div>
-
-          <span className="rounded-full border border-[#285342] bg-[#10291f] px-3 py-1 text-xs font-black text-[#1BBB8C]">
-            {job.status ===
-            "bidding"
-              ? "BIDDING"
-              : "OPEN"}
-          </span>
-
-        </div>
-
-      </div>
-
-      <div className="space-y-5 p-6">
-
-        <JobLine
-          label="Location"
-          value={
-            job.postcode ||
-            "Postcode not provided"
-          }
-        />
-
-        <JobLine
-          label="Collection date"
-          value={
-            job.preferred_date
-              ? formatDate(
-                  job.preferred_date
-                )
-              : "Date not provided"
-          }
-        />
-
-        <JobLine
-          label="Load size"
-          value={
-            job.load_size ||
-            "Not specified"
-          }
-        />
-
-        <JobLine
-          label="Access"
-          value={
-            job.access_notes ||
-            "No access details provided"
-          }
-        />
-
-        {job.description && (
-          <div>
-
-            <p className="text-xs font-black uppercase tracking-wide text-[#657a70]">
-              Description
-            </p>
-
-            <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#aebbb5]">
-              {job.description}
-            </p>
-
-          </div>
-        )}
-
-        <Link
-          href={`/driver/jobs/${job.id}`}
-          className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
-        >
-          View Job & Bid
-        </Link>
-
-      </div>
-
-    </div>
-  );
-}
-
-/* ========================================================= */
-/* PENDING BID                                               */
-/* ========================================================= */
-
-function PendingBidCard({
-  bid,
-}: {
-  bid: Bid;
-}) {
-  const driverAmount =
-    Number(bid.amount || 0);
-
-  const rcsFee =
-    driverAmount *
-    (RCS_FEE_PERCENT / 100);
-
-  const driverPayout =
-    driverAmount - rcsFee;
-
-  return (
-    <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl">
-
-      <div className="flex items-start justify-between gap-4">
-
-        <div>
-
-          <p className="text-xs font-black uppercase tracking-wide text-[#657a70]">
-            Job
-          </p>
-
-          <p className="mt-1 text-lg font-black">
-            RC-
-            {String(
-              bid.job_id
-            ).padStart(6, "0")}
-          </p>
-
-        </div>
-
-        <span className="rounded-full border border-[#29483a] bg-[#18271f] px-3 py-1 text-xs font-black text-[#b8c6c0]">
-          BID PENDING
-        </span>
-
-      </div>
-
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-
-        <MoneyBox
-          label="Your bid"
-          value={driverAmount}
-        />
-
-        <MoneyBox
-          label={`RCS ${RCS_FEE_PERCENT}%`}
-          value={rcsFee}
-        />
-
-        <MoneyBox
-          label="You receive"
-          value={driverPayout}
-          highlight
-        />
-
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-[#214333] bg-[#07130e] p-4">
-
-        <p className="text-sm font-black text-white">
-          If your bid is accepted
-        </p>
-
-        <p className="mt-1 text-sm leading-6 text-[#82958c]">
-          RCS takes {RCS_FEE_PERCENT}% from
-          the accepted bid. You receive the
-          remaining 90%.
-        </p>
-
-      </div>
-
-      {bid.message && (
-        <p className="mt-4 rounded-2xl bg-[#07130e] p-4 text-sm leading-6 text-[#aab8b2]">
-          {bid.message}
-        </p>
-      )}
-
-      <Link
-        href={`/driver/jobs/${bid.job_id}`}
-        className="mt-5 block w-full rounded-xl border border-[#29483a] px-5 py-3 text-center font-black text-white hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
-      >
-        View Job
-      </Link>
-
-    </div>
-  );
-}
-
-/* ========================================================= */
-/* ACCEPTED / ACTIVE JOB                                     */
-/* ========================================================= */
-
-function AcceptedJobCard({
-  job,
-  driverPayout,
-}: {
-  job: Job;
-  driverPayout: number;
-}) {
-  const isActive =
-    job.status ===
-    "in_progress";
-
-  return (
-    <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl">
-
-      <div className="flex items-start justify-between gap-4">
-
-        <div>
-
-          <p className="text-xs font-black uppercase tracking-wide text-[#1BBB8C]">
-            {job.reference ||
-              `RC-${String(
-                job.id
-              ).padStart(6, "0")}`}
-          </p>
-
-          <h3 className="mt-2 text-xl font-black">
-            {job.job_type ||
-              "Waste Collection"}
-          </h3>
-
-        </div>
-
-        <span className="rounded-full bg-[#15392e] px-3 py-1 text-xs font-black text-[#1BBB8C]">
-          {isActive
-            ? "IN PROGRESS"
-            : "ACCEPTED"}
-        </span>
-
-      </div>
-
-      {driverPayout > 0 && (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-
-          <MoneyBox
-            label={`RCS ${RCS_FEE_PERCENT}% already deducted`}
-            value={0}
-          />
-
-          <MoneyBox
-            label="Your payout"
-            value={driverPayout}
-            highlight
-          />
-
-        </div>
-      )}
-
-      <div className="mt-6 space-y-5">
-
-        <JobLine
-          label="Location"
-          value={
-            job.postcode ||
-            "Not provided"
-          }
-        />
-
-        <JobLine
-          label="Collection date"
-          value={
-            job.preferred_date
-              ? formatDate(
-                  job.preferred_date
-                )
-              : "Not provided"
-          }
-        />
-
-        <JobLine
-          label="Time"
-          value={
-            job.preferred_time ||
-            "Not specified"
-          }
-        />
-
-      </div>
-
-      <Link
-        href={`/driver/jobs/${job.id}`}
-        className="mt-6 block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
-      >
-        Manage Job
-      </Link>
-
-    </div>
-  );
-}
-
-/* ========================================================= */
-/* SECTION HEADING                                           */
-/* ========================================================= */
-
-function SectionHeading({
-  eyebrow,
-  title,
-}: {
-  eyebrow: string;
-  title: string;
-}) {
-  return (
-    <div className="mb-5">
-
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
-        {eyebrow}
-      </p>
-
-      <h2 className="mt-1 text-2xl font-black">
-        {title}
-      </h2>
-
-    </div>
   );
 }
 
@@ -1587,10 +565,199 @@ function StatCard({
 }
 
 /* ========================================================= */
-/* JOB LINE                                                  */
+/* ACTION CARD                                               */
 /* ========================================================= */
 
-function JobLine({
+function ActionCard({
+  icon,
+  title,
+  description,
+  href,
+  primary = false,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+  href: string;
+  primary?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`group rounded-3xl border p-6 shadow-xl transition hover:-translate-y-0.5 ${
+        primary
+          ? "border-[#3f8d24] bg-[#10230f]"
+          : "border-[#17382b] bg-[#0b1b14]"
+      }`}
+    >
+
+      <div className="flex items-start gap-4">
+
+        <div
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl font-black ${
+            primary
+              ? "bg-[#1BBB8C] text-[#06100c]"
+              : "bg-[#123529] text-[#1BBB8C]"
+          }`}
+        >
+          {icon}
+        </div>
+
+        <div>
+
+          <h3 className="font-black">
+            {title}
+          </h3>
+
+          <p className="mt-1 text-sm leading-6 text-[#82958c]">
+            {description}
+          </p>
+
+          <p className="mt-3 text-sm font-bold text-[#1BBB8C]">
+            Open →
+          </p>
+
+        </div>
+
+      </div>
+
+    </Link>
+  );
+}
+
+/* ========================================================= */
+/* CUSTOMER JOB CARD                                         */
+/* ========================================================= */
+
+function CustomerJobCard({
+  job,
+}: {
+  job: Job;
+}) {
+  const status = normaliseStatus(job.status);
+
+  const hasDriver =
+    Boolean(job.assigned_driver_id);
+
+  const isCompleted =
+    status === "completed" ||
+    status === "complete";
+
+  return (
+    <Link
+      href={`/customer/jobs/${job.id}`}
+      className="block overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl transition hover:border-[#1BBB8C]"
+    >
+
+      <div className="p-6">
+
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+
+          <div className="flex min-w-0 items-start gap-4">
+
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#123529] text-xl">
+              🚚
+            </div>
+
+            <div className="min-w-0">
+
+              <div className="flex flex-wrap items-center gap-3">
+
+                <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+                  {job.reference ||
+                    `RC-${String(job.id).padStart(6, "0")}`}
+                </p>
+
+                <StatusBadge
+                  status={job.status || "pending"}
+                />
+
+              </div>
+
+              <h3 className="mt-2 text-xl font-black">
+                {job.job_type ||
+                  "Waste Collection"}
+              </h3>
+
+              <p className="mt-1 text-sm text-[#82958c]">
+                {job.postcode ||
+                  "Postcode not provided"}
+              </p>
+
+              {job.description && (
+                <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-[#71867c]">
+                  {job.description}
+                </p>
+              )}
+
+            </div>
+
+          </div>
+
+          <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
+
+            {hasDriver && (
+              <span className="text-xs font-bold text-[#1BBB8C]">
+                Driver assigned
+              </span>
+            )}
+
+            {isCompleted && (
+              <span className="text-xs font-bold text-[#6d8178]">
+                Collection completed
+              </span>
+            )}
+
+            <span className="text-sm font-bold text-[#1BBB8C]">
+              View Job →
+            </span>
+
+          </div>
+
+        </div>
+
+        {/* JOB DETAILS */}
+
+        <div className="mt-6 grid gap-4 border-t border-[#17382b] pt-5 sm:grid-cols-3">
+
+          <DetailItem
+            label="Collection date"
+            value={
+              job.preferred_date
+                ? formatDate(job.preferred_date)
+                : "Not provided"
+            }
+          />
+
+          <DetailItem
+            label="Collection time"
+            value={
+              job.preferred_time ||
+              "Not specified"
+            }
+          />
+
+          <DetailItem
+            label="Load size"
+            value={
+              job.load_size ||
+              "Not specified"
+            }
+          />
+
+        </div>
+
+      </div>
+
+    </Link>
+  );
+}
+
+/* ========================================================= */
+/* DETAIL ITEM                                               */
+/* ========================================================= */
+
+function DetailItem({
   label,
   value,
 }: {
@@ -1613,51 +780,176 @@ function JobLine({
 }
 
 /* ========================================================= */
-/* EMPTY STATE                                               */
+/* STATUS BADGE                                              */
 /* ========================================================= */
 
-function EmptyState({
-  title,
-  description,
+function StatusBadge({
+  status,
 }: {
-  title: string;
-  description: string;
+  status: string;
 }) {
+  const normalised = normaliseStatus(status);
+
+  let className =
+    "border-[#29483a] bg-[#18271f] text-[#b8c6c0]";
+
+  let text = formatStatus(status);
+
+  if (
+    normalised === "pending" ||
+    normalised === "new" ||
+    normalised === "open"
+  ) {
+    className =
+      "border-amber-900/60 bg-amber-950/40 text-amber-300";
+  }
+
+  if (normalised === "bidding") {
+    className =
+      "border-blue-900/60 bg-blue-950/40 text-blue-300";
+
+    text = "Bidding";
+  }
+
+  if (
+    normalised === "assigned" ||
+    normalised === "accepted" ||
+    normalised === "booked"
+  ) {
+    className =
+      "border-[#3f8d24] bg-[#183017] text-[#1BBB8C]";
+  }
+
+  if (
+    normalised === "in_progress" ||
+    normalised === "in progress"
+  ) {
+    className =
+      "border-blue-900/60 bg-blue-950/40 text-blue-300";
+
+    text = "In Progress";
+  }
+
+  if (
+    normalised === "completed" ||
+    normalised === "complete"
+  ) {
+    className =
+      "border-green-900/60 bg-green-950/40 text-green-300";
+
+    text = "Completed";
+  }
+
+  if (
+    normalised === "cancelled" ||
+    normalised === "canceled" ||
+    normalised === "rejected"
+  ) {
+    className =
+      "border-red-900/60 bg-red-950/40 text-red-300";
+  }
+
   return (
-    <div className="rounded-3xl border border-dashed border-[#29483a] bg-[#081710] px-6 py-12 text-center">
+    <span
+      className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${className}`}
+    >
+      {text}
+    </span>
+  );
+}
 
-      <div className="mx-auto h-1.5 w-14 rounded-full bg-[#1BBB8C]" />
+/* ========================================================= */
+/* EMPTY JOBS                                                */
+/* ========================================================= */
 
-      <h3 className="mt-5 text-xl font-black">
-        {title}
+function EmptyJobs() {
+  return (
+    <div className="rounded-3xl border border-dashed border-[#29483a] bg-[#081710] px-6 py-14 text-center">
+
+      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[#123529] text-3xl">
+        🚚
+      </div>
+
+      <h3 className="mt-6 text-2xl font-black">
+        No jobs yet
       </h3>
 
-      <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#71857b]">
-        {description}
+      <p className="mx-auto mt-2 max-w-lg leading-7 text-[#71867c]">
+        Post your first waste collection job
+        and approved RCS drivers can submit
+        quotes for you to choose from.
       </p>
+
+      <Link
+        href="/customer/post-job"
+        className="mt-7 inline-flex rounded-xl bg-[#1BBB8C] px-7 py-3.5 font-black text-[#06100c] hover:bg-[#16a77c]"
+      >
+        POST YOUR FIRST JOB
+      </Link>
 
     </div>
   );
 }
 
 /* ========================================================= */
-/* DATE                                                      */
+/* SECTION HEADING                                           */
 /* ========================================================= */
 
-function formatDate(date: string) {
-  try {
-    return new Date(
-      `${date}T00:00:00`
-    ).toLocaleDateString(
-      "en-GB",
-      {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }
+function SectionHeading({
+  eyebrow,
+  title,
+}: {
+  eyebrow: string;
+  title: string;
+}) {
+  return (
+    <div className="mb-5">
+
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+        {eyebrow}
+      </p>
+
+      <h2 className="mt-1 text-2xl font-black">
+        {title}
+      </h2>
+
+    </div>
+  );
+}
+
+/* ========================================================= */
+/* HELPERS                                                   */
+/* ========================================================= */
+
+function normaliseStatus(
+  status: string | null
+) {
+  return (status || "")
+    .trim()
+    .toLowerCase();
+}
+
+function formatStatus(status: string) {
+  return status
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase()
     );
-  } catch {
+}
+
+function formatDate(date: string) {
+  const parsed = new Date(
+    `${date}T00:00:00`
+  );
+
+  if (Number.isNaN(parsed.getTime())) {
     return date;
   }
+
+  return parsed.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }

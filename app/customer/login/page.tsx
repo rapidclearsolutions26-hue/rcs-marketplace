@@ -1,23 +1,23 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function CustomerLogin() {
+export default function CustomerLoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
   async function handleLogin(
-    event: React.FormEvent<HTMLFormElement>
+    event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
@@ -27,25 +27,67 @@ export default function CustomerLogin() {
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      /*
+       * ================================================
+       * SIGN IN
+       * ================================================
+       */
+
+      const { error } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
 
       if (error) {
-        setErrorMessage(error.message);
+        console.error(
+          "Customer login error:",
+          error
+        );
+
+        setErrorMessage(
+          getLoginErrorMessage(error.message)
+        );
+
         return;
       }
 
-      router.push("/customer/dashboard");
+      /*
+       * ================================================
+       * CHECK SESSION
+       * ================================================
+       */
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setErrorMessage(
+          "Login succeeded but we couldn't find your account session. Please try again."
+        );
+
+        return;
+      }
+
+      /*
+       * ================================================
+       * SEND CUSTOMER TO DASHBOARD
+       * ================================================
+       */
+
+      router.replace("/customer/dashboard");
       router.refresh();
     } catch (error) {
-      console.error("Customer login error:", error);
+      console.error(
+        "Unexpected customer login error:",
+        error
+      );
 
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Unable to log in. Please try again."
+          : "Something went wrong. Please try again."
       );
     } finally {
       setLoading(false);
@@ -53,160 +95,250 @@ export default function CustomerLogin() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7f4]">
+    <main className="min-h-screen bg-[#06100c] text-white">
+
       {/* HEADER */}
 
-      <header className="border-b border-[#dde5d8] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link href="/" className="block">
-            <div className="text-2xl font-black text-[#111111]">
-              Rapid Clear
-            </div>
+      <header className="border-b border-[#17382b] bg-[#081710]">
 
-            <div className="text-sm font-bold text-[#529027]">
-              Solutions
-            </div>
-          </Link>
+        <div className="mx-auto flex max-w-7xl items-center px-5 py-4">
 
           <Link
             href="/"
-            className="text-sm font-bold text-[#529027] hover:underline"
+            className="flex items-center"
           >
-            ← Back to website
+            <Image
+              src="/rapid-clear-logo.png"
+              alt="Rapid Clear Solutions"
+              width={190}
+              height={70}
+              priority
+              className="h-12 w-auto object-contain"
+            />
           </Link>
+
         </div>
+
       </header>
 
       {/* LOGIN */}
 
-      <div className="flex min-h-[calc(100vh-86px)] items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md">
-          {/* TITLE */}
+      <div className="flex min-h-[calc(100vh-81px)] items-center justify-center px-5 py-10">
 
-          <div className="text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e7f1df] text-3xl">
-              👤
+        <div className="w-full max-w-md">
+
+          {/* BACK */}
+
+          <Link
+            href="/"
+            className="text-sm font-bold text-[#1BBB8C] hover:text-[#16a77c]"
+          >
+            ← Back to Rapid Clear Solutions
+          </Link>
+
+          {/* CARD */}
+
+          <div className="mt-6 rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-2xl sm:p-8">
+
+            <div className="text-center">
+
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#1BBB8C]">
+                Customer Portal
+              </p>
+
+              <h1 className="mt-2 text-3xl font-black">
+                Welcome back
+              </h1>
+
+              <p className="mt-2 text-sm leading-6 text-[#71867c]">
+                Log in to manage your waste
+                collection jobs and quotes.
+              </p>
+
             </div>
 
-            <p className="mt-6 text-sm font-black uppercase tracking-wide text-[#529027]">
-              Customer Portal
-            </p>
+            {/* ERROR */}
 
-            <h1 className="mt-2 text-4xl font-black text-[#111111]">
-              Welcome back
-            </h1>
-
-            <p className="mt-3 text-[#666666]">
-              Log in to manage your jobs and quotes.
-            </p>
-          </div>
-
-          {/* FORM */}
-
-          <form
-            onSubmit={handleLogin}
-            className="mt-8 rounded-3xl border border-[#dde5d8] bg-white p-7 shadow-sm"
-          >
             {errorMessage && (
-              <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4">
-                <p className="text-sm font-semibold text-red-700">
+              <div className="mt-6 rounded-2xl border border-red-900/60 bg-[#230e0e] p-4">
+
+                <p className="text-sm font-semibold leading-6 text-red-300">
                   {errorMessage}
                 </p>
+
               </div>
             )}
 
-            {/* EMAIL */}
+            {/* FORM */}
 
-            <div>
-              <label
-                htmlFor="email"
-                className="text-sm font-bold text-[#333333]"
-              >
-                Email address
-              </label>
-
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) =>
-                  setEmail(event.target.value)
-                }
-                placeholder="you@example.com"
-                autoComplete="email"
-                required
-                disabled={loading}
-                className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none transition placeholder:text-[#999999] focus:border-[#529027] focus:ring-2 focus:ring-[#529027]/20 disabled:bg-gray-100"
-              />
-            </div>
-
-            {/* PASSWORD */}
-
-            <div className="mt-5">
-              <label
-                htmlFor="password"
-                className="text-sm font-bold text-[#333333]"
-              >
-                Password
-              </label>
-
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) =>
-                  setPassword(event.target.value)
-                }
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                required
-                disabled={loading}
-                className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none transition placeholder:text-[#999999] focus:border-[#529027] focus:ring-2 focus:ring-[#529027]/20 disabled:bg-gray-100"
-              />
-            </div>
-
-            {/* LOGIN BUTTON */}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-6 w-full rounded-xl bg-[#529027] px-5 py-4 font-black text-white transition hover:bg-[#315c18] disabled:cursor-not-allowed disabled:opacity-50"
+            <form
+              onSubmit={handleLogin}
+              className="mt-7 space-y-5"
             >
-              {loading ? "Logging in..." : "Log In"}
-            </button>
+
+              {/* EMAIL */}
+
+              <div>
+
+                <label
+                  htmlFor="email"
+                  className="text-sm font-black text-[#d5dfda]"
+                >
+                  Email address
+                </label>
+
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  required
+                  disabled={loading}
+                  className="mt-2 w-full rounded-xl border border-[#29483a] bg-[#07130e] px-4 py-3.5 text-white outline-none transition placeholder:text-[#50645b] focus:border-[#1BBB8C] disabled:cursor-not-allowed disabled:opacity-60"
+                />
+
+              </div>
+
+              {/* PASSWORD */}
+
+              <div>
+
+                <div className="flex items-center justify-between gap-3">
+
+                  <label
+                    htmlFor="password"
+                    className="text-sm font-black text-[#d5dfda]"
+                  >
+                    Password
+                  </label>
+
+                  <Link
+                    href="/customer/forgot-password"
+                    className="text-xs font-bold text-[#1BBB8C] hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+
+                </div>
+
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  required
+                  disabled={loading}
+                  className="mt-2 w-full rounded-xl border border-[#29483a] bg-[#07130e] px-4 py-3.5 text-white outline-none transition placeholder:text-[#50645b] focus:border-[#1BBB8C] disabled:cursor-not-allowed disabled:opacity-60"
+                />
+
+              </div>
+
+              {/* LOGIN BUTTON */}
+
+              <button
+                type="submit"
+                disabled={
+                  loading ||
+                  !email.trim() ||
+                  !password
+                }
+                className="w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 font-black text-[#06100c] transition hover:bg-[#16a77c] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading
+                  ? "Logging in..."
+                  : "LOG IN"}
+              </button>
+
+            </form>
 
             {/* REGISTER */}
 
-            <div className="mt-6 border-t border-[#dde5d8] pt-6 text-center">
-              <p className="text-sm text-[#666666]">
+            <div className="mt-7 border-t border-[#17382b] pt-6 text-center">
+
+              <p className="text-sm text-[#71867c]">
                 Don't have a customer account?
               </p>
 
               <Link
                 href="/customer/register"
-                className="mt-2 inline-block font-black text-[#529027] hover:underline"
+                className="mt-2 inline-block font-black text-[#1BBB8C] hover:underline"
               >
                 Create an account →
               </Link>
+
             </div>
-          </form>
 
-          {/* DRIVER LINK */}
+          </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-[#777777]">
+          {/* DRIVER LOGIN */}
+
+          <div className="mt-5 text-center">
+
+            <p className="text-xs text-[#50645b]">
               Are you a driver?
             </p>
 
             <Link
               href="/driver/login"
-              className="mt-1 inline-block text-sm font-bold text-[#529027] hover:underline"
+              className="mt-1 inline-block text-sm font-bold text-[#71867c] hover:text-[#1BBB8C]"
             >
-              Driver login →
+              Driver Login →
             </Link>
+
           </div>
+
         </div>
+
       </div>
+
     </main>
+  );
+}
+
+/* ========================================================= */
+/* LOGIN ERROR                                               */
+/* ========================================================= */
+
+function getLoginErrorMessage(
+  message: string
+) {
+  const normalised =
+    message.toLowerCase();
+
+  if (
+    normalised.includes(
+      "invalid login credentials"
+    )
+  ) {
+    return "The email address or password is incorrect.";
+  }
+
+  if (
+    normalised.includes(
+      "email not confirmed"
+    )
+  ) {
+    return "Please confirm your email address before logging in.";
+  }
+
+  if (
+    normalised.includes(
+      "too many requests"
+    )
+  ) {
+    return "Too many login attempts. Please wait a moment and try again.";
+  }
+
+  return (
+    message ||
+    "Unable to log in. Please check your details and try again."
   );
 }
