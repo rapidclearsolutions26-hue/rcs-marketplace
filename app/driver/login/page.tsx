@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function DriverLogin() {
-  const supabase = createClient();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -24,6 +23,11 @@ export default function DriverLogin() {
     setErrorMessage("");
 
     try {
+      // Create Supabase client only when the user submits the form.
+      // This prevents Next.js prerendering from trying to initialise
+      // Supabase during the production build.
+      const supabase = createClient();
+
       /*
        * =====================================================
        * SIGN IN
@@ -40,7 +44,6 @@ export default function DriverLogin() {
         setErrorMessage(
           error?.message || "Unable to sign in."
         );
-
         setLoading(false);
         return;
       }
@@ -56,9 +59,7 @@ export default function DriverLogin() {
         error: driverError,
       } = await supabase
         .from("drivers")
-        .select(
-          "id, approved, application_status"
-        )
+        .select("id, approved, application_status")
         .eq("id", data.user.id)
         .maybeSingle();
 
@@ -91,14 +92,13 @@ export default function DriverLogin() {
 
       /*
        * =====================================================
-       * CHECK APPROVAL
+       * CHECK DRIVER APPROVAL
        * =====================================================
        */
 
       const isApproved =
         driver.approved === true &&
-        driver.application_status ===
-          "approved";
+        driver.application_status === "approved";
 
       if (!isApproved) {
         setErrorMessage(
@@ -113,22 +113,12 @@ export default function DriverLogin() {
 
       /*
        * =====================================================
-       * DRIVER IS APPROVED
+       * DRIVER APPROVED
        * =====================================================
-       *
-       * Send the driver DIRECTLY to the dashboard.
-       *
-       * We do NOT send them to a job page.
        */
 
       router.replace("/driver/dashboard");
 
-      /*
-       * Don't set loading back to false here.
-       *
-       * This prevents the login page from briefly
-       * appearing again while Next.js changes page.
-       */
     } catch (error) {
       console.error(
         "Unexpected driver login error:",
@@ -187,9 +177,9 @@ export default function DriverLogin() {
               </h2>
 
               <p className="mt-4 max-w-md text-lg leading-7 text-white/70">
-                Find available work, submit your price
-                and manage your RCS jobs from one
-                place.
+                Find available work, submit your
+                price and manage your RCS jobs
+                from one place.
               </p>
             </div>
           </div>
