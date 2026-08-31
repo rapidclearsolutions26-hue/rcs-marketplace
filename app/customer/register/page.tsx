@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function CustomerRegister() {
-  const supabase = createClient();
-
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -13,34 +12,44 @@ export default function CustomerRegister() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleRegister(e: React.FormEvent) {
+  async function handleRegister(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
 
     setLoading(true);
     setMessage("");
 
-    const { data, error } = await supabase.auth.signUp({
-  email,
-  password,
-  options: {
-    data: {
-      full_name: fullName,
-      phone: phone,
-    },
-  },
-});
+    try {
+      const supabase = createClient();
 
-    if (error) {
-      setMessage(error.message);
-      setLoading(false);
-      return;
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            phone: phone.trim(),
+          },
+        },
+      });
+
+      if (error) {
+        setMessage(error.message);
+        setLoading(false);
+        return;
+      }
+
+      setMessage(
+        "Account created. Check your email if confirmation is required."
+      );
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      setMessage(
+        "Something went wrong while creating your account. Please try again."
+      );
     }
-
-   
-
-    setMessage(
-      "Account created. Check your email if confirmation is required."
-    );
 
     setLoading(false);
   }
@@ -63,61 +72,82 @@ export default function CustomerRegister() {
           className="space-y-5 rounded-2xl bg-white p-8 shadow-sm"
         >
           <div>
-            <label className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="fullName"
+              className="text-sm font-medium text-gray-700"
+            >
               Full name
             </label>
 
             <input
+              id="fullName"
               required
+              type="text"
+              autoComplete="name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
               placeholder="Your full name"
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="phone"
+              className="text-sm font-medium text-gray-700"
+            >
               Phone
             </label>
 
             <input
+              id="phone"
               required
               type="tel"
+              autoComplete="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
               placeholder="07..."
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="email"
+              className="text-sm font-medium text-gray-700"
+            >
               Email
             </label>
 
             <input
+              id="email"
               required
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="password"
+              className="text-sm font-medium text-gray-700"
+            >
               Password
             </label>
 
             <input
+              id="password"
               required
               type="password"
               minLength={6}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
               placeholder="At least 6 characters"
             />
           </div>
@@ -131,19 +161,19 @@ export default function CustomerRegister() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white disabled:opacity-50"
+            className="w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
 
           <p className="text-center text-sm text-gray-500">
             Already have an account?{" "}
-            <a
+            <Link
               href="/customer/login"
-              className="font-semibold text-green-600"
+              className="font-semibold text-green-600 hover:underline"
             >
               Log in
-            </a>
+            </Link>
           </p>
         </form>
       </div>
