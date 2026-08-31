@@ -1,801 +1,585 @@
 "use client";
-export const dynamic = "force-dynamic";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import NotificationBell from "@/components/NotificationBell";
+
+export const dynamic = "force-dynamic";
 
 type Job = {
-  id: number;
-  reference: string | null;
-  customer_id: string;
-  job_type: string;
-  postcode: string;
-  address: string;
-  load_size: string | null;
-  description: string;
-  status: string;
-  preferred_date: string | null;
-  preferred_time: string | null;
+  id: string;
   created_at: string;
-  accepted_bid_id: number | null;
-  assigned_driver_id: string | null;
-  assigned_bid_id: number | null;
-};
-
-type Bid = {
-  id: number;
-  job_id: number;
-  amount: number;
-  status: string;
+  status: string | null;
+  service: string | null;
+  description: string | null;
+  postcode: string | null;
+  address: string | null;
+  quote_price: number | null;
 };
 
 export default function CustomerDashboard() {
-  const supabase = createClient();
   const router = useRouter();
 
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [bids, setBids] = useState<Bid[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [customerName, setCustomerName] =
-    useState("Customer");
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [supabase] = useState(() => createClient());
 
-  /*
-   * =========================================================
-   * LOAD DASHBOARD
-   * =========================================================
-   */
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    let mounted = true;
+
+    async function loadDashboard() {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          throw userError;
+        }
+
+        if (!user) {
+          router.push("/customer/login");
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("jobs")
+          .select(
+            `
+              id,
+              created_at,
+              status,
+              service,
+              description,
+              postcode,
+              address,
+              quote_price
+            `
+          )
+          .eq("customer_id", user.id)
+          .order("created_at", {
+            ascending: false,
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        if (mounted) {
+          setJobs((data as Job[]) || []);
+        }
+      } catch (error) {
+        console.error("Customer dashboard error:", error);
+
+        if (mounted) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Something went wrong loading your dashboard."
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
     loadDashboard();
 
-    const interval = setInterval(() => {
-      loadDashboard(true);
-    }, 15000);
+    return () => {
+      mounted = false;
+    };
+  }, [router, supabase]);
 
-    return () => clearInterval(interval);
-  }, []);
-
-  async function loadDashboard(
-    silent = false
-  ) {
-    if (!silent) {
-      setLoading(true);
-    }
-
-    setErrorMessage("");
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+  async function handleLogout() {
+    try {
+      await supabase.auth.signOut();
       router.push("/customer/login");
-      return;
+      router.refresh();
+    } catch (error) {
+      console.error("Logout error:", error);
+      setErrorMessage("Unable to log out. Please try again.");
     }
-
-    /*
-     * =======================================================
-     * CUSTOMER PROFILE
-     * =======================================================
-     */
-
-    const {
-      data: profile,
-      error: profileError,
-    } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error(
-        "Profile error:",
-        profileError
-      );
-    }
-
-    if (profile?.full_name) {
-      setCustomerName(profile.full_name);
-    }
-
-    /*
-     * =======================================================
-     * CUSTOMER JOBS
-     * =======================================================
-     */
-
-    const {
-      data: jobsData,
-      error: jobsError,
-    } = await supabase
-      .from("jobs")
-      .select(
-        `
-          id,
-          reference,
-          customer_id,
-          job_type,
-          postcode,
-          address,
-          load_size,
-          description,
-          status,
-          preferred_date,
-          preferred_time,
-          created_at,
-          accepted_bid_id,
-          assigned_driver_id,
-          assigned_bid_id
-        `
-      )
-      .eq("customer_id", user.id)
-      .order("created_at", {
-        ascending: false,
-      });
-
-    if (jobsError) {
-      console.error(
-        "Jobs error:",
-        jobsError
-      );
-
-      setErrorMessage(
-        jobsError.message ||
-          "We couldn't load your jobs."
-      );
-
-      setLoading(false);
-      return;
-    }
-
-    const customerJobs =
-      (jobsData || []) as Job[];
-
-    setJobs(customerJobs);
-
-    /*
-     * =======================================================
-     * DRIVER BIDS
-     * =======================================================
-     */
-
-    if (customerJobs.length > 0) {
-      const jobIds = customerJobs.map(
-        (job) => job.id
-      );
-
-      const {
-        data: bidsData,
-        error: bidsError,
-      } = await supabase
-        .from("bids")
-        .select(
-          "id, job_id, amount, status"
-        )
-        .in("job_id", jobIds);
-
-      if (bidsError) {
-        console.error(
-          "Bids error:",
-          bidsError
-        );
-      } else {
-        setBids(
-          (bidsData || []) as Bid[]
-        );
-      }
-    } else {
-      setBids([]);
-    }
-
-    setLoading(false);
   }
 
-  /*
-   * =========================================================
-   * LOGOUT
-   * =========================================================
-   */
-
-  async function logout() {
-    await supabase.auth.signOut();
-    router.push("/customer/login");
-  }
-
-  /*
-   * =========================================================
-   * JOB COUNTS
-   * =========================================================
-   */
-
-  const activeJobs = useMemo(
-    () =>
-      jobs.filter(
-        (job) =>
-          job.status !== "completed" &&
-          job.status !== "cancelled"
-      ),
-    [jobs]
+  const pendingJobs = jobs.filter(
+    (job) =>
+      job.status === "pending" ||
+      job.status === "Pending"
   );
 
-  const completedJobs = useMemo(
-    () =>
-      jobs.filter(
-        (job) =>
-          job.status === "completed"
-      ),
-    [jobs]
+  const activeJobs = jobs.filter(
+    (job) =>
+      job.status === "accepted" ||
+      job.status === "booked" ||
+      job.status === "in_progress" ||
+      job.status === "In Progress"
   );
 
-  const totalQuotes = bids.length;
-
-  /*
-   * =========================================================
-   * PAGE
-   * =========================================================
-   */
+  const completedJobs = jobs.filter(
+    (job) =>
+      job.status === "completed" ||
+      job.status === "Completed"
+  );
 
   return (
-    <main className="min-h-screen bg-[#07110b] text-white">
-
+    <main className="min-h-screen bg-[#f5f7f4]">
       {/* HEADER */}
 
-      <header className="border-b border-white/10 bg-[#09150d]">
-
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-6">
-
-          {/* LOGO */}
-
-          <Link
-            href="/customer/dashboard"
-            className="shrink-0"
+      <header className="border-b border-[#dde5d8] bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <button
+            onClick={() => router.push("/")}
+            className="text-left"
           >
-            <Image
-              src="/rcs-logo.jpg"
-              alt="Rapid Clear Solutions"
-              width={180}
-              height={70}
-              priority
-              className="h-12 w-auto object-contain"
-            />
-          </Link>
-
-          {/* RIGHT */}
-
-          <div className="flex items-center gap-3">
-
-            {/* CUSTOMER */}
-
-            <div className="hidden text-right sm:block">
-
-              <p className="text-xs font-bold uppercase tracking-wider text-[#529027]">
-                Customer
-              </p>
-
-              <p className="font-bold text-white">
-                {customerName}
-              </p>
-
+            <div className="text-2xl font-black text-[#111111]">
+              Rapid Clear
             </div>
 
-            {/* NOTIFICATION */}
+            <div className="text-sm font-bold text-[#529027]">
+              Solutions
+            </div>
+          </button>
 
-            <NotificationBell />
-
-            {/* LOGOUT */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/customer/post-job")}
+              className="hidden rounded-xl bg-[#529027] px-5 py-3 text-sm font-black text-white transition hover:bg-[#315c18] sm:block"
+            >
+              + Post a Job
+            </button>
 
             <button
-              type="button"
-              onClick={logout}
-              className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/10"
+              onClick={handleLogout}
+              className="rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-sm font-bold text-[#555555] transition hover:bg-[#f5f7f4]"
             >
               Log out
             </button>
-
           </div>
-
         </div>
-
       </header>
 
-      {/* MAIN */}
+      {/* CONTENT */}
 
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6 sm:py-12">
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        {/* TITLE */}
 
-        {/* HERO */}
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-sm font-black uppercase tracking-wide text-[#529027]">
+              Customer Portal
+            </p>
 
-        <section className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#102218] to-[#0a150e] p-6 shadow-2xl sm:p-9">
+            <h1 className="mt-2 text-4xl font-black tracking-tight text-[#111111]">
+              Your Dashboard
+            </h1>
 
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#529027]">
-            RCS CUSTOMER PORTAL
-          </p>
-
-          <div className="mt-3 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-
-            <div>
-
-              <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
-                Welcome back
-                {customerName !==
-                "Customer"
-                  ? `, ${customerName}`
-                  : ""}
-              </h1>
-
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60 sm:text-base">
-                Manage your waste collections,
-                compare driver quotes and keep
-                track of your bookings.
-              </p>
-
-            </div>
-
-            <Link
-              href="/customer/post-job"
-              className="inline-flex items-center justify-center rounded-xl bg-[#529027] px-6 py-4 font-black text-white shadow-lg shadow-[#529027]/20 transition hover:bg-[#6aa63b]"
-            >
-              Get a quote
-            </Link>
-
+            <p className="mt-2 max-w-2xl text-[#666666]">
+              Manage your waste collection jobs, quotes and bookings.
+            </p>
           </div>
 
-        </section>
+          <button
+            onClick={() => router.push("/customer/post-job")}
+            className="rounded-xl bg-[#529027] px-6 py-4 font-black text-white shadow-sm transition hover:bg-[#315c18] sm:hidden"
+          >
+            + Post a Job
+          </button>
+        </div>
 
         {/* ERROR */}
 
         {errorMessage && (
-          <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
-
-            <p className="font-semibold text-red-300">
+          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5">
+            <p className="font-bold text-red-700">
               {errorMessage}
             </p>
 
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white"
+            >
+              Try Again
+            </button>
           </div>
         )}
 
-        {/* DASHBOARD BUTTONS */}
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-
-          <DashboardButton
-            href="/customer/post-job"
-            title="Get a quote"
-            description="Tell us what needs collecting"
-          />
-
-          <DashboardButton
-            href={
-              jobs.length > 0
-                ? `/customer/jobs/${jobs[0].id}`
-                : "/customer/dashboard"
-            }
-            title="My quotes"
-            description="Compare drivers and prices"
-            disabled={
-              jobs.length === 0
-            }
-          />
-
-          <DashboardButton
-            href={
-              activeJobs.length > 0
-                ? `/customer/jobs/${activeJobs[0].id}`
-                : "/customer/dashboard"
-            }
-            title="My jobs"
-            description="View your booked collections"
-            disabled={
-              activeJobs.length === 0
-            }
-          />
-
-        </div>
-
         {/* STATS */}
 
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
+            title="Total Jobs"
             number={jobs.length}
-            label="Jobs submitted"
+            description="All your jobs"
           />
 
           <StatCard
-            number={totalQuotes}
-            label="Quotes received"
+            title="Pending"
+            number={pendingJobs.length}
+            description="Awaiting action"
           />
 
           <StatCard
+            title="Active"
             number={activeJobs.length}
-            label="Active jobs"
+            description="Jobs in progress"
           />
 
           <StatCard
-            number={
-              completedJobs.length
-            }
-            label="Completed"
+            title="Completed"
+            number={completedJobs.length}
+            description="Finished jobs"
           />
-
         </div>
+
+        {/* QUICK ACTIONS */}
+
+        <section className="mt-8">
+          <h2 className="text-2xl font-black text-[#111111]">
+            Quick Actions
+          </h2>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <ActionCard
+              title="Post a New Job"
+              description="Tell us what needs clearing."
+              icon="＋"
+              onClick={() =>
+                router.push("/customer/post-job")
+              }
+            />
+
+            <ActionCard
+              title="View Quotes"
+              description="See quotes from drivers."
+              icon="£"
+              onClick={() =>
+                router.push("/customer/quotes")
+              }
+            />
+
+            <ActionCard
+              title="My Jobs"
+              description="View your collection history."
+              icon="🚚"
+              onClick={() =>
+                router.push("/customer/dashboard")
+              }
+            />
+          </div>
+        </section>
 
         {/* JOBS */}
 
-        <section className="mt-8">
-
-          <div className="mb-5 flex items-end justify-between">
-
+        <section className="mt-10">
+          <div className="mb-5 flex items-center justify-between">
             <div>
-
-              <p className="text-xs font-black uppercase tracking-widest text-[#529027]">
-                Your activity
-              </p>
-
-              <h2 className="mt-1 text-2xl font-black text-white">
-                Your jobs
+              <h2 className="text-2xl font-black text-[#111111]">
+                Your Jobs
               </h2>
 
+              <p className="mt-1 text-sm text-[#777777]">
+                Your latest collection requests.
+              </p>
             </div>
 
-            {jobs.length > 0 && (
-              <button
-                type="button"
-                onClick={() =>
-                  loadDashboard()
-                }
-                className="text-sm font-bold text-[#6aa63b] transition hover:text-[#8bc45b]"
-              >
-                Refresh
-              </button>
-            )}
-
+            <button
+              onClick={() =>
+                router.push("/customer/quotes")
+              }
+              className="text-sm font-bold text-[#529027] hover:underline"
+            >
+              View Quotes →
+            </button>
           </div>
 
-          {/* LOADING */}
-
           {loading ? (
+            <div className="rounded-3xl border border-[#dde5d8] bg-white p-10 text-center shadow-sm">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-[#dde5d8] border-t-[#529027]" />
 
-            <div className="rounded-3xl border border-white/10 bg-[#0d1a11] p-10 text-center">
-
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-white/10 border-t-[#529027]" />
-
-              <p className="mt-4 font-semibold text-white/60">
+              <p className="mt-4 font-semibold text-[#666666]">
                 Loading your jobs...
               </p>
-
             </div>
-
           ) : jobs.length === 0 ? (
-
-            /* NO JOBS */
-
-            <div className="rounded-3xl border border-white/10 bg-[#0d1a11] p-10 text-center sm:p-14">
-
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#529027]/15">
-
-                <span className="text-2xl font-black text-[#529027]">
-                  +
-                </span>
-
-              </div>
-
-              <h3 className="mt-5 text-2xl font-black">
-                No jobs yet
-              </h3>
-
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/50">
-                Post your first job and let
-                approved RCS drivers compete
-                to complete your collection.
-              </p>
-
-              <Link
-                href="/customer/post-job"
-                className="mt-6 inline-flex rounded-xl bg-[#529027] px-6 py-3 font-black text-white transition hover:bg-[#6aa63b]"
-              >
-                Get your first quote
-              </Link>
-
-            </div>
-
+            <EmptyJobs
+              onPostJob={() =>
+                router.push("/customer/post-job")
+              }
+            />
           ) : (
-
-            /* JOB LIST */
-
             <div className="space-y-4">
-
-              {jobs.map((job) => {
-
-                const quoteCount =
-                  bids.filter(
-                    (bid) =>
-                      bid.job_id ===
-                      job.id
-                  ).length;
-
-                return (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    quoteCount={
-                      quoteCount
-                    }
-                  />
-                );
-              })}
-
+              {jobs.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onClick={() =>
+                    router.push(`/customer/jobs/${job.id}`)
+                  }
+                />
+              ))}
             </div>
-
           )}
-
         </section>
-
       </div>
-
     </main>
   );
 }
 
-/* ========================================================= */
-/* DASHBOARD BUTTON                                          */
-/* ========================================================= */
-
-function DashboardButton({
-  href,
-  title,
-  description,
-  disabled,
-}: {
-  href: string;
-  title: string;
-  description: string;
-  disabled?: boolean;
-}) {
-  if (disabled) {
-    return (
-      <div className="cursor-not-allowed rounded-2xl border border-white/10 bg-[#0d1a11] p-6 opacity-40">
-
-        <h3 className="text-xl font-black">
-          {title}
-        </h3>
-
-        <p className="mt-2 text-sm text-white/50">
-          {description}
-        </p>
-
-      </div>
-    );
-  }
-
-  return (
-    <Link
-      href={href}
-      className="group rounded-2xl border border-white/10 bg-[#0d1a11] p-6 transition hover:-translate-y-1 hover:border-[#529027]/50 hover:bg-[#102218]"
-    >
-
-      <div className="flex items-center justify-between">
-
-        <h3 className="text-xl font-black">
-          {title}
-        </h3>
-
-        <span className="text-xl text-[#529027] transition group-hover:translate-x-1">
-          →
-        </span>
-
-      </div>
-
-      <p className="mt-2 text-sm text-white/50">
-        {description}
-      </p>
-
-    </Link>
-  );
-}
-
-/* ========================================================= */
-/* STAT CARD                                                 */
-/* ========================================================= */
+/* -------------------------------- */
+/* STAT CARD                        */
+/* -------------------------------- */
 
 function StatCard({
+  title,
   number,
-  label,
+  description,
 }: {
-  number: number | string;
-  label: string;
+  title: string;
+  number: number;
+  description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0d1a11] p-5">
+    <div className="rounded-3xl border border-[#dde5d8] bg-white p-6 shadow-sm">
+      <p className="text-sm font-black uppercase tracking-wide text-[#529027]">
+        {title}
+      </p>
 
-      <p className="text-2xl font-black text-white sm:text-3xl">
+      <p className="mt-2 text-4xl font-black text-[#111111]">
         {number}
       </p>
 
-      <p className="mt-1 text-xs font-bold text-white/40 sm:text-sm">
-        {label}
+      <p className="mt-1 text-sm text-[#777777]">
+        {description}
       </p>
-
     </div>
   );
 }
 
-/* ========================================================= */
-/* JOB CARD                                                  */
-/* ========================================================= */
+/* -------------------------------- */
+/* ACTION CARD                      */
+/* -------------------------------- */
+
+function ActionCard({
+  title,
+  description,
+  icon,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  icon: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="group rounded-3xl border border-[#dde5d8] bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#529027] hover:shadow-md"
+    >
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#e7f1df] text-xl font-black text-[#529027]">
+          {icon}
+        </div>
+
+        <div>
+          <h3 className="font-black text-[#111111]">
+            {title}
+          </h3>
+
+          <p className="mt-1 text-sm text-[#777777]">
+            {description}
+          </p>
+
+          <p className="mt-3 text-sm font-bold text-[#529027] group-hover:underline">
+            Open →
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* -------------------------------- */
+/* JOB CARD                         */
+/* -------------------------------- */
 
 function JobCard({
   job,
-  quoteCount,
+  onClick,
 }: {
   job: Job;
-  quoteCount: number;
+  onClick: () => void;
 }) {
-  const isAssigned =
-    Boolean(job.assigned_driver_id) ||
-    Boolean(job.accepted_bid_id) ||
-    Boolean(job.assigned_bid_id) ||
-    job.status === "assigned" ||
-    job.status === "in_progress" ||
-    job.status === "driver_assigned";
-
-  const isCompleted =
-    job.status === "completed";
-
-  const isCancelled =
-    job.status === "cancelled";
-
-  const isWaitingForBids =
-    !isAssigned &&
-    !isCompleted &&
-    !isCancelled;
-
-  let statusLabel =
-    "WAITING FOR DRIVER BIDS";
-
-  if (isCompleted) {
-    statusLabel = "COMPLETED";
-  } else if (isCancelled) {
-    statusLabel = "CANCELLED";
-  } else if (isAssigned) {
-    statusLabel = "BOOKED";
-  } else if (quoteCount > 0) {
-    statusLabel =
-      quoteCount === 1
-        ? "1 DRIVER QUOTE RECEIVED"
-        : `${quoteCount} DRIVER QUOTES RECEIVED`;
-  }
-
-  const statusClass =
-    isCompleted
-      ? "border-blue-500/20 bg-blue-500/10 text-blue-300"
-      : isCancelled
-        ? "border-red-500/20 bg-red-500/10 text-red-300"
-        : isAssigned
-          ? "border-[#529027]/30 bg-[#529027]/15 text-[#8bc45b]"
-          : "border-amber-500/30 bg-amber-500/10 text-amber-300";
-
   return (
-    <Link
-      href={`/customer/jobs/${job.id}`}
-      className="group block rounded-3xl border border-white/10 bg-[#0d1a11] p-5 transition hover:border-[#529027]/40 hover:bg-[#102218] sm:p-6"
+    <button
+      onClick={onClick}
+      className="w-full rounded-3xl border border-[#dde5d8] bg-white p-6 text-left shadow-sm transition hover:border-[#529027] hover:shadow-md"
     >
-
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-
-        <div className="min-w-0">
-
-          <div className="flex flex-wrap items-center gap-3">
-
-            <span
-              className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${statusClass}`}
-            >
-              {statusLabel}
-            </span>
-
-            <span className="text-xs font-bold text-white/30">
-              {job.reference ||
-                `RC-${String(job.id).padStart(6, "0")}`}
-            </span>
-
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#e7f1df] text-xl">
+            🚚
           </div>
-
-          <h3 className="mt-3 text-xl font-black text-white">
-            {job.job_type}
-          </h3>
-
-          <div className="mt-2 space-y-1 text-sm text-white/50">
-
-            <p>
-              {job.postcode}
-
-              {job.address
-                ? ` · ${job.address}`
-                : ""}
-            </p>
-
-            {job.preferred_date && (
-              <p>
-                Collection:{" "}
-                {new Date(
-                  job.preferred_date
-                ).toLocaleDateString(
-                  "en-GB"
-                )}
-
-                {job.preferred_time
-                  ? ` · ${job.preferred_time}`
-                  : ""}
-              </p>
-            )}
-
-          </div>
-
-          {!isAssigned &&
-            !isCompleted &&
-            !isCancelled && (
-              <div className="mt-4 flex items-center gap-2">
-
-                <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
-
-                <p className="text-xs font-bold text-amber-300">
-                  {quoteCount > 0
-                    ? "Drivers are still able to submit quotes"
-                    : "Waiting for drivers to submit bids"}
-                </p>
-
-              </div>
-            )}
-
-          {isAssigned &&
-            !isCompleted && (
-              <div className="mt-4 flex items-center gap-2">
-
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#529027] text-xs font-black">
-                  ✓
-                </span>
-
-                <p className="text-xs font-bold text-[#8bc45b]">
-                  Driver selected — your
-                  collection is booked
-                </p>
-
-              </div>
-            )}
-
-        </div>
-
-        <div className="flex items-center justify-between gap-5 sm:block sm:min-w-[160px] sm:text-right">
 
           <div>
+            <h3 className="text-lg font-black text-[#111111]">
+              {job.service || "Waste Collection"}
+            </h3>
 
-            <p className="text-2xl font-black text-white">
-              {quoteCount}
+            <p className="mt-1 text-sm text-[#666666]">
+              Job #{job.id}
             </p>
 
-            <p className="text-xs font-bold text-white/40">
-              {quoteCount === 1
-                ? "Driver quote"
-                : "Driver quotes"}
+            <p className="mt-2 text-sm font-semibold text-[#555555]">
+              {job.postcode || "Postcode not provided"}
             </p>
 
+            {job.description && (
+              <p className="mt-2 line-clamp-2 text-sm text-[#777777]">
+                {job.description}
+              </p>
+            )}
           </div>
-
-          <span className="mt-3 hidden text-sm font-black text-[#6aa63b] transition group-hover:text-[#8bc45b] sm:block">
-            View job →
-          </span>
-
         </div>
 
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <StatusBadge
+            status={job.status || "pending"}
+          />
+
+          {job.quote_price !== null && (
+            <p className="text-xl font-black text-[#111111]">
+              £{Number(job.quote_price).toFixed(2)}
+            </p>
+          )}
+
+          <p className="text-xs text-[#888888]">
+            {formatDate(job.created_at)}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* -------------------------------- */
+/* STATUS BADGE                     */
+/* -------------------------------- */
+
+function StatusBadge({
+  status,
+}: {
+  status: string;
+}) {
+  const normalised = status.toLowerCase();
+
+  let className = "bg-gray-100 text-gray-700";
+
+  if (
+    normalised === "pending" ||
+    normalised === "new"
+  ) {
+    className = "bg-amber-100 text-amber-800";
+  }
+
+  if (
+    normalised === "accepted" ||
+    normalised === "approved" ||
+    normalised === "booked"
+  ) {
+    className = "bg-[#e7f1df] text-[#315c18]";
+  }
+
+  if (
+    normalised === "in_progress" ||
+    normalised === "in progress"
+  ) {
+    className = "bg-blue-100 text-blue-700";
+  }
+
+  if (
+    normalised === "completed" ||
+    normalised === "complete"
+  ) {
+    className = "bg-green-100 text-green-700";
+  }
+
+  if (
+    normalised === "cancelled" ||
+    normalised === "canceled" ||
+    normalised === "rejected"
+  ) {
+    className = "bg-red-100 text-red-700";
+  }
+
+  const text =
+    status.charAt(0).toUpperCase() +
+    status.slice(1).replace("_", " ");
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${className}`}
+    >
+      {text}
+    </span>
+  );
+}
+
+/* -------------------------------- */
+/* EMPTY JOBS                       */
+/* -------------------------------- */
+
+function EmptyJobs({
+  onPostJob,
+}: {
+  onPostJob: () => void;
+}) {
+  return (
+    <div className="rounded-3xl border border-[#dde5d8] bg-white p-10 text-center shadow-sm">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e7f1df] text-3xl">
+        🚚
       </div>
 
-    </Link>
+      <h3 className="mt-5 text-xl font-black text-[#111111]">
+        No jobs yet
+      </h3>
+
+      <p className="mx-auto mt-2 max-w-md text-[#777777]">
+        Post your first waste collection job and let
+        RCS Marketplace drivers provide you with a quote.
+      </p>
+
+      <button
+        onClick={onPostJob}
+        className="mt-6 rounded-xl bg-[#529027] px-6 py-3 font-black text-white transition hover:bg-[#315c18]"
+      >
+        Post Your First Job
+      </button>
+    </div>
   );
+}
+
+/* -------------------------------- */
+/* DATE                             */
+/* -------------------------------- */
+
+function formatDate(date: string) {
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Date unavailable";
+  }
+
+  return parsedDate.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
