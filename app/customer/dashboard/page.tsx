@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export const dynamic = "force-dynamic";
@@ -20,19 +21,22 @@ type Job = {
 export default function CustomerDashboard() {
   const router = useRouter();
 
-  const [supabase] = useState(() => createClient());
-
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    let mounted = true;
+    let cancelled = false;
 
     async function loadDashboard() {
+      setLoading(true);
+      setErrorMessage("");
+
       try {
-        setLoading(true);
-        setErrorMessage("");
+        // IMPORTANT:
+        // Supabase is created only after the component
+        // has mounted in the browser.
+        const supabase = createClient();
 
         const {
           data: { user },
@@ -44,23 +48,14 @@ export default function CustomerDashboard() {
         }
 
         if (!user) {
-          router.push("/customer/login");
+          router.replace("/customer/login");
           return;
         }
 
         const { data, error } = await supabase
           .from("jobs")
           .select(
-            `
-              id,
-              created_at,
-              status,
-              service,
-              description,
-              postcode,
-              address,
-              quote_price
-            `
+            "id, created_at, status, service, description, postcode, address, quote_price"
           )
           .eq("customer_id", user.id)
           .order("created_at", {
@@ -71,21 +66,21 @@ export default function CustomerDashboard() {
           throw error;
         }
 
-        if (mounted) {
+        if (!cancelled) {
           setJobs((data as Job[]) || []);
         }
       } catch (error) {
         console.error("Customer dashboard error:", error);
 
-        if (mounted) {
+        if (!cancelled) {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Something went wrong loading your dashboard."
+              : "Unable to load your dashboard."
           );
         }
       } finally {
-        if (mounted) {
+        if (!cancelled) {
           setLoading(false);
         }
       }
@@ -94,40 +89,51 @@ export default function CustomerDashboard() {
     loadDashboard();
 
     return () => {
-      mounted = false;
+      cancelled = true;
     };
-  }, [router, supabase]);
+  }, [router]);
 
   async function handleLogout() {
     try {
+      const supabase = createClient();
+
       await supabase.auth.signOut();
-      router.push("/customer/login");
+
+      router.replace("/customer/login");
       router.refresh();
     } catch (error) {
       console.error("Logout error:", error);
-      setErrorMessage("Unable to log out. Please try again.");
+
+      setErrorMessage(
+        "Unable to log out. Please try again."
+      );
     }
   }
 
   const pendingJobs = jobs.filter(
     (job) =>
-      job.status === "pending" ||
-      job.status === "Pending"
+      job.status?.toLowerCase() === "pending"
   );
 
-  const activeJobs = jobs.filter(
-    (job) =>
-      job.status === "accepted" ||
-      job.status === "booked" ||
-      job.status === "in_progress" ||
-      job.status === "In Progress"
-  );
+  const activeJobs = jobs.filter((job) => {
+    const status = job.status?.toLowerCase();
 
-  const completedJobs = jobs.filter(
-    (job) =>
-      job.status === "completed" ||
-      job.status === "Completed"
-  );
+    return (
+      status === "accepted" ||
+      status === "booked" ||
+      status === "in_progress" ||
+      status === "in progress"
+    );
+  });
+
+  const completedJobs = jobs.filter((job) => {
+    const status = job.status?.toLowerCase();
+
+    return (
+      status === "completed" ||
+      status === "complete"
+    );
+  });
 
   return (
     <main className="min-h-screen bg-[#f5f7f4]">
@@ -135,10 +141,7 @@ export default function CustomerDashboard() {
 
       <header className="border-b border-[#dde5d8] bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <button
-            onClick={() => router.push("/")}
-            className="text-left"
-          >
+          <Link href="/" className="block">
             <div className="text-2xl font-black text-[#111111]">
               Rapid Clear
             </div>
@@ -146,19 +149,20 @@ export default function CustomerDashboard() {
             <div className="text-sm font-bold text-[#529027]">
               Solutions
             </div>
-          </button>
+          </Link>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/customer/post-job")}
-              className="hidden rounded-xl bg-[#529027] px-5 py-3 text-sm font-black text-white transition hover:bg-[#315c18] sm:block"
+            <Link
+              href="/customer/post-job"
+              className="hidden rounded-xl bg-[#529027] px-5 py-3 text-sm font-black text-white hover:bg-[#315c18] sm:block"
             >
               + Post a Job
-            </button>
+            </Link>
 
             <button
+              type="button"
               onClick={handleLogout}
-              className="rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-sm font-bold text-[#555555] transition hover:bg-[#f5f7f4]"
+              className="rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-sm font-bold text-[#555555] hover:bg-[#f5f7f4]"
             >
               Log out
             </button>
@@ -171,27 +175,18 @@ export default function CustomerDashboard() {
       <div className="mx-auto max-w-7xl px-6 py-10">
         {/* TITLE */}
 
-        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-sm font-black uppercase tracking-wide text-[#529027]">
-              Customer Portal
-            </p>
+        <div>
+          <p className="text-sm font-black uppercase tracking-wide text-[#529027]">
+            Customer Portal
+          </p>
 
-            <h1 className="mt-2 text-4xl font-black tracking-tight text-[#111111]">
-              Your Dashboard
-            </h1>
+          <h1 className="mt-2 text-4xl font-black tracking-tight text-[#111111]">
+            Your Dashboard
+          </h1>
 
-            <p className="mt-2 max-w-2xl text-[#666666]">
-              Manage your waste collection jobs, quotes and bookings.
-            </p>
-          </div>
-
-          <button
-            onClick={() => router.push("/customer/post-job")}
-            className="rounded-xl bg-[#529027] px-6 py-4 font-black text-white shadow-sm transition hover:bg-[#315c18] sm:hidden"
-          >
-            + Post a Job
-          </button>
+          <p className="mt-2 text-[#666666]">
+            Manage your waste collection jobs, quotes and bookings.
+          </p>
         </div>
 
         {/* ERROR */}
@@ -203,6 +198,7 @@ export default function CustomerDashboard() {
             </p>
 
             <button
+              type="button"
               onClick={() => window.location.reload()}
               className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white"
             >
@@ -241,37 +237,31 @@ export default function CustomerDashboard() {
 
         {/* QUICK ACTIONS */}
 
-        <section className="mt-8">
+        <section className="mt-10">
           <h2 className="text-2xl font-black text-[#111111]">
             Quick Actions
           </h2>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <ActionCard
+              icon="＋"
               title="Post a New Job"
               description="Tell us what needs clearing."
-              icon="＋"
-              onClick={() =>
-                router.push("/customer/post-job")
-              }
+              href="/customer/post-job"
             />
 
             <ActionCard
+              icon="£"
               title="View Quotes"
               description="See quotes from drivers."
-              icon="£"
-              onClick={() =>
-                router.push("/customer/quotes")
-              }
+              href="/customer/quotes"
             />
 
             <ActionCard
-              title="My Jobs"
-              description="View your collection history."
               icon="🚚"
-              onClick={() =>
-                router.push("/customer/dashboard")
-              }
+              title="My Jobs"
+              description="View your collection jobs."
+              href="/customer/dashboard"
             />
           </div>
         </section>
@@ -279,29 +269,18 @@ export default function CustomerDashboard() {
         {/* JOBS */}
 
         <section className="mt-10">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-black text-[#111111]">
-                Your Jobs
-              </h2>
+          <div className="mb-5">
+            <h2 className="text-2xl font-black text-[#111111]">
+              Your Jobs
+            </h2>
 
-              <p className="mt-1 text-sm text-[#777777]">
-                Your latest collection requests.
-              </p>
-            </div>
-
-            <button
-              onClick={() =>
-                router.push("/customer/quotes")
-              }
-              className="text-sm font-bold text-[#529027] hover:underline"
-            >
-              View Quotes →
-            </button>
+            <p className="mt-1 text-sm text-[#777777]">
+              Your latest collection requests.
+            </p>
           </div>
 
           {loading ? (
-            <div className="rounded-3xl border border-[#dde5d8] bg-white p-10 text-center shadow-sm">
+            <div className="rounded-3xl border border-[#dde5d8] bg-white p-12 text-center shadow-sm">
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-[#dde5d8] border-t-[#529027]" />
 
               <p className="mt-4 font-semibold text-[#666666]">
@@ -309,20 +288,13 @@ export default function CustomerDashboard() {
               </p>
             </div>
           ) : jobs.length === 0 ? (
-            <EmptyJobs
-              onPostJob={() =>
-                router.push("/customer/post-job")
-              }
-            />
+            <EmptyJobs />
           ) : (
             <div className="space-y-4">
               {jobs.map((job) => (
                 <JobCard
                   key={job.id}
                   job={job}
-                  onClick={() =>
-                    router.push(`/customer/jobs/${job.id}`)
-                  }
                 />
               ))}
             </div>
@@ -368,20 +340,20 @@ function StatCard({
 /* -------------------------------- */
 
 function ActionCard({
+  icon,
   title,
   description,
-  icon,
-  onClick,
+  href,
 }: {
+  icon: string;
   title: string;
   description: string;
-  icon: string;
-  onClick: () => void;
+  href: string;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="group rounded-3xl border border-[#dde5d8] bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#529027] hover:shadow-md"
+    <Link
+      href={href}
+      className="group rounded-3xl border border-[#dde5d8] bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-[#529027] hover:shadow-md"
     >
       <div className="flex items-start gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#e7f1df] text-xl font-black text-[#529027]">
@@ -397,12 +369,12 @@ function ActionCard({
             {description}
           </p>
 
-          <p className="mt-3 text-sm font-bold text-[#529027] group-hover:underline">
+          <p className="mt-3 text-sm font-bold text-[#529027]">
             Open →
           </p>
         </div>
       </div>
-    </button>
+    </Link>
   );
 }
 
@@ -412,15 +384,13 @@ function ActionCard({
 
 function JobCard({
   job,
-  onClick,
 }: {
   job: Job;
-  onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full rounded-3xl border border-[#dde5d8] bg-white p-6 text-left shadow-sm transition hover:border-[#529027] hover:shadow-md"
+    <Link
+      href={`/customer/jobs/${job.id}`}
+      className="block rounded-3xl border border-[#dde5d8] bg-white p-6 shadow-sm transition hover:border-[#529027] hover:shadow-md"
     >
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-4">
@@ -465,12 +435,12 @@ function JobCard({
           </p>
         </div>
       </div>
-    </button>
+    </Link>
   );
 }
 
 /* -------------------------------- */
-/* STATUS BADGE                     */
+/* STATUS                           */
 /* -------------------------------- */
 
 function StatusBadge({
@@ -533,14 +503,10 @@ function StatusBadge({
 }
 
 /* -------------------------------- */
-/* EMPTY JOBS                       */
+/* EMPTY                            */
 /* -------------------------------- */
 
-function EmptyJobs({
-  onPostJob,
-}: {
-  onPostJob: () => void;
-}) {
+function EmptyJobs() {
   return (
     <div className="rounded-3xl border border-[#dde5d8] bg-white p-10 text-center shadow-sm">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e7f1df] text-3xl">
@@ -552,16 +518,17 @@ function EmptyJobs({
       </h3>
 
       <p className="mx-auto mt-2 max-w-md text-[#777777]">
-        Post your first waste collection job and let
-        RCS Marketplace drivers provide you with a quote.
+        Post your first waste collection job and
+        let RCS Marketplace drivers provide you
+        with a quote.
       </p>
 
-      <button
-        onClick={onPostJob}
-        className="mt-6 rounded-xl bg-[#529027] px-6 py-3 font-black text-white transition hover:bg-[#315c18]"
+      <Link
+        href="/customer/post-job"
+        className="mt-6 inline-block rounded-xl bg-[#529027] px-6 py-3 font-black text-white hover:bg-[#315c18]"
       >
         Post Your First Job
-      </button>
+      </Link>
     </div>
   );
 }
