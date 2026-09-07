@@ -19,7 +19,7 @@ type Job = {
   stairs: boolean | null;
   access_notes: string | null;
   preferred_date: string | null;
-  preferred_time: string | null;
+  preferred_time: number | string | null;
   status: string | null;
   journey_status: string | null;
   accepted_bid_id: number | null;
@@ -48,6 +48,13 @@ type Bid = {
 
 type PhotoType = "before" | "after";
 
+type CustomerPhoto = {
+  id: number;
+  job_id: number;
+  storage_path: string;
+  url: string;
+};
+
 export default function DriverJobPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -71,6 +78,10 @@ export default function DriverJobPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [existingBid, setExistingBid] = useState<Bid | null>(null);
 
+  const [customerPhotos, setCustomerPhotos] = useState<CustomerPhoto[]>([]);
+  const [selectedCustomerPhoto, setSelectedCustomerPhoto] =
+    useState<CustomerPhoto | null>(null);
+
   const [bidAmount, setBidAmount] = useState("");
   const [message, setMessage] = useState("");
 
@@ -81,6 +92,7 @@ export default function DriverJobPage() {
   const [submitting, setSubmitting] = useState(false);
   const [journeyLoading, setJourneyLoading] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [customerPhotosLoading, setCustomerPhotosLoading] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -144,7 +156,9 @@ export default function DriverJobPage() {
 
     try {
       /*
+      |--------------------------------------------------------------------------
       | AUTH
+      |--------------------------------------------------------------------------
       */
 
       const {
@@ -162,7 +176,9 @@ export default function DriverJobPage() {
       }
 
       /*
+      |--------------------------------------------------------------------------
       | DRIVER
+      |--------------------------------------------------------------------------
       */
 
       const {
@@ -200,7 +216,9 @@ export default function DriverJobPage() {
       setDriver(driverData as Driver);
 
       /*
+      |--------------------------------------------------------------------------
       | JOB
+      |--------------------------------------------------------------------------
       */
 
       const {
@@ -243,10 +261,22 @@ export default function DriverJobPage() {
         return;
       }
 
-      setJob(jobData as Job);
+      const loadedJob = jobData as Job;
+
+      setJob(loadedJob);
 
       /*
+      |--------------------------------------------------------------------------
+      | CUSTOMER PHOTOS
+      |--------------------------------------------------------------------------
+      */
+
+      await loadCustomerPhotos(loadedJob.id);
+
+      /*
+      |--------------------------------------------------------------------------
       | BID
+      |--------------------------------------------------------------------------
       */
 
       const {
@@ -300,6 +330,95 @@ export default function DriverJobPage() {
 
   /*
   |--------------------------------------------------------------------------
+  | CUSTOMER PHOTOS
+  |--------------------------------------------------------------------------
+  */
+
+  async function loadCustomerPhotos(currentJobId: number) {
+    setCustomerPhotosLoading(true);
+
+    try {
+      const {
+        data: photoRows,
+        error: photoError,
+      } = await supabase
+        .from("job_photos")
+        .select(
+          "id, job_id, storage_path"
+        )
+        .eq("job_id", currentJobId)
+        .order("id", {
+          ascending: true,
+        });
+
+      if (photoError) {
+        console.error(
+          "Customer photo database error:",
+          photoError
+        );
+
+        setCustomerPhotos([]);
+        return;
+      }
+
+      if (!photoRows || photoRows.length === 0) {
+        setCustomerPhotos([]);
+        return;
+      }
+
+      const photos: CustomerPhoto[] = [];
+
+      for (const row of photoRows) {
+        if (!row.storage_path) {
+          continue;
+        }
+
+        const {
+          data: signedUrlData,
+          error: signedUrlError,
+        } = await supabase.storage
+          .from("customer-job-photos")
+          .createSignedUrl(
+            row.storage_path,
+            60 * 60
+          );
+
+        if (signedUrlError) {
+          console.error(
+            "Customer photo signed URL error:",
+            signedUrlError
+          );
+
+          continue;
+        }
+
+        if (!signedUrlData?.signedUrl) {
+          continue;
+        }
+
+        photos.push({
+          id: row.id,
+          job_id: row.job_id,
+          storage_path: row.storage_path,
+          url: signedUrlData.signedUrl,
+        });
+      }
+
+      setCustomerPhotos(photos);
+    } catch (error) {
+      console.error(
+        "Customer photo loading error:",
+        error
+      );
+
+      setCustomerPhotos([]);
+    } finally {
+      setCustomerPhotosLoading(false);
+    }
+  }
+
+  /*
+  |--------------------------------------------------------------------------
   | STATUS
   |--------------------------------------------------------------------------
   */
@@ -331,6 +450,55 @@ export default function DriverJobPage() {
 
   /*
   |--------------------------------------------------------------------------
+  | COLLECTION DATE
+  |--------------------------------------------------------------------------
+  |
+  | We deliberately compare YYYY-MM-DD strings rather than using
+  | new Date("YYYY-MM-DD") so the driver's local timezone cannot
+  | accidentally move the collection date backwards/forwards.
+  |
+  */
+
+  const todayKey = useMemo(() => {
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = String(
+      now.getMonth() + 1
+    ).padStart(2, "0");
+    const day = String(
+      now.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const collectionDateKey =
+    job?.preferred_date || null;
+
+  const hasCollectionDate =
+    Boolean(collectionDateKey);
+
+  const isCollectionDay =
+    Boolean(
+      collectionDateKey &&
+      collectionDateKey === todayKey
+    );
+
+  const collectionDatePassed =
+    Boolean(
+      collectionDateKey &&
+      collectionDateKey < todayKey
+    );
+
+  const collectionDateUpcoming =
+    Boolean(
+      collectionDateKey &&
+      collectionDateKey > todayKey
+    );
+
+  /*
+  |--------------------------------------------------------------------------
   | DATE
   |--------------------------------------------------------------------------
   */
@@ -340,19 +508,87 @@ export default function DriverJobPage() {
       return "Flexible";
     }
 
-    return new Date(
-      job.preferred_date
-    ).toLocaleDateString("en-GB", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    const parts =
+      job.preferred_date.split("-");
+
+    if (parts.length !== 3) {
+      return job.preferred_date;
+    }
+
+    const year = Number(parts[0]);
+    const month = Number(parts[1]);
+    const day = Number(parts[2]);
+
+    const date = new Date(
+      year,
+      month - 1,
+      day
+    );
+
+    return date.toLocaleDateString(
+      "en-GB",
+      {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }
+    );
   }, [job?.preferred_date]);
 
   /*
   |--------------------------------------------------------------------------
-  | PHOTOS
+  | TIME
+  |--------------------------------------------------------------------------
+  */
+
+  const formattedTime = useMemo(() => {
+    const value = job?.preferred_time;
+
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "Flexible";
+    }
+
+    const numericTime = Number(value);
+
+    if (numericTime === 8) {
+      return "Morning · 8:00 AM – 12:00 PM";
+    }
+
+    if (numericTime === 13) {
+      return "Afternoon · 1:00 PM – 5:00 PM";
+    }
+
+    if (numericTime === 18) {
+      return "Evening · 6:00 PM – 8:00 PM";
+    }
+
+    return String(value);
+  }, [job?.preferred_time]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | COLLECTION DAY PERMISSION
+  |--------------------------------------------------------------------------
+  */
+
+  const canStartCollection =
+    assignedToThisDriver &&
+    !isCompleted &&
+    isCollectionDay;
+
+  const canUploadCompletionPhotos =
+    assignedToThisDriver &&
+    !isCompleted &&
+    isCollectionDay;
+
+  /*
+  |--------------------------------------------------------------------------
+  | PHOTO UPLOAD
   |--------------------------------------------------------------------------
   */
 
@@ -369,6 +605,19 @@ export default function DriverJobPage() {
   function handleBeforePhotos(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
+    setErrorMessage("");
+
+    if (!canUploadCompletionPhotos) {
+      setErrorMessage(
+        hasCollectionDate
+          ? `Before photos can be uploaded on ${formattedDate}.`
+          : "A collection date must be set before completion photos can be uploaded."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
     const files = Array.from(
       event.target.files || []
     );
@@ -393,6 +642,19 @@ export default function DriverJobPage() {
   function handleAfterPhotos(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
+    setErrorMessage("");
+
+    if (!canUploadCompletionPhotos) {
+      setErrorMessage(
+        hasCollectionDate
+          ? `After photos can be uploaded on ${formattedDate}.`
+          : "A collection date must be set before completion photos can be uploaded."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
     const files = Array.from(
       event.target.files || []
     );
@@ -504,6 +766,33 @@ export default function DriverJobPage() {
 
     if (isOnTheWay) return;
 
+    /*
+     * IMPORTANT:
+     * The driver should only press "I'm on the way"
+     * on the actual collection day.
+     */
+
+    if (!hasCollectionDate) {
+      setErrorMessage(
+        "No collection date has been set for this job. Please contact RCS."
+      );
+      return;
+    }
+
+    if (!isCollectionDay) {
+      if (collectionDateUpcoming) {
+        setErrorMessage(
+          `This job is scheduled for ${formattedDate}. "I'm on the way" becomes available on the collection day.`
+        );
+      } else if (collectionDatePassed) {
+        setErrorMessage(
+          `The collection date was ${formattedDate}. Please contact RCS before starting the job.`
+        );
+      }
+
+      return;
+    }
+
     setJourneyLoading(true);
 
     try {
@@ -566,7 +855,7 @@ export default function DriverJobPage() {
 
   /*
   |--------------------------------------------------------------------------
-  | COMPLETE
+  | COMPLETE JOB
   |--------------------------------------------------------------------------
   */
 
@@ -579,6 +868,39 @@ export default function DriverJobPage() {
     if (!assignedToThisDriver) {
       setErrorMessage(
         "This job is not assigned to you."
+      );
+      return;
+    }
+
+    /*
+     * IMPORTANT:
+     * Completion is only allowed on the collection day.
+     */
+
+    if (!hasCollectionDate) {
+      setErrorMessage(
+        "No collection date has been set for this job. Please contact RCS."
+      );
+      return;
+    }
+
+    if (!isCollectionDay) {
+      if (collectionDateUpcoming) {
+        setErrorMessage(
+          `You cannot complete this job before ${formattedDate}.`
+        );
+      } else if (collectionDatePassed) {
+        setErrorMessage(
+          `The collection date was ${formattedDate}. Please contact RCS before completing the job.`
+        );
+      }
+
+      return;
+    }
+
+    if (!isOnTheWay) {
+      setErrorMessage(
+        "Click “I'm on the way” before completing the job."
       );
       return;
     }
@@ -655,6 +977,7 @@ export default function DriverJobPage() {
       }
 
       setJob(data as Job);
+
       setSuccessMessage(
         "Job completed successfully."
       );
@@ -706,10 +1029,6 @@ export default function DriverJobPage() {
     setSubmitting(true);
 
     try {
-      /*
-      | VERIFY JOB
-      */
-
       const {
         data: currentJob,
         error: currentJobError,
@@ -756,10 +1075,6 @@ export default function DriverJobPage() {
         await loadJob();
         return;
       }
-
-      /*
-      | UPDATE
-      */
 
       if (existingBid) {
         if (
@@ -815,10 +1130,6 @@ export default function DriverJobPage() {
 
         return;
       }
-
-      /*
-      | CREATE
-      */
 
       const {
         data,
@@ -920,7 +1231,7 @@ export default function DriverJobPage() {
     <main className="min-h-screen bg-[#07100a] text-white">
       {/* HEADER */}
 
-      <header className="sticky top-0 z-20 border-b border-white/5 bg-[#07100a]/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-white/5 bg-[#07100a]/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <Link
             href="/driver/dashboard"
@@ -943,11 +1254,17 @@ export default function DriverJobPage() {
       </header>
 
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-        {/* JOB HEADER */}
+
+        {/* ==========================================================
+            JOB HEADER
+        ========================================================== */}
 
         <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b1a12]">
+
           <div className="p-6 sm:p-8">
+
             <div className="flex flex-wrap items-center gap-3">
+
               <span className="rounded-full bg-[#1bbb8c]/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-[#1bbb8c]">
                 {job.status === "bidding"
                   ? "Open for bids"
@@ -958,6 +1275,7 @@ export default function DriverJobPage() {
                 {job.reference ||
                   `RC-${job.id}`}
               </span>
+
             </div>
 
             <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">
@@ -973,11 +1291,11 @@ export default function DriverJobPage() {
                 "en-GB"
               )}
             </p>
+
           </div>
 
-          {/* QUICK INFO */}
-
           <div className="grid border-t border-white/5 sm:grid-cols-3">
+
             <QuickInfo
               icon="📍"
               label="Location"
@@ -996,12 +1314,11 @@ export default function DriverJobPage() {
             <QuickInfo
               icon="🕐"
               label="Time"
-              value={
-                job.preferred_time ||
-                "Flexible"
-              }
+              value={formattedTime}
             />
+
           </div>
+
         </section>
 
         {/* MESSAGES */}
@@ -1022,89 +1339,206 @@ export default function DriverJobPage() {
           </div>
         )}
 
+        {/* ==========================================================
+            MAIN GRID
+        ========================================================== */}
+
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
-          {/* ==========================================================
+
+          {/* ========================================================
               LEFT
-          ========================================================== */}
+          ======================================================== */}
 
           <div className="space-y-6">
-            {/* LOCATION */}
 
-            <section className="rounded-3xl border border-white/10 bg-[#0b1a12] p-6 sm:p-7">
-              <SectionHeading
-                eyebrow="Where"
-                title="Collection location"
-              />
+            {/* ======================================================
+                CUSTOMER WASTE PHOTOS
+            ====================================================== */}
 
-              <div className="mt-5 rounded-2xl bg-[#07110d] p-5">
-                <p className="text-base font-black sm:text-lg">
-                  {job.address ||
-                    "Address not provided"}
-                </p>
+            <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b1a12]">
 
-                {job.postcode && (
-                  <p className="mt-1 text-sm font-bold text-[#1bbb8c]">
-                    {job.postcode}
-                  </p>
-                )}
+              <div className="border-b border-white/5 p-6 sm:p-7">
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (job.address) {
-                      window.open(
-                        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                          `${job.address} ${job.postcode || ""}`
-                        )}`,
-                        "_blank"
-                      );
-                    }
-                  }}
-                  className="mt-4 rounded-xl bg-white/5 px-4 py-3 text-sm font-black text-white transition hover:bg-white/10"
-                >
-                  Open in Maps →
-                </button>
+                <div className="flex items-center justify-between gap-4">
+
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1bbb8c]">
+                      Waste photos
+                    </p>
+
+                    <p className="mt-2 text-sm leading-5 text-white/40">
+                      Review the waste before placing your bid.
+                    </p>
+                  </div>
+
+                  {!customerPhotosLoading &&
+                    customerPhotos.length > 0 && (
+                      <span className="shrink-0 rounded-full bg-[#1bbb8c]/15 px-3 py-1.5 text-xs font-black text-[#1bbb8c]">
+                        {customerPhotos.length}{" "}
+                        {customerPhotos.length === 1
+                          ? "photo"
+                          : "photos"}
+                      </span>
+                    )}
+
+                </div>
+
               </div>
+
+              {customerPhotosLoading && (
+                <div className="p-8 text-center">
+
+                  <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-white/10 border-t-[#1bbb8c]" />
+
+                  <p className="mt-4 text-sm font-bold text-white/40">
+                    Loading photos...
+                  </p>
+
+                </div>
+              )}
+
+              {!customerPhotosLoading &&
+                customerPhotos.length === 0 && (
+                  <div className="p-6 sm:p-7">
+
+                    <div className="rounded-2xl border border-white/5 bg-[#07110d] p-6">
+
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xl">
+                        📷
+                      </div>
+
+                      <p className="mt-4 font-black">
+                        No photos uploaded
+                      </p>
+
+                      <p className="mt-1 text-sm leading-6 text-white/30">
+                        The customer hasn't added any waste photos to this job.
+                      </p>
+
+                    </div>
+
+                  </div>
+              )}
+
+              {!customerPhotosLoading &&
+                customerPhotos.length > 0 && (
+                  <div className="p-6 sm:p-7">
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+
+                      {customerPhotos.map(
+                        (photo, index) => (
+                          <button
+                            key={photo.id}
+                            type="button"
+                            onClick={() =>
+                              setSelectedCustomerPhoto(
+                                photo
+                              )
+                            }
+                            className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-[#07110d] text-left"
+                          >
+
+                            <img
+                              src={photo.url}
+                              alt={`Customer waste photo ${index + 1}`}
+                              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                            />
+
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pt-12">
+
+                              <span className="text-sm font-black text-white">
+                                View photo
+                              </span>
+
+                              <span className="ml-2 text-white/50">
+                                →
+                              </span>
+
+                            </div>
+
+                          </button>
+                        )
+                      )}
+
+                    </div>
+
+                  </div>
+              )}
+
             </section>
 
-            {/* JOB DETAILS */}
+            {/* ======================================================
+                COLLECTION DETAILS
+            ====================================================== */}
 
             <section className="rounded-3xl border border-white/10 bg-[#0b1a12] p-6 sm:p-7">
-              <SectionHeading
-                eyebrow="Details"
-                title="What needs collecting"
-              />
+
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1bbb8c]">
+                Job details
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black">
+                Collection details
+              </h2>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
+
+                <DetailCard
+                  label="Location"
+                  value={job.postcode}
+                />
+
+                <DetailCard
+                  label="Collection date"
+                  value={formattedDate}
+                />
+
+                <DetailCard
+                  label="Preferred time"
+                  value={formattedTime}
+                />
+
                 <DetailCard
                   label="Load size"
                   value={job.load_size}
                 />
 
-                <DetailCard
-                  label="Floor"
-                  value={job.floor}
-                />
+              </div>
 
-                <DetailCard
-                  label="Stairs"
-                  value={
-                    job.stairs
-                      ? "Yes"
-                      : "No"
-                  }
-                />
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
 
                 <DetailCard
                   label="Access"
                   value={
-                    job.access_notes
+                    job.access_notes ||
+                    "No access details provided"
                   }
                 />
+
+                <DetailCard
+                  label="Floor"
+                  value={
+                    job.floor ||
+                    "Not provided"
+                  }
+                />
+
               </div>
+
+              {job.stairs && (
+                <div className="mt-3 rounded-2xl border border-white/10 bg-[#07110d] px-4 py-4">
+
+                  <p className="text-sm font-black">
+                    Stairs involved
+                  </p>
+
+                </div>
+              )}
 
               {job.description && (
                 <div className="mt-4 rounded-2xl bg-[#07110d] p-5">
+
                   <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/30">
                     Description
                   </p>
@@ -1112,26 +1546,62 @@ export default function DriverJobPage() {
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white/70">
                     {job.description}
                   </p>
+
                 </div>
               )}
+
+              {job.address && (
+                <div className="mt-4 rounded-2xl bg-[#07110d] p-5">
+
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/30">
+                    Collection address
+                  </p>
+
+                  <p className="mt-2 text-sm font-bold text-white">
+                    {job.address}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(
+                        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          `${job.address} ${job.postcode || ""}`
+                        )}`,
+                        "_blank"
+                      );
+                    }}
+                    className="mt-4 rounded-xl bg-white/5 px-4 py-3 text-sm font-black text-white transition hover:bg-white/10"
+                  >
+                    Open in Maps →
+                  </button>
+
+                </div>
+              )}
+
             </section>
 
-            {/* JOB PROGRESS */}
+            {/* ======================================================
+                JOB PROGRESS
+            ====================================================== */}
 
             {assignedToThisDriver && (
               <section className="rounded-3xl border border-white/10 bg-[#0b1a12] p-6 sm:p-7">
-                <SectionHeading
-                  eyebrow="Your job"
-                  title={
-                    isCompleted
-                      ? "Completed"
-                      : "Job progress"
-                  }
-                />
+
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1bbb8c]">
+                  Your job
+                </p>
+
+                <h2 className="mt-2 text-2xl font-black">
+                  {isCompleted
+                    ? "Completed"
+                    : "Job progress"}
+                </h2>
 
                 {/* PROGRESS */}
 
                 <div className="mt-6 flex items-center">
+
                   <ProgressStep
                     number="1"
                     label="Assigned"
@@ -1172,7 +1642,33 @@ export default function DriverJobPage() {
                       isCompleted
                     }
                   />
+
                 </div>
+
+                {/* ==================================================
+                    COLLECTION DAY INSTRUCTION
+                ================================================== */}
+
+                {!isCompleted && (
+                  <CollectionDayNotice
+                    formattedDate={
+                      formattedDate
+                    }
+                    hasCollectionDate={
+                      hasCollectionDate
+                    }
+                    isCollectionDay={
+                      isCollectionDay
+                    }
+                    collectionDatePassed={
+                      collectionDatePassed
+                    }
+                  />
+                )}
+
+                {/* ==================================================
+                    I'M ON THE WAY
+                ================================================== */}
 
                 {!isCompleted && (
                   <button
@@ -1182,51 +1678,92 @@ export default function DriverJobPage() {
                     }
                     disabled={
                       journeyLoading ||
-                      isOnTheWay
+                      isOnTheWay ||
+                      !canStartCollection
                     }
-                    className="mt-7 w-full rounded-2xl bg-[#1bbb8c] px-5 py-4 font-black text-[#07110d] transition hover:bg-[#5ee0b3] disabled:cursor-not-allowed disabled:opacity-50"
+                    className={`mt-6 w-full rounded-2xl px-5 py-4 font-black transition ${
+                      canStartCollection &&
+                      !isOnTheWay
+                        ? "bg-[#1bbb8c] text-[#07110d] hover:bg-[#5ee0b3]"
+                        : "cursor-not-allowed bg-white/10 text-white/30"
+                    }`}
                   >
                     {journeyLoading
                       ? "Updating..."
                       : isOnTheWay
                         ? "✓ You're on the way"
-                        : "I'm on the way"}
+                        : isCollectionDay
+                          ? "I'm on the way"
+                          : "🔒 Available on collection day"}
                   </button>
                 )}
 
-                {/* PHOTOS */}
+                {/* ==================================================
+                    COMPLETION PHOTOS
+                ================================================== */}
 
                 {!isCompleted && (
                   <div className="mt-8 border-t border-white/5 pt-7">
-                    <p className="text-sm font-black">
-                      Completion photos
-                    </p>
 
-                    <p className="mt-1 text-xs leading-5 text-white/40">
-                      Add photos before and after the collection.
-                    </p>
+                    <div className="flex items-start justify-between gap-4">
+
+                      <div>
+                        <p className="text-sm font-black">
+                          Completion photos
+                        </p>
+
+                        <p className="mt-1 text-xs leading-5 text-white/40">
+                          Add photos before and after the collection.
+                        </p>
+                      </div>
+
+                      {!isCollectionDay && (
+                        <span className="shrink-0 rounded-full bg-white/5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white/30">
+                          🔒 Locked
+                        </span>
+                      )}
+
+                    </div>
 
                     <PhotoUpload
                       title="Before photos"
-                      description="Show the waste before starting."
-                      files={beforePhotos}
+                      description={
+                        isCollectionDay
+                          ? "Show the waste before starting."
+                          : `Available on ${formattedDate}.`
+                      }
+                      files={
+                        beforePhotos
+                      }
                       onChange={
                         handleBeforePhotos
                       }
                       onRemove={
                         removeBeforePhoto
                       }
+                      disabled={
+                        !canUploadCompletionPhotos
+                      }
                     />
 
                     <PhotoUpload
                       title="After photos"
-                      description="Show the cleared area."
-                      files={afterPhotos}
+                      description={
+                        isCollectionDay
+                          ? "Show the cleared area."
+                          : `Available on ${formattedDate}.`
+                      }
+                      files={
+                        afterPhotos
+                      }
                       onChange={
                         handleAfterPhotos
                       }
                       onRemove={
                         removeAfterPhoto
+                      }
+                      disabled={
+                        !canUploadCompletionPhotos
                       }
                     />
 
@@ -1236,19 +1773,38 @@ export default function DriverJobPage() {
                         completeJob
                       }
                       disabled={
-                        photoUploading
+                        photoUploading ||
+                        !isCollectionDay ||
+                        !isOnTheWay
                       }
-                      className="mt-5 w-full rounded-2xl bg-[#1bbb8c] px-5 py-4 font-black text-[#07110d] transition hover:bg-[#5ee0b3] disabled:cursor-not-allowed disabled:opacity-50"
+                      className={`mt-5 w-full rounded-2xl px-5 py-4 font-black transition ${
+                        isCollectionDay &&
+                        isOnTheWay
+                          ? "bg-[#1bbb8c] text-[#07110d] hover:bg-[#5ee0b3]"
+                          : "cursor-not-allowed bg-white/10 text-white/30"
+                      }`}
                     >
                       {photoUploading
                         ? "Completing..."
-                        : "Complete job"}
+                        : isCompleted
+                          ? "✓ Job completed"
+                          : !isCollectionDay
+                            ? "🔒 Complete job on collection day"
+                            : !isOnTheWay
+                              ? "Click “I'm on the way” first"
+                              : "Complete job"}
                     </button>
+
                   </div>
                 )}
 
+                {/* ==================================================
+                    COMPLETED
+                ================================================== */}
+
                 {isCompleted && (
                   <div className="mt-7 rounded-2xl border border-[#1bbb8c]/20 bg-[#1bbb8c]/10 p-5">
+
                     <p className="font-black text-[#5ee0b3]">
                       ✓ Collection completed
                     </p>
@@ -1256,22 +1812,25 @@ export default function DriverJobPage() {
                     <p className="mt-1 text-sm text-white/40">
                       This job has been marked as complete.
                     </p>
+
                   </div>
                 )}
+
               </section>
             )}
+
           </div>
 
-          {/* ==========================================================
-              RIGHT
-          ========================================================== */}
+          {/* ========================================================
+              RIGHT — BID / ASSIGNMENT
+          ======================================================== */}
 
           <aside className="lg:sticky lg:top-24 lg:h-fit">
-            {/* ACCEPTED */}
 
             {bidAccepted &&
               assignedToThisDriver && (
                 <div className="rounded-3xl border border-[#1bbb8c]/30 bg-[#10251b] p-6">
+
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1bbb8c]/15 text-xl">
                     ✓
                   </div>
@@ -1289,7 +1848,49 @@ export default function DriverJobPage() {
                     You can now manage the collection below.
                   </p>
 
-                  <div className="mt-6 rounded-2xl bg-[#07110d] p-5">
+                  {/* COLLECTION DATE */}
+
+                  <div className="mt-6 rounded-2xl border border-[#1bbb8c]/20 bg-[#07110d] p-5">
+
+                    <div className="flex items-center gap-3">
+
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#1bbb8c]/10 text-xl">
+                        📅
+                      </div>
+
+                      <div>
+
+                        <p className="text-[9px] font-black uppercase tracking-wider text-white/30">
+                          Collection date
+                        </p>
+
+                        <p className="mt-1 font-black text-white">
+                          {formattedDate}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    {!isCollectionDay &&
+                      hasCollectionDate && (
+                        <p className="mt-4 text-xs leading-5 text-[#f4c95d]">
+                          🔒 Collection controls become available on this day.
+                        </p>
+                      )}
+
+                    {isCollectionDay && (
+                      <p className="mt-4 text-xs leading-5 text-[#5ee0b3]">
+                        ✓ Today is collection day. You can start the job.
+                      </p>
+                    )}
+
+                  </div>
+
+                  {/* PAYOUT */}
+
+                  <div className="mt-4 rounded-2xl bg-[#07110d] p-5">
+
                     <p className="text-xs font-bold text-white/40">
                       Your payout
                     </p>
@@ -1307,14 +1908,15 @@ export default function DriverJobPage() {
                     <p className="mt-1 text-xs text-white/30">
                       After {RCS_FEE_PERCENT}% RCS commission
                     </p>
+
                   </div>
+
                 </div>
               )}
 
-            {/* BID */}
-
             {canEditBid && (
               <section className="rounded-3xl border border-white/10 bg-[#0b1a12] p-6">
+
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1bbb8c]">
                   Marketplace
                 </p>
@@ -1335,11 +1937,13 @@ export default function DriverJobPage() {
                   }
                   className="mt-6"
                 >
+
                   <label className="text-sm font-black">
                     Customer price
                   </label>
 
                   <div className="mt-2 flex items-center rounded-2xl border border-white/10 bg-[#07110d] focus-within:border-[#1bbb8c]">
+
                     <span className="pl-5 text-2xl font-black text-[#1bbb8c]">
                       £
                     </span>
@@ -1361,12 +1965,13 @@ export default function DriverJobPage() {
                       placeholder="0.00"
                       className="w-full bg-transparent px-3 py-4 text-2xl font-black outline-none placeholder:text-white/20"
                     />
+
                   </div>
 
-                  {/* PAYOUT */}
-
                   <div className="mt-4 rounded-2xl bg-[#07110d] p-5">
+
                     <div className="flex justify-between">
+
                       <span className="text-sm text-white/40">
                         Customer pays
                       </span>
@@ -1377,9 +1982,11 @@ export default function DriverJobPage() {
                           2
                         )}
                       </span>
+
                     </div>
 
                     <div className="mt-3 flex justify-between">
+
                       <span className="text-sm text-white/40">
                         RCS fee ({RCS_FEE_PERCENT}%)
                       </span>
@@ -1390,12 +1997,15 @@ export default function DriverJobPage() {
                           2
                         )}
                       </span>
+
                     </div>
 
                     <div className="my-4 border-t border-white/10" />
 
                     <div className="flex items-end justify-between">
+
                       <div>
+
                         <p className="text-[10px] font-black uppercase tracking-wider text-[#1bbb8c]">
                           You receive
                         </p>
@@ -1403,6 +2013,7 @@ export default function DriverJobPage() {
                         <p className="mt-1 text-xs text-white/30">
                           After RCS fee
                         </p>
+
                       </div>
 
                       <p className="text-3xl font-black text-[#5ee0b3]">
@@ -1411,16 +2022,19 @@ export default function DriverJobPage() {
                           2
                         )}
                       </p>
+
                     </div>
+
                   </div>
 
-                  {/* MESSAGE */}
-
                   <label className="mt-6 block text-sm font-black">
+
                     Message
+
                     <span className="ml-1 font-normal text-white/30">
                       optional
                     </span>
+
                   </label>
 
                   <textarea
@@ -1448,16 +2062,17 @@ export default function DriverJobPage() {
                         ? "Update bid"
                         : "Submit bid"}
                   </button>
+
                 </form>
+
               </section>
             )}
-
-            {/* BID STATUS */}
 
             {existingBid &&
               !bidAccepted &&
               !canEditBid && (
                 <section className="rounded-3xl border border-white/10 bg-[#0b1a12] p-6">
+
                   <p className="text-[10px] font-black uppercase tracking-wider text-white/30">
                     Your bid
                   </p>
@@ -1475,15 +2090,15 @@ export default function DriverJobPage() {
                       ? "Rejected"
                       : "Pending"}
                   </p>
+
                 </section>
               )}
-
-            {/* CLOSED */}
 
             {!canEditBid &&
               !assignedToThisDriver &&
               !existingBid && (
                 <section className="rounded-3xl border border-white/10 bg-[#0b1a12] p-6">
+
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5">
                     🔒
                   </div>
@@ -1495,12 +2110,211 @@ export default function DriverJobPage() {
                   <p className="mt-2 text-sm leading-6 text-white/40">
                     This job is no longer accepting bids.
                   </p>
+
                 </section>
               )}
+
           </aside>
+
         </div>
       </div>
+
+      {/* ============================================================
+          FULLSCREEN CUSTOMER PHOTO
+      ============================================================ */}
+
+      {selectedCustomerPhoto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4"
+          onClick={() =>
+            setSelectedCustomerPhoto(null)
+          }
+        >
+
+          <button
+            type="button"
+            onClick={() =>
+              setSelectedCustomerPhoto(null)
+            }
+            className="absolute right-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-2xl font-black text-white backdrop-blur transition hover:bg-white/20"
+            aria-label="Close photo"
+          >
+            ×
+          </button>
+
+          <div
+            className="flex max-h-[90vh] max-w-6xl flex-col items-center"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            <img
+              src={
+                selectedCustomerPhoto.url
+              }
+              alt="Customer waste photo"
+              className="max-h-[82vh] max-w-full rounded-2xl object-contain"
+            />
+
+            <p className="mt-4 text-xs font-bold text-white/50">
+              Customer waste photo
+            </p>
+
+          </div>
+
+        </div>
+      )}
     </main>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| COLLECTION DAY NOTICE
+|--------------------------------------------------------------------------
+*/
+
+function CollectionDayNotice({
+  formattedDate,
+  hasCollectionDate,
+  isCollectionDay,
+  collectionDatePassed,
+}: {
+  formattedDate: string;
+  hasCollectionDate: boolean;
+  isCollectionDay: boolean;
+  collectionDatePassed: boolean;
+}) {
+  if (!hasCollectionDate) {
+    return (
+      <div className="mt-6 rounded-2xl border border-yellow-400/20 bg-yellow-400/5 p-5">
+
+        <div className="flex gap-4">
+
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-xl">
+            ⚠
+          </div>
+
+          <div>
+            <p className="font-black">
+              Collection date not set
+            </p>
+
+            <p className="mt-1 text-sm leading-6 text-white/40">
+              Please contact RCS before starting this job.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    );
+  }
+
+  if (collectionDatePassed) {
+    return (
+      <div className="mt-6 rounded-2xl border border-yellow-400/20 bg-yellow-400/5 p-5">
+
+        <div className="flex gap-4">
+
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-xl">
+            ⚠
+          </div>
+
+          <div>
+
+            <p className="font-black">
+              Collection date has passed
+            </p>
+
+            <p className="mt-1 text-sm leading-6 text-white/50">
+              This job was scheduled for{" "}
+              <span className="font-bold text-white">
+                {formattedDate}
+              </span>
+              .
+            </p>
+
+            <p className="mt-2 text-xs font-bold text-yellow-300">
+              Please contact RCS before starting or completing the job.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+    );
+  }
+
+  if (isCollectionDay) {
+    return (
+      <div className="mt-6 rounded-2xl border border-[#1bbb8c]/30 bg-[#1bbb8c]/10 p-5">
+
+        <div className="flex gap-4">
+
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1bbb8c]/15 text-xl">
+            🚚
+          </div>
+
+          <div>
+
+            <p className="font-black text-[#5ee0b3]">
+              Today is collection day
+            </p>
+
+            <p className="mt-1 text-sm leading-6 text-white/60">
+              You can now start the collection.
+              Click <span className="font-black text-white">“I'm on the way”</span>{" "}
+              when you leave for the customer's property.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6 rounded-2xl border border-[#1bbb8c]/30 bg-[#10251b] p-5">
+
+      <div className="flex gap-4">
+
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1bbb8c]/10 text-xl">
+          📅
+        </div>
+
+        <div className="min-w-0">
+
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#1bbb8c]">
+            Next step: Collection day
+          </p>
+
+          <p className="mt-2 text-xl font-black">
+            {formattedDate}
+          </p>
+
+          <p className="mt-2 text-sm leading-6 text-white/50">
+            Your job is booked for this date.
+            Come back on the collection day and click
+            <span className="font-black text-white">
+              {" “I'm on the way” "}
+            </span>
+            when you leave for the collection.
+          </p>
+
+          <p className="mt-3 text-xs font-black text-yellow-300">
+            🔒 Do not start or complete the job before the collection day.
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
   );
 }
 
@@ -1521,11 +2335,13 @@ function QuickInfo({
 }) {
   return (
     <div className="flex items-center gap-3 border-white/5 p-5 sm:border-r last:border-r-0">
+
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5">
         {icon}
       </div>
 
       <div className="min-w-0">
+
         <p className="text-[9px] font-black uppercase tracking-wider text-white/30">
           {label}
         </p>
@@ -1533,28 +2349,10 @@ function QuickInfo({
         <p className="mt-1 truncate text-sm font-bold text-white">
           {value || "Not provided"}
         </p>
+
       </div>
+
     </div>
-  );
-}
-
-function SectionHeading({
-  eyebrow,
-  title,
-}: {
-  eyebrow: string;
-  title: string;
-}) {
-  return (
-    <>
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1bbb8c]">
-        {eyebrow}
-      </p>
-
-      <h2 className="mt-2 text-2xl font-black">
-        {title}
-      </h2>
-    </>
   );
 }
 
@@ -1570,6 +2368,7 @@ function DetailCard({
 }) {
   return (
     <div className="rounded-2xl bg-[#07110d] p-4">
+
       <p className="text-[9px] font-black uppercase tracking-wider text-white/30">
         {label}
       </p>
@@ -1577,6 +2376,7 @@ function DetailCard({
       <p className="mt-1 text-sm font-bold">
         {value || "Not provided"}
       </p>
+
     </div>
   );
 }
@@ -1594,6 +2394,7 @@ function ProgressStep({
 }) {
   return (
     <div className="flex min-w-0 flex-col items-center">
+
       <div
         className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-black ${
           complete
@@ -1617,6 +2418,7 @@ function ProgressStep({
       >
         {label}
       </p>
+
     </div>
   );
 }
@@ -1643,6 +2445,7 @@ function PhotoUpload({
   files,
   onChange,
   onRemove,
+  disabled,
 }: {
   title: string;
   description: string;
@@ -1653,11 +2456,15 @@ function PhotoUpload({
   onRemove: (
     index: number
   ) => void;
+  disabled: boolean;
 }) {
   return (
     <div className="mt-5 rounded-2xl border border-white/5 bg-[#07110d] p-4">
+
       <div className="flex items-start justify-between gap-4">
+
         <div>
+
           <p className="text-sm font-black">
             {title}
           </p>
@@ -1665,33 +2472,48 @@ function PhotoUpload({
           <p className="mt-1 text-xs text-white/30">
             {description}
           </p>
+
         </div>
 
         <span className="rounded-lg bg-white/5 px-2 py-1 text-[9px] font-black text-white/30">
           {files.length}/8
         </span>
+
       </div>
 
-      <label className="mt-4 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-white/10 px-4 py-4 text-sm font-bold text-white/50 transition hover:border-[#1bbb8c]/40 hover:text-[#1bbb8c]">
-        + Add photos
+      <label
+        className={`mt-4 flex items-center justify-center rounded-xl border border-dashed px-4 py-4 text-sm font-bold transition ${
+          disabled
+            ? "cursor-not-allowed border-white/5 text-white/20"
+            : "cursor-pointer border-white/10 text-white/50 hover:border-[#1bbb8c]/40 hover:text-[#1bbb8c]"
+        }`}
+      >
+
+        {disabled
+          ? "🔒 Available on collection day"
+          : "+ Add photos"}
 
         <input
           type="file"
           accept="image/*"
           multiple
           onChange={onChange}
+          disabled={disabled}
           className="hidden"
         />
+
       </label>
 
       {files.length > 0 && (
         <div className="mt-3 space-y-2">
+
           {files.map(
             (file, index) => (
               <div
                 key={`${file.name}-${index}`}
                 className="flex items-center justify-between gap-3 rounded-xl bg-white/5 p-3"
               >
+
                 <p className="min-w-0 truncate text-xs font-bold text-white/70">
                   {file.name}
                 </p>
@@ -1705,11 +2527,14 @@ function PhotoUpload({
                 >
                   Remove
                 </button>
+
               </div>
             )
           )}
+
         </div>
       )}
+
     </div>
   );
 }

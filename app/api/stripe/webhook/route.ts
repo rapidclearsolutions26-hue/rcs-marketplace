@@ -4,27 +4,53 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
+/*
+ * =========================================================
+ * ENVIRONMENT
+ * =========================================================
+ */
+
 function getEnv(name: string): string {
   const value = process.env[name];
 
   if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
+    throw new Error(
+      `Missing environment variable: ${name}`
+    );
   }
 
   return value;
 }
 
-const stripe = new Stripe(getEnv("STRIPE_SECRET_KEY"));
+const stripe = new Stripe(
+  getEnv("STRIPE_SECRET_KEY")
+);
+
+/*
+ * =========================================================
+ * POST /api/stripe/webhook
+ * =========================================================
+ */
 
 export async function POST(request: Request) {
+  console.log("");
   console.log("========================================");
-  console.log("STRIPE WEBHOOK RECEIVED");
+  console.log("RCS STRIPE WEBHOOK RECEIVED");
   console.log("========================================");
 
-  const signature = request.headers.get("stripe-signature");
+  /*
+   * =======================================================
+   * STRIPE SIGNATURE
+   * =======================================================
+   */
+
+  const signature =
+    request.headers.get("stripe-signature");
 
   if (!signature) {
-    console.error("Missing Stripe signature");
+    console.error(
+      "Missing Stripe signature."
+    );
 
     return NextResponse.json(
       {
@@ -36,16 +62,31 @@ export async function POST(request: Request) {
     );
   }
 
+  /*
+   * =======================================================
+   * READ RAW BODY
+   *
+   * IMPORTANT:
+   *
+   * Stripe signature verification requires the
+   * ORIGINAL RAW REQUEST BODY.
+   * =======================================================
+   */
+
   let body: string;
 
   try {
     body = await request.text();
   } catch (error) {
-    console.error("Could not read webhook body:", error);
+    console.error(
+      "Could not read Stripe webhook body:",
+      error
+    );
 
     return NextResponse.json(
       {
-        error: "Could not read webhook body",
+        error:
+          "Could not read webhook body",
       },
       {
         status: 400,
@@ -53,34 +94,36 @@ export async function POST(request: Request) {
     );
   }
 
-  let event: Stripe.Event;
-
   /*
-   * =========================================================
-   * VERIFY STRIPE WEBHOOK
-   * =========================================================
+   * =======================================================
+   * VERIFY WEBHOOK
+   * =======================================================
    */
+
+  let event: Stripe.Event;
 
   try {
     const webhookSecret = getEnv(
       "STRIPE_WEBHOOK_SECRET"
     );
 
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      webhookSecret
-    );
+    event =
+      stripe.webhooks.constructEvent(
+        body,
+        signature,
+        webhookSecret
+      );
   } catch (error) {
     console.error(
-      "STRIPE SIGNATURE VERIFICATION FAILED:"
+      "STRIPE SIGNATURE VERIFICATION FAILED"
     );
 
     console.error(error);
 
     return NextResponse.json(
       {
-        error: "Webhook signature verification failed",
+        error:
+          "Webhook signature verification failed",
       },
       {
         status: 400,
@@ -88,13 +131,20 @@ export async function POST(request: Request) {
     );
   }
 
-  console.log("Stripe event:", event.type);
-  console.log("Stripe event ID:", event.id);
+  console.log(
+    "Stripe event:",
+    event.type
+  );
+
+  console.log(
+    "Stripe event ID:",
+    event.id
+  );
 
   /*
-   * =========================================================
+   * =======================================================
    * SUPABASE ADMIN CLIENT
-   * =========================================================
+   * =======================================================
    */
 
   let supabase;
@@ -120,14 +170,15 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error(
-      "SUPABASE ADMIN CLIENT ERROR:"
+      "SUPABASE ADMIN CLIENT ERROR"
     );
 
     console.error(error);
 
     return NextResponse.json(
       {
-        error: "Supabase server configuration is missing",
+        error:
+          "Supabase server configuration is missing",
       },
       {
         status: 500,
@@ -136,16 +187,16 @@ export async function POST(request: Request) {
   }
 
   /*
-   * =========================================================
-   * HANDLE EVENTS
-   * =========================================================
+   * =======================================================
+   * HANDLE STRIPE EVENT
+   * =======================================================
    */
 
   try {
     /*
-     * =======================================================
+     * =====================================================
      * CHECKOUT COMPLETED
-     * =======================================================
+     * =====================================================
      */
 
     if (
@@ -155,8 +206,13 @@ export async function POST(request: Request) {
       const session =
         event.data.object as Stripe.Checkout.Session;
 
+      console.log("");
       console.log(
-        "CHECKOUT SESSION COMPLETED:",
+        "CHECKOUT SESSION COMPLETED"
+      );
+
+      console.log(
+        "Session ID:",
         session.id
       );
 
@@ -171,14 +227,16 @@ export async function POST(request: Request) {
       );
 
       /*
-       * Only continue if Stripe says payment is paid.
+       * ===================================================
+       * ONLY PROCESS PAID CHECKOUTS
+       * ===================================================
        */
 
       if (
         session.payment_status !== "paid"
       ) {
         console.log(
-          "Payment is not marked as paid yet."
+          "Checkout completed but payment is not marked as paid."
         );
 
         return NextResponse.json({
@@ -187,9 +245,9 @@ export async function POST(request: Request) {
       }
 
       /*
-       * =====================================================
+       * ===================================================
        * GET METADATA
-       * =====================================================
+       * ===================================================
        */
 
       const jobIdRaw =
@@ -204,16 +262,39 @@ export async function POST(request: Request) {
       const driverId =
         session.metadata?.driver_id;
 
-      console.log("job_id:", jobIdRaw);
-      console.log("bid_id:", bidIdRaw);
+      const jobReference =
+        session.metadata?.job_reference;
+
+      console.log(
+        "job_id:",
+        jobIdRaw
+      );
+
+      console.log(
+        "bid_id:",
+        bidIdRaw
+      );
+
       console.log(
         "customer_id:",
         customerId
       );
+
       console.log(
         "driver_id:",
         driverId
       );
+
+      console.log(
+        "job_reference:",
+        jobReference
+      );
+
+      /*
+       * ===================================================
+       * CHECK REQUIRED METADATA
+       * ===================================================
+       */
 
       if (
         !jobIdRaw ||
@@ -222,7 +303,7 @@ export async function POST(request: Request) {
         !driverId
       ) {
         console.error(
-          "STRIPE WEBHOOK IS MISSING METADATA"
+          "Stripe checkout session is missing required metadata."
         );
 
         return NextResponse.json(
@@ -236,20 +317,26 @@ export async function POST(request: Request) {
         );
       }
 
-      const jobId = Number(jobIdRaw);
-      const bidId = Number(bidIdRaw);
+      const jobId = Number(
+        jobIdRaw
+      );
+
+      const bidId = Number(
+        bidIdRaw
+      );
 
       if (
         !Number.isInteger(jobId) ||
         !Number.isInteger(bidId)
       ) {
         console.error(
-          "Invalid job_id or bid_id:",
-          {
-            jobIdRaw,
-            bidIdRaw,
-          }
+          "Invalid job or bid ID."
         );
+
+        console.error({
+          jobIdRaw,
+          bidIdRaw,
+        });
 
         return NextResponse.json(
           {
@@ -263,9 +350,9 @@ export async function POST(request: Request) {
       }
 
       /*
-       * =====================================================
-       * FIND JOB
-       * =====================================================
+       * ===================================================
+       * LOAD JOB
+       * ===================================================
        */
 
       const {
@@ -289,7 +376,7 @@ export async function POST(request: Request) {
 
       if (jobError) {
         console.error(
-          "SUPABASE JOB LOOKUP ERROR:"
+          "SUPABASE JOB LOOKUP ERROR"
         );
 
         console.error(jobError);
@@ -328,9 +415,9 @@ export async function POST(request: Request) {
       );
 
       /*
-       * =====================================================
+       * ===================================================
        * VERIFY CUSTOMER
-       * =====================================================
+       * ===================================================
        */
 
       if (
@@ -359,12 +446,14 @@ export async function POST(request: Request) {
       }
 
       /*
-       * =====================================================
+       * ===================================================
        * IDEMPOTENCY
-       * =====================================================
        *
-       * If the job has already been assigned,
+       * Stripe can retry webhook events.
+       *
+       * If the job is already assigned,
        * don't assign another driver.
+       * ===================================================
        */
 
       const alreadyAssigned =
@@ -381,7 +470,9 @@ export async function POST(request: Request) {
           "assigned",
           "in_progress",
           "completed",
-        ].includes(job.status);
+        ].includes(
+          job.status || ""
+        );
 
       if (alreadyAssigned) {
         console.log(
@@ -391,13 +482,14 @@ export async function POST(request: Request) {
         return NextResponse.json({
           received: true,
           alreadyAssigned: true,
+          jobId,
         });
       }
 
       /*
-       * =====================================================
-       * FIND BID
-       * =====================================================
+       * ===================================================
+       * LOAD BID
+       * ===================================================
        */
 
       const {
@@ -420,7 +512,7 @@ export async function POST(request: Request) {
 
       if (bidError) {
         console.error(
-          "SUPABASE BID LOOKUP ERROR:"
+          "SUPABASE BID LOOKUP ERROR"
         );
 
         console.error(bidError);
@@ -459,9 +551,9 @@ export async function POST(request: Request) {
       );
 
       /*
-       * =====================================================
+       * ===================================================
        * VERIFY DRIVER
-       * =====================================================
+       * ===================================================
        */
 
       if (
@@ -490,9 +582,35 @@ export async function POST(request: Request) {
       }
 
       /*
-       * =====================================================
-       * ACCEPT BID
-       * =====================================================
+       * ===================================================
+       * CHECK BID STATUS
+       *
+       * A rejected bid must never be accepted.
+       * ===================================================
+       */
+
+      if (
+        bid.status === "rejected"
+      ) {
+        console.error(
+          `Bid ${bidId} has already been rejected.`
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "This bid is no longer available",
+          },
+          {
+            status: 409,
+          }
+        );
+      }
+
+      /*
+       * ===================================================
+       * ACCEPT SELECTED BID
+       * ===================================================
        */
 
       const {
@@ -507,7 +625,7 @@ export async function POST(request: Request) {
 
       if (acceptBidError) {
         console.error(
-          "ACCEPT BID ERROR:"
+          "ACCEPT BID ERROR"
         );
 
         console.error(
@@ -532,9 +650,9 @@ export async function POST(request: Request) {
       );
 
       /*
-       * =====================================================
-       * REJECT OTHER BIDS
-       * =====================================================
+       * ===================================================
+       * REJECT ALL OTHER BIDS
+       * ===================================================
        */
 
       const {
@@ -549,12 +667,12 @@ export async function POST(request: Request) {
 
       if (rejectBidsError) {
         /*
-         * Don't fail the payment because another
-         * bid could not be rejected.
+         * We don't fail the payment because
+         * rejection of another bid is secondary.
          */
 
         console.error(
-          "REJECT OTHER BIDS ERROR:"
+          "REJECT OTHER BIDS ERROR"
         );
 
         console.error(
@@ -567,9 +685,9 @@ export async function POST(request: Request) {
       }
 
       /*
-       * =====================================================
-       * ASSIGN DRIVER TO JOB
-       * =====================================================
+       * ===================================================
+       * ASSIGN DRIVER
+       * ===================================================
        */
 
       const {
@@ -583,7 +701,8 @@ export async function POST(request: Request) {
           assigned_bid_id: bidId,
           assigned_driver_id:
             bid.driver_id,
-          journey_status: "assigned",
+          journey_status:
+            "assigned",
         })
         .eq("id", jobId)
         .eq(
@@ -604,7 +723,7 @@ export async function POST(request: Request) {
 
       if (assignError) {
         console.error(
-          "ASSIGN DRIVER ERROR:"
+          "ASSIGN DRIVER ERROR"
         );
 
         console.error(
@@ -625,21 +744,26 @@ export async function POST(request: Request) {
       }
 
       /*
-       * =====================================================
+       * ===================================================
        * SUCCESS
-       * =====================================================
+       * ===================================================
        */
 
+      console.log("");
       console.log(
         "========================================"
       );
 
       console.log(
-        "PAYMENT SUCCESSFUL"
+        "RCS PAYMENT SUCCESSFUL"
       );
 
       console.log(
         `Job ${jobId} assigned to driver ${bid.driver_id}`
+      );
+
+      console.log(
+        `Bid ${bidId} accepted`
       );
 
       console.log(
@@ -656,14 +780,15 @@ export async function POST(request: Request) {
         success: true,
         jobId,
         bidId,
-        driverId: bid.driver_id,
+        driverId:
+          bid.driver_id,
       });
     }
 
     /*
-     * =======================================================
+     * =====================================================
      * PAYMENT FAILED
-     * =======================================================
+     * =====================================================
      */
 
     if (
@@ -678,18 +803,48 @@ export async function POST(request: Request) {
         paymentIntent.id
       );
 
+      console.log(
+        "Payment intent metadata:",
+        paymentIntent.metadata
+      );
+
       return NextResponse.json({
         received: true,
       });
     }
 
     /*
-     * =======================================================
-     * ALL OTHER EVENTS
-     * =======================================================
-     *
-     * Stripe sends several events for one payment.
-     * We don't need to process them.
+     * =====================================================
+     * CHECKOUT EXPIRED
+     * =====================================================
+     */
+
+    if (
+      event.type ===
+      "checkout.session.expired"
+    ) {
+      const session =
+        event.data.object as Stripe.Checkout.Session;
+
+      console.log(
+        "CHECKOUT SESSION EXPIRED:",
+        session.id
+      );
+
+      console.log(
+        "Expired session metadata:",
+        session.metadata
+      );
+
+      return NextResponse.json({
+        received: true,
+      });
+    }
+
+    /*
+     * =====================================================
+     * OTHER EVENTS
+     * =====================================================
      */
 
     console.log(
@@ -700,6 +855,7 @@ export async function POST(request: Request) {
       received: true,
     });
   } catch (error) {
+    console.error("");
     console.error(
       "========================================"
     );

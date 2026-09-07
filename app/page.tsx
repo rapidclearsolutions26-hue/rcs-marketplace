@@ -7,16 +7,19 @@ export default function Home() {
 
       {/* HEADER */}
       <header className="border-b border-[#1d251b] bg-[#070907]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
 
-          <Link href="/">
+          <Link
+            href="/"
+            className="shrink-0"
+          >
             <Image
               src="/rapid-clear-logo.png"
               alt="Rapid Clear Solutions"
               width={220}
               height={90}
               priority
-              className="h-16 w-auto object-contain"
+              className="h-14 w-auto object-contain sm:h-16"
             />
           </Link>
 
@@ -52,20 +55,34 @@ export default function Home() {
 
           </nav>
 
-          <div className="flex items-center gap-3">
+          {/* LOGIN BUTTONS */}
+
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
 
             <Link
               href="/customer/login"
-              className="hidden rounded-lg border border-[#394635] px-5 py-3 text-sm font-bold text-white transition hover:border-[#79c51c] sm:block"
+              className="rounded-lg border border-[#394635] px-3 py-2.5 text-xs font-bold text-white transition hover:border-[#79c51c] sm:px-5 sm:py-3 sm:text-sm"
             >
-              Customer Login
+              <span className="sm:hidden">
+                Customer
+              </span>
+
+              <span className="hidden sm:inline">
+                Customer Login
+              </span>
             </Link>
 
             <Link
               href="/driver/login"
-              className="rounded-lg bg-[#79c51c] px-5 py-3 text-sm font-bold text-black transition hover:bg-[#91db32]"
+              className="rounded-lg bg-[#79c51c] px-3 py-2.5 text-xs font-bold text-black transition hover:bg-[#91db32] sm:px-5 sm:py-3 sm:text-sm"
             >
-              Driver Login
+              <span className="sm:hidden">
+                Driver
+              </span>
+
+              <span className="hidden sm:inline">
+                Driver Login
+              </span>
             </Link>
 
           </div>

@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 
-const stripeSecretKey =
-  process.env.STRIPE_SECRET_KEY;
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 if (!stripeSecretKey) {
   throw new Error(
@@ -51,16 +50,36 @@ export async function POST(request: Request) {
      * =====================================================
      */
 
-    const body = await request.json();
+    let body: {
+      jobId?: unknown;
+      bidId?: unknown;
+    };
+
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          error: "Invalid request body.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
     const jobId = Number(body.jobId);
     const bidId = Number(body.bidId);
 
-    if (!jobId || !bidId) {
+    if (
+      !Number.isInteger(jobId) ||
+      jobId <= 0 ||
+      !Number.isInteger(bidId) ||
+      bidId <= 0
+    ) {
       return NextResponse.json(
         {
-          error:
-            "jobId and bidId are required.",
+          error: "A valid jobId and bidId are required.",
         },
         {
           status: 400,
@@ -98,18 +117,42 @@ export async function POST(request: Request) {
       .single();
 
     if (jobError || !job) {
-      console.error(
-        "Stripe job lookup error:",
-        jobError
-      );
+      console.error("Stripe job lookup error:", jobError);
 
       return NextResponse.json(
         {
-          error:
-            "We couldn't find this job.",
+          error: "We couldn't find this job.",
         },
         {
           status: 404,
+        }
+      );
+    }
+
+    /*
+     * =====================================================
+     * DO NOT ALLOW ALREADY BOOKED JOBS
+     * =====================================================
+     */
+
+    const alreadyAssigned =
+      Boolean(job.accepted_bid_id) ||
+      Boolean(job.assigned_driver_id) ||
+      Boolean(job.assigned_bid_id) ||
+      [
+        "assigned",
+        "in_progress",
+        "completed",
+      ].includes(job.status || "");
+
+    if (alreadyAssigned) {
+      return NextResponse.json(
+        {
+          error:
+            "A driver has already been booked for this job.",
+        },
+        {
+          status: 409,
         }
       );
     }
@@ -139,10 +182,7 @@ export async function POST(request: Request) {
       .single();
 
     if (bidError || !bid) {
-      console.error(
-        "Stripe bid lookup error:",
-        bidError
-      );
+      console.error("Stripe bid lookup error:", bidError);
 
       return NextResponse.json(
         {
@@ -151,6 +191,26 @@ export async function POST(request: Request) {
         },
         {
           status: 404,
+        }
+      );
+    }
+
+    /*
+     * =====================================================
+     * CHECK BID STATUS
+     *
+     * A rejected bid can never be paid for.
+     * =====================================================
+     */
+
+    if (bid.status === "rejected") {
+      return NextResponse.json(
+        {
+          error:
+            "This driver's quote is no longer available.",
+        },
+        {
+          status: 409,
         }
       );
     }
@@ -180,28 +240,18 @@ export async function POST(request: Request) {
 
     /*
      * =====================================================
-     * DO NOT ALLOW ALREADY BOOKED JOBS
+     * CHECK DRIVER ID
      * =====================================================
      */
 
-    const alreadyAssigned =
-      Boolean(job.accepted_bid_id) ||
-      Boolean(job.assigned_driver_id) ||
-      Boolean(job.assigned_bid_id) ||
-      [
-        "assigned",
-        "in_progress",
-        "completed",
-      ].includes(job.status);
-
-    if (alreadyAssigned) {
+    if (!bid.driver_id) {
       return NextResponse.json(
         {
           error:
-            "A driver has already been booked for this job.",
+            "This quote is missing its assigned driver.",
         },
         {
-          status: 409,
+          status: 400,
         }
       );
     }
@@ -254,9 +304,7 @@ export async function POST(request: Request) {
           job_id: String(job.id),
           bid_id: String(bid.id),
           customer_id: user.id,
-          driver_id: String(
-            bid.driver_id
-          ),
+          driver_id: String(bid.driver_id),
           job_reference: reference,
         },
 
@@ -273,9 +321,7 @@ export async function POST(request: Request) {
             job_id: String(job.id),
             bid_id: String(bid.id),
             customer_id: user.id,
-            driver_id: String(
-              bid.driver_id
-            ),
+            driver_id: String(bid.driver_id),
             job_reference: reference,
           },
         },
@@ -286,6 +332,23 @@ export async function POST(request: Request) {
      * RETURN CHECKOUT URL
      * =====================================================
      */
+
+    if (!checkoutSession.url) {
+      console.error(
+        "Stripe checkout session did not return a URL:",
+        checkoutSession.id
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Stripe did not return a checkout URL.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
 
     return NextResponse.json({
       success: true,
