@@ -13,6 +13,7 @@ export default function DriverRegister() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -60,7 +61,6 @@ export default function DriverRegister() {
       file.name.split(".").pop()?.toLowerCase() || "file";
 
     const fileName = `${crypto.randomUUID()}.${extension}`;
-
     const filePath = `${userId}/${folder}/${fileName}`;
 
     const { error } = await supabase.storage
@@ -87,6 +87,13 @@ export default function DriverRegister() {
     setLoading(true);
     setErrorMessage("");
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = fullName.trim();
+    const cleanPhone = phone.trim();
+    const cleanPostcode = postcode.trim().toUpperCase();
+    const cleanRegistration =
+      vehicleRegistration.trim().toUpperCase();
+
     try {
       if (!wasteLicenceFile) {
         throw new Error(
@@ -106,12 +113,25 @@ export default function DriverRegister() {
         );
       }
 
+      if (password.length < 6) {
+        throw new Error(
+          "Your password must be at least 6 characters."
+        );
+      }
+
       const {
-        data: { user },
+        data: { user, session },
         error: signUpError,
       } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
+        options: {
+          data: {
+            full_name: cleanName,
+            phone: cleanPhone,
+            account_type: "driver",
+          },
+        },
       });
 
       if (signUpError) {
@@ -120,7 +140,7 @@ export default function DriverRegister() {
 
       if (!user) {
         throw new Error(
-          "Your account could not be created."
+          "Your account could not be created. Please try again."
         );
       }
 
@@ -147,36 +167,36 @@ export default function DriverRegister() {
         .insert({
           id: user.id,
 
-          full_name: fullName,
-          email,
-          phone,
-          address,
-          postcode,
+          full_name: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          address: address.trim(),
+          postcode: cleanPostcode,
 
-          company_name: companyName || null,
-          trading_name: tradingName || null,
-          company_number: companyNumber || null,
+          company_name: companyName.trim() || null,
+          trading_name: tradingName.trim() || null,
+          company_number: companyNumber.trim() || null,
           years_trading: yearsTrading
             ? Number(yearsTrading)
             : null,
 
-          waste_carrier_number: wasteCarrierNumber,
+          waste_carrier_number:
+            wasteCarrierNumber.trim(),
           waste_carrier_type: wasteCarrierType,
           waste_carrier_expiry: wasteCarrierExpiry,
           waste_licence_url: wasteLicencePath,
 
-          insurance_provider: insuranceProvider,
+          insurance_provider: insuranceProvider.trim(),
           insurance_policy_number:
-            insurancePolicyNumber,
+            insurancePolicyNumber.trim(),
           insurance_expiry: insuranceExpiry,
           insurance_certificate_url: insurancePath,
 
           vehicle_type: vehicleType,
-          vehicle_registration:
-            vehicleRegistration.toUpperCase(),
-          vehicle_make: vehicleMake,
-          vehicle_model: vehicleModel,
-          vehicle_capacity: vehicleCapacity,
+          vehicle_registration: cleanRegistration,
+          vehicle_make: vehicleMake.trim(),
+          vehicle_model: vehicleModel.trim(),
+          vehicle_capacity: vehicleCapacity.trim(),
           van_photo_url: vanPhotoPath,
 
           approved: false,
@@ -184,13 +204,19 @@ export default function DriverRegister() {
         });
 
       if (driverError) {
-        console.error(driverError);
-        throw new Error(driverError.message);
+        console.error("Driver insert error:", driverError);
+        throw new Error(
+          `Your account was created, but your driver application could not be saved: ${driverError.message}`
+        );
       }
 
-      setSuccess(true);
+      if (!session) {
+        setNeedsConfirmation(true);
+      } else {
+        setSuccess(true);
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Driver registration error:", error);
 
       setErrorMessage(
         error instanceof Error
@@ -202,72 +228,82 @@ export default function DriverRegister() {
     }
   }
 
-  if (success) {
+  if (success || needsConfirmation) {
     return (
-      <main className="min-h-screen bg-[#f5f7f4]">
-        <header className="border-b border-[#dde5d8] bg-white">
-          <div className="mx-auto flex max-w-6xl items-center px-6 py-4">
+      <main className="min-h-screen bg-[#070907]">
+        <header className="border-b border-[#283326] bg-[#070907]">
+          <div className="mx-auto flex max-w-6xl items-center px-4 py-4 sm:px-6">
             <Link href="/">
               <Image
-                src="/rcs-logo.jpg"
+                src="/rapid-clear-logo.png"
                 alt="Rapid Clear Solutions"
-                width={180}
-                height={70}
+                width={220}
+                height={90}
                 className="h-14 w-auto object-contain"
               />
             </Link>
           </div>
         </header>
 
-        <div className="mx-auto flex min-h-[80vh] max-w-2xl items-center px-6 py-12">
-          <div className="w-full rounded-3xl bg-white p-10 text-center shadow-lg">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#e7f1df] text-4xl font-black text-[#529027]">
-              ✓
+        <div className="mx-auto flex min-h-[80vh] max-w-2xl items-center px-4 py-10 sm:px-6">
+          <div className="w-full rounded-3xl border border-[#283326] bg-[#0d120d] p-7 text-center shadow-2xl sm:p-10">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#79c51c] text-4xl font-black text-black">
+              {needsConfirmation ? "✉" : "✓"}
             </div>
 
-            <div className="mt-7 inline-flex rounded-full bg-[#e7f1df] px-4 py-2 text-sm font-bold uppercase tracking-wide text-[#315c18]">
+            <p className="mt-7 text-sm font-bold uppercase tracking-[0.2em] text-[#79c51c]">
               RCS Driver Network
-            </div>
-
-            <h1 className="mt-4 text-3xl font-black text-[#111111]">
-              Application submitted
-            </h1>
-
-            <p className="mx-auto mt-4 max-w-lg text-[#555555]">
-              Thanks for applying to join the RCS Driver Network.
-              Your details and documents have been submitted for
-              review.
             </p>
 
-            <div className="mt-7 rounded-2xl border border-[#dde5d8] bg-[#f5f7f4] p-6 text-left">
-              <h2 className="font-bold text-[#111111]">
+            <h1 className="mt-3 text-3xl font-black text-white">
+              {needsConfirmation
+                ? "Check your email"
+                : "Application submitted"}
+            </h1>
+
+            <p className="mx-auto mt-4 max-w-lg leading-7 text-gray-400">
+              {needsConfirmation
+                ? `Your account and driver application have been created. Please confirm your email address at ${email.trim().toLowerCase()} before logging in.`
+                : "Thanks for applying to join the RCS Driver Network. Your details and documents have been submitted for review."}
+            </p>
+
+            <div className="mt-7 rounded-2xl border border-[#283326] bg-[#0b0f0b] p-6 text-left">
+              <h2 className="font-bold text-white">
                 What happens next?
               </h2>
 
-              <div className="mt-4 space-y-3 text-sm text-[#555555]">
+              <div className="mt-4 space-y-3 text-sm leading-6 text-gray-400">
                 <p>✓ Your driver details have been saved.</p>
                 <p>✓ Your licence and insurance have been uploaded.</p>
                 <p>✓ Your vehicle has been added.</p>
                 <p>✓ RCS can now review your application.</p>
               </div>
 
-              <div className="mt-5 rounded-xl bg-white p-4">
-                <p className="text-sm text-[#666666]">
+              <div className="mt-5 rounded-xl border border-[#283326] bg-[#101610] p-4">
+                <p className="text-sm text-gray-500">
                   Application status
                 </p>
 
-                <p className="mt-1 font-bold text-[#529027]">
+                <p className="mt-1 font-bold text-[#79c51c]">
                   Pending Admin Approval
                 </p>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={() => router.push("/driver/login")}
-              className="mt-7 w-full rounded-xl bg-[#529027] px-5 py-4 font-black text-white transition hover:bg-[#315c18]"
+              className="mt-7 w-full rounded-xl bg-[#79c51c] px-5 py-4 font-black text-black transition hover:bg-[#91db32]"
             >
               Go to Driver Login
             </button>
+
+            <Link
+              href="/"
+              className="mt-4 block text-sm font-semibold text-gray-500 hover:text-white"
+            >
+              ← Back to RCS Marketplace
+            </Link>
           </div>
         </div>
       </main>
@@ -277,13 +313,13 @@ export default function DriverRegister() {
   return (
     <main className="min-h-screen bg-[#f5f7f4]">
       <header className="border-b border-[#dde5d8] bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <Link href="/">
             <Image
-              src="/rcs-logo.jpg"
+              src="/rapid-clear-logo.png"
               alt="Rapid Clear Solutions"
-              width={180}
-              height={70}
+              width={220}
+              height={90}
               className="h-14 w-auto object-contain"
             />
           </Link>
@@ -297,17 +333,17 @@ export default function DriverRegister() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-4xl px-6 py-10">
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="mb-8">
           <div className="inline-flex rounded-full bg-[#e7f1df] px-4 py-2 text-sm font-bold text-[#315c18]">
             RCS DRIVER NETWORK
           </div>
 
-          <h1 className="mt-4 text-4xl font-black text-[#111111]">
+          <h1 className="mt-4 text-3xl font-black text-[#111111] sm:text-4xl">
             Driver application
           </h1>
 
-          <p className="mt-3 max-w-2xl text-lg text-[#555555]">
+          <p className="mt-3 max-w-2xl text-lg leading-7 text-[#555555]">
             Apply to join the RCS Marketplace. Your details and
             documents will be reviewed before you can accept or
             bid on jobs.
@@ -318,9 +354,7 @@ export default function DriverRegister() {
           onSubmit={handleRegister}
           className="space-y-6"
         >
-          {/* PERSONAL DETAILS */}
-
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-7 shadow-sm">
+          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
             <h2 className="text-xl font-black text-[#111111]">
               1. Personal details
             </h2>
@@ -377,9 +411,7 @@ export default function DriverRegister() {
             </div>
           </section>
 
-          {/* BUSINESS DETAILS */}
-
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-7 shadow-sm">
+          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
             <h2 className="text-xl font-black text-[#111111]">
               2. Business details
             </h2>
@@ -429,9 +461,7 @@ export default function DriverRegister() {
             </div>
           </section>
 
-          {/* WASTE LICENCE */}
-
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-7 shadow-sm">
+          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
             <h2 className="text-xl font-black text-[#111111]">
               3. Waste Carrier Licence
             </h2>
@@ -450,48 +480,23 @@ export default function DriverRegister() {
                 required
               />
 
-              <div>
-                <label className="text-sm font-bold text-[#222222]">
-                  Licence type
-                </label>
+              <Select
+                label="Licence type"
+                value={wasteCarrierType}
+                onChange={setWasteCarrierType}
+                required
+                options={[
+                  "Upper Tier",
+                  "Lower Tier",
+                ]}
+              />
 
-                <select
-                  required
-                  value={wasteCarrierType}
-                  onChange={(e) =>
-                    setWasteCarrierType(e.target.value)
-                  }
-                  className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none focus:border-[#529027]"
-                >
-                  <option value="" disabled>
-                    Select licence type
-                  </option>
-
-                  <option value="Upper Tier">
-                    Upper Tier
-                  </option>
-
-                  <option value="Lower Tier">
-                    Lower Tier
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm font-bold text-[#222222]">
-                  Licence expiry date
-                </label>
-
-                <input
-                  required
-                  type="date"
-                  value={wasteCarrierExpiry}
-                  onChange={(e) =>
-                    setWasteCarrierExpiry(e.target.value)
-                  }
-                  className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none focus:border-[#529027]"
-                />
-              </div>
+              <DateInput
+                label="Licence expiry date"
+                value={wasteCarrierExpiry}
+                onChange={setWasteCarrierExpiry}
+                required
+              />
             </div>
 
             <FileUpload
@@ -503,9 +508,7 @@ export default function DriverRegister() {
             />
           </section>
 
-          {/* INSURANCE */}
-
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-7 shadow-sm">
+          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
             <h2 className="text-xl font-black text-[#111111]">
               4. Insurance
             </h2>
@@ -531,21 +534,12 @@ export default function DriverRegister() {
                 required
               />
 
-              <div>
-                <label className="text-sm font-bold text-[#222222]">
-                  Insurance expiry date
-                </label>
-
-                <input
-                  required
-                  type="date"
-                  value={insuranceExpiry}
-                  onChange={(e) =>
-                    setInsuranceExpiry(e.target.value)
-                  }
-                  className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none focus:border-[#529027]"
-                />
-              </div>
+              <DateInput
+                label="Insurance expiry date"
+                value={insuranceExpiry}
+                onChange={setInsuranceExpiry}
+                required
+              />
             </div>
 
             <FileUpload
@@ -557,9 +551,7 @@ export default function DriverRegister() {
             />
           </section>
 
-          {/* VEHICLE */}
-
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-7 shadow-sm">
+          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
             <h2 className="text-xl font-black text-[#111111]">
               5. Vehicle details
             </h2>
@@ -569,48 +561,20 @@ export default function DriverRegister() {
             </p>
 
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-bold text-[#222222]">
-                  Vehicle type
-                </label>
-
-                <select
-                  required
-                  value={vehicleType}
-                  onChange={(e) =>
-                    setVehicleType(e.target.value)
-                  }
-                  className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none focus:border-[#529027]"
-                >
-                  <option value="" disabled>
-                    Select vehicle
-                  </option>
-
-                  <option value="Small Van">
-                    Small Van
-                  </option>
-
-                  <option value="Large Van">
-                    Large Van
-                  </option>
-
-                  <option value="Luton">
-                    Luton
-                  </option>
-
-                  <option value="Tipper">
-                    Tipper
-                  </option>
-
-                  <option value="Van and Trailer">
-                    Van & Trailer
-                  </option>
-
-                  <option value="Other">
-                    Other
-                  </option>
-                </select>
-              </div>
+              <Select
+                label="Vehicle type"
+                value={vehicleType}
+                onChange={setVehicleType}
+                required
+                options={[
+                  "Small Van",
+                  "Large Van",
+                  "Luton",
+                  "Tipper",
+                  "Van and Trailer",
+                  "Other",
+                ]}
+              />
 
               <Input
                 label="Registration number"
@@ -659,9 +623,7 @@ export default function DriverRegister() {
             />
           </section>
 
-          {/* ACCOUNT */}
-
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-7 shadow-sm">
+          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
             <h2 className="text-xl font-black text-[#111111]">
               6. Create your account
             </h2>
@@ -685,19 +647,15 @@ export default function DriverRegister() {
             </div>
           </section>
 
-          {/* ERROR */}
-
           {errorMessage && (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
-              <p className="font-semibold text-red-700">
+              <p className="font-semibold leading-6 text-red-700">
                 {errorMessage}
               </p>
             </div>
           )}
 
-          {/* SUBMIT */}
-
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-7 shadow-sm">
+          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
             <div className="rounded-2xl bg-[#f5f7f4] p-5">
               <p className="font-bold text-[#111111]">
                 Before you submit
@@ -725,10 +683,6 @@ export default function DriverRegister() {
     </main>
   );
 }
-
-/* ----------------------------- */
-/* INPUT COMPONENT                */
-/* ----------------------------- */
 
 function Input({
   label,
@@ -766,9 +720,78 @@ function Input({
   );
 }
 
-/* ----------------------------- */
-/* FILE UPLOAD COMPONENT          */
-/* ----------------------------- */
+function Select({
+  label,
+  value,
+  onChange,
+  options,
+  required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-bold text-[#222222]">
+        {label}
+        {required && (
+          <span className="ml-1 text-[#529027]">*</span>
+        )}
+      </label>
+
+      <select
+        required={required}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none focus:border-[#529027]"
+      >
+        <option value="" disabled>
+          Select an option
+        </option>
+
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function DateInput({
+  label,
+  value,
+  onChange,
+  required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-bold text-[#222222]">
+        {label}
+        {required && (
+          <span className="ml-1 text-[#529027]">*</span>
+        )}
+      </label>
+
+      <input
+        required={required}
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none focus:border-[#529027]"
+      />
+    </div>
+  );
+}
 
 function FileUpload({
   label,
@@ -799,7 +822,7 @@ function FileUpload({
           {image ? "🚐" : "📄"}
         </span>
 
-        <span className="mt-3 font-bold text-[#111111]">
+        <span className="mt-3 break-all font-bold text-[#111111]">
           {file ? file.name : "Choose a file"}
         </span>
 
