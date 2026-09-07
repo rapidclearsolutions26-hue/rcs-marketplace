@@ -205,6 +205,7 @@ export default function DriverRegister() {
 
       if (driverError) {
         console.error("Driver insert error:", driverError);
+
         throw new Error(
           `Your account was created, but your driver application could not be saved: ${driverError.message}`
         );
@@ -230,9 +231,9 @@ export default function DriverRegister() {
 
   if (success || needsConfirmation) {
     return (
-      <main className="min-h-screen bg-[#070907]">
-        <header className="border-b border-[#283326] bg-[#070907]">
-          <div className="mx-auto flex max-w-6xl items-center px-4 py-4 sm:px-6">
+      <main className="min-h-screen bg-[#070907] text-white">
+        <header className="border-b border-[#1d251b] bg-[#070907]">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
             <Link href="/">
               <Image
                 src="/rapid-clear-logo.png"
@@ -273,13 +274,28 @@ export default function DriverRegister() {
               </h2>
 
               <div className="mt-4 space-y-3 text-sm leading-6 text-gray-400">
-                <p>✓ Your driver details have been saved.</p>
-                <p>✓ Your licence and insurance have been uploaded.</p>
-                <p>✓ Your vehicle has been added.</p>
-                <p>✓ RCS can now review your application.</p>
+                <p>
+                  <span className="text-[#79c51c]">✓</span>{" "}
+                  Your driver details have been saved.
+                </p>
+
+                <p>
+                  <span className="text-[#79c51c]">✓</span>{" "}
+                  Your licence and insurance have been uploaded.
+                </p>
+
+                <p>
+                  <span className="text-[#79c51c]">✓</span>{" "}
+                  Your vehicle has been added.
+                </p>
+
+                <p>
+                  <span className="text-[#79c51c]">✓</span>{" "}
+                  RCS can now review your application.
+                </p>
               </div>
 
-              <div className="mt-5 rounded-xl border border-[#283326] bg-[#101610] p-4">
+              <div className="mt-5 rounded-xl border border-[#294126] bg-[#101610] p-4">
                 <p className="text-sm text-gray-500">
                   Application status
                 </p>
@@ -300,7 +316,7 @@ export default function DriverRegister() {
 
             <Link
               href="/"
-              className="mt-4 block text-sm font-semibold text-gray-500 hover:text-white"
+              className="mt-4 block text-sm font-semibold text-gray-500 transition hover:text-white"
             >
               ← Back to RCS Marketplace
             </Link>
@@ -311,59 +327,83 @@ export default function DriverRegister() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7f4]">
-      <header className="border-b border-[#dde5d8] bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
+    <main className="min-h-screen bg-[#070907] text-white">
+      {/* HEADER */}
+
+      <header className="border-b border-[#1d251b] bg-[#070907]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <Link href="/">
             <Image
               src="/rapid-clear-logo.png"
               alt="Rapid Clear Solutions"
               width={220}
               height={90}
-              className="h-14 w-auto object-contain"
+              priority
+              className="h-14 w-auto object-contain sm:h-16"
             />
           </Link>
 
           <Link
             href="/driver/login"
-            className="font-semibold text-[#315c18] hover:text-[#529027]"
+            className="rounded-lg border border-[#394635] px-4 py-2.5 text-sm font-bold text-white transition hover:border-[#79c51c] hover:text-[#79c51c]"
           >
             Driver Login
           </Link>
         </div>
       </header>
 
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mb-8">
-          <div className="inline-flex rounded-full bg-[#e7f1df] px-4 py-2 text-sm font-bold text-[#315c18]">
-            RCS DRIVER NETWORK
+      {/* PAGE HEADER */}
+
+      <section className="border-b border-[#1d251b] bg-[#070907]">
+        <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+          <div className="inline-flex rounded-full border border-[#294126] bg-[#101a0d] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+            RCS Driver Network
           </div>
 
-          <h1 className="mt-4 text-3xl font-black text-[#111111] sm:text-4xl">
-            Driver application
+          <h1 className="mt-5 text-4xl font-black uppercase leading-tight sm:text-5xl">
+            Become an
+            <span className="text-[#79c51c]"> RCS Driver.</span>
           </h1>
 
-          <p className="mt-3 max-w-2xl text-lg leading-7 text-[#555555]">
-            Apply to join the RCS Marketplace. Your details and
-            documents will be reviewed before you can accept or
-            bid on jobs.
+          <p className="mt-4 max-w-2xl text-base leading-7 text-gray-400 sm:text-lg">
+            Apply to join the RCS Marketplace. Submit your details,
+            licence, insurance and vehicle information for review.
           </p>
-        </div>
 
+          <div className="mt-7 grid gap-3 sm:grid-cols-3">
+            <Feature
+              number="01"
+              text="Complete application"
+            />
+
+            <Feature
+              number="02"
+              text="RCS reviews your documents"
+            />
+
+            <Feature
+              number="03"
+              text="Get approved and start bidding"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* FORM */}
+
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         <form
           onSubmit={handleRegister}
           className="space-y-6"
         >
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
-            <h2 className="text-xl font-black text-[#111111]">
-              1. Personal details
-            </h2>
+          {/* PERSONAL */}
 
-            <p className="mt-1 text-sm text-[#666666]">
-              Tell us who will be carrying out the work.
-            </p>
-
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <FormSection
+            number="01"
+            title="Personal details"
+            description="Tell us who will be carrying out the work."
+          >
+            <div className="grid gap-5 sm:grid-cols-2">
               <Input
                 label="Full name"
                 value={fullName}
@@ -409,18 +449,16 @@ export default function DriverRegister() {
                 required
               />
             </div>
-          </section>
+          </FormSection>
 
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
-            <h2 className="text-xl font-black text-[#111111]">
-              2. Business details
-            </h2>
+          {/* BUSINESS */}
 
-            <p className="mt-1 text-sm text-[#666666]">
-              Business information, if applicable.
-            </p>
-
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <FormSection
+            number="02"
+            title="Business details"
+            description="Business information, if applicable."
+          >
+            <div className="grid gap-5 sm:grid-cols-2">
               <Input
                 label="Business name"
                 value={companyName}
@@ -442,36 +480,24 @@ export default function DriverRegister() {
                 placeholder="Optional"
               />
 
-              <div>
-                <label className="text-sm font-bold text-[#222222]">
-                  Years trading
-                </label>
-
-                <input
-                  type="number"
-                  min="0"
-                  value={yearsTrading}
-                  onChange={(e) =>
-                    setYearsTrading(e.target.value)
-                  }
-                  placeholder="e.g. 5"
-                  className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] placeholder:text-[#888888] outline-none focus:border-[#529027] focus:ring-2 focus:ring-[#e7f1df]"
-                />
-              </div>
+              <Input
+                label="Years trading"
+                value={yearsTrading}
+                onChange={setYearsTrading}
+                placeholder="e.g. 5"
+                type="number"
+              />
             </div>
-          </section>
+          </FormSection>
 
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
-            <h2 className="text-xl font-black text-[#111111]">
-              3. Waste Carrier Licence
-            </h2>
+          {/* LICENCE */}
 
-            <p className="mt-1 text-sm text-[#666666]">
-              Your waste carrier information must be supplied
-              before your application can be approved.
-            </p>
-
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <FormSection
+            number="03"
+            title="Waste Carrier Licence"
+            description="Your waste carrier information must be supplied before your application can be approved."
+          >
+            <div className="grid gap-5 sm:grid-cols-2">
               <Input
                 label="Waste Carrier Licence number"
                 value={wasteCarrierNumber}
@@ -506,18 +532,16 @@ export default function DriverRegister() {
               accept=".pdf,.jpg,.jpeg,.png"
               required
             />
-          </section>
+          </FormSection>
 
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
-            <h2 className="text-xl font-black text-[#111111]">
-              4. Insurance
-            </h2>
+          {/* INSURANCE */}
 
-            <p className="mt-1 text-sm text-[#666666]">
-              Provide your current insurance details.
-            </p>
-
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <FormSection
+            number="04"
+            title="Insurance"
+            description="Provide your current insurance details."
+          >
+            <div className="grid gap-5 sm:grid-cols-2">
               <Input
                 label="Insurance provider"
                 value={insuranceProvider}
@@ -549,18 +573,16 @@ export default function DriverRegister() {
               accept=".pdf,.jpg,.jpeg,.png"
               required
             />
-          </section>
+          </FormSection>
 
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
-            <h2 className="text-xl font-black text-[#111111]">
-              5. Vehicle details
-            </h2>
+          {/* VEHICLE */}
 
-            <p className="mt-1 text-sm text-[#666666]">
-              Tell us about the vehicle you will use for RCS jobs.
-            </p>
-
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <FormSection
+            number="05"
+            title="Vehicle details"
+            description="Tell us about the vehicle you will use for RCS jobs."
+          >
+            <div className="grid gap-5 sm:grid-cols-2">
               <Select
                 label="Vehicle type"
                 value={vehicleType}
@@ -621,47 +643,44 @@ export default function DriverRegister() {
               required
               image
             />
-          </section>
+          </FormSection>
 
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
-            <h2 className="text-xl font-black text-[#111111]">
-              6. Create your account
-            </h2>
+          {/* ACCOUNT */}
 
-            <div className="mt-6">
-              <label className="text-sm font-bold text-[#222222]">
-                Password
-              </label>
+          <FormSection
+            number="06"
+            title="Create your account"
+            description="Create the password you will use to access the driver portal."
+          >
+            <Input
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              placeholder="At least 6 characters"
+              type="password"
+              required
+            />
+          </FormSection>
 
-              <input
-                required
-                minLength={6}
-                type="password"
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                placeholder="At least 6 characters"
-                className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] placeholder:text-[#888888] outline-none focus:border-[#529027] focus:ring-2 focus:ring-[#e7f1df]"
-              />
-            </div>
-          </section>
+          {/* ERROR */}
 
           {errorMessage && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
-              <p className="font-semibold leading-6 text-red-700">
+            <div className="rounded-2xl border border-red-900/70 bg-red-950/30 p-5">
+              <p className="font-semibold leading-6 text-red-300">
                 {errorMessage}
               </p>
             </div>
           )}
 
-          <section className="rounded-3xl border border-[#dde5d8] bg-white p-5 shadow-sm sm:p-7">
-            <div className="rounded-2xl bg-[#f5f7f4] p-5">
-              <p className="font-bold text-[#111111]">
+          {/* SUBMIT */}
+
+          <section className="rounded-3xl border border-[#294126] bg-[#0d120d] p-5 shadow-2xl sm:p-7">
+            <div className="rounded-2xl border border-[#283326] bg-[#0b0f0b] p-5">
+              <p className="font-bold text-white">
                 Before you submit
               </p>
 
-              <p className="mt-2 text-sm leading-6 text-[#555555]">
+              <p className="mt-2 text-sm leading-6 text-gray-400">
                 Your application will be reviewed by RCS. You will
                 not be able to bid on marketplace jobs until your
                 driver account has been approved.
@@ -671,16 +690,80 @@ export default function DriverRegister() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 w-full rounded-xl bg-[#529027] px-6 py-4 text-lg font-black text-white transition hover:bg-[#315c18] disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-6 w-full rounded-xl bg-[#79c51c] px-6 py-4 text-lg font-black text-black transition hover:bg-[#91db32] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading
                 ? "Submitting application..."
                 : "Submit Driver Application"}
             </button>
+
+            <p className="mt-4 text-center text-sm text-gray-600">
+              Already have a driver account?{" "}
+              <Link
+                href="/driver/login"
+                className="font-bold text-[#79c51c] hover:underline"
+              >
+                Driver Login
+              </Link>
+            </p>
           </section>
         </form>
       </div>
     </main>
+  );
+}
+
+function FormSection({
+  number,
+  title,
+  description,
+  children,
+}: {
+  number: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border border-[#283326] bg-[#0d120d] p-5 shadow-xl sm:p-7">
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#79c51c] text-sm font-black text-black">
+          {number}
+        </div>
+
+        <div>
+          <h2 className="text-xl font-black text-white">
+            {title}
+          </h2>
+
+          <p className="mt-1 text-sm leading-6 text-gray-500">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-7">{children}</div>
+    </section>
+  );
+}
+
+function Feature({
+  number,
+  text,
+}: {
+  number: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[#283326] bg-[#0d120d] p-4">
+      <p className="text-xs font-black text-[#79c51c]">
+        {number}
+      </p>
+
+      <p className="mt-2 text-sm font-bold text-white">
+        {text}
+      </p>
+    </div>
   );
 }
 
@@ -701,20 +784,23 @@ function Input({
 }) {
   return (
     <div>
-      <label className="text-sm font-bold text-[#222222]">
+      <label className="text-sm font-bold text-gray-200">
         {label}
+
         {required && (
-          <span className="ml-1 text-[#529027]">*</span>
+          <span className="ml-1 text-[#79c51c]">*</span>
         )}
       </label>
 
       <input
         required={required}
         type={type}
+        min={type === "number" ? "0" : undefined}
+        minLength={type === "password" ? 6 : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] placeholder:text-[#888888] outline-none focus:border-[#529027] focus:ring-2 focus:ring-[#e7f1df]"
+        className="mt-2 w-full rounded-xl border border-[#354433] bg-[#080d09] px-4 py-3 text-white placeholder:text-gray-600 outline-none transition focus:border-[#79c51c] focus:ring-2 focus:ring-[#79c51c]/20"
       />
     </div>
   );
@@ -735,10 +821,11 @@ function Select({
 }) {
   return (
     <div>
-      <label className="text-sm font-bold text-[#222222]">
+      <label className="text-sm font-bold text-gray-200">
         {label}
+
         {required && (
-          <span className="ml-1 text-[#529027]">*</span>
+          <span className="ml-1 text-[#79c51c]">*</span>
         )}
       </label>
 
@@ -746,14 +833,18 @@ function Select({
         required={required}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none focus:border-[#529027]"
+        className="mt-2 w-full rounded-xl border border-[#354433] bg-[#080d09] px-4 py-3 text-white outline-none transition focus:border-[#79c51c] focus:ring-2 focus:ring-[#79c51c]/20"
       >
-        <option value="" disabled>
+        <option value="" disabled className="bg-[#080d09]">
           Select an option
         </option>
 
         {options.map((option) => (
-          <option key={option} value={option}>
+          <option
+            key={option}
+            value={option}
+            className="bg-[#080d09]"
+          >
             {option}
           </option>
         ))}
@@ -775,10 +866,11 @@ function DateInput({
 }) {
   return (
     <div>
-      <label className="text-sm font-bold text-[#222222]">
+      <label className="text-sm font-bold text-gray-200">
         {label}
+
         {required && (
-          <span className="ml-1 text-[#529027]">*</span>
+          <span className="ml-1 text-[#79c51c]">*</span>
         )}
       </label>
 
@@ -787,7 +879,7 @@ function DateInput({
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full rounded-xl border border-[#cbd5c5] bg-white px-4 py-3 text-[#111111] outline-none focus:border-[#529027]"
+        className="mt-2 w-full rounded-xl border border-[#354433] bg-[#080d09] px-4 py-3 text-white outline-none transition focus:border-[#79c51c] focus:ring-2 focus:ring-[#79c51c]/20"
       />
     </div>
   );
@@ -810,23 +902,24 @@ function FileUpload({
 }) {
   return (
     <div className="mt-6">
-      <label className="text-sm font-bold text-[#222222]">
+      <label className="text-sm font-bold text-gray-200">
         {label}
+
         {required && (
-          <span className="ml-1 text-[#529027]">*</span>
+          <span className="ml-1 text-[#79c51c]">*</span>
         )}
       </label>
 
-      <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#cbd5c5] bg-[#f5f7f4] px-6 py-8 text-center transition hover:border-[#529027]">
+      <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#354433] bg-[#080d09] px-6 py-8 text-center transition hover:border-[#79c51c] hover:bg-[#0b110c]">
         <span className="text-3xl">
           {image ? "🚐" : "📄"}
         </span>
 
-        <span className="mt-3 break-all font-bold text-[#111111]">
+        <span className="mt-3 break-all font-bold text-white">
           {file ? file.name : "Choose a file"}
         </span>
 
-        <span className="mt-1 text-sm text-[#666666]">
+        <span className="mt-1 text-sm text-gray-600">
           {image
             ? "Upload a clear photo of the vehicle"
             : "PDF, JPG or PNG"}
@@ -844,7 +937,7 @@ function FileUpload({
       </label>
 
       {file && (
-        <p className="mt-2 text-sm font-medium text-[#529027]">
+        <p className="mt-2 text-sm font-medium text-[#79c51c]">
           ✓ File selected
         </p>
       )}
