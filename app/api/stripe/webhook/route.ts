@@ -4,33 +4,17 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-/*
- * =========================================================
- * ENVIRONMENT
- * =========================================================
- */
-
 function getEnv(name: string): string {
   const value = process.env[name];
 
   if (!value) {
-    throw new Error(
-      `Missing environment variable: ${name}`
-    );
+    throw new Error(`Missing environment variable: ${name}`);
   }
 
   return value;
 }
 
-const stripe = new Stripe(
-  getEnv("STRIPE_SECRET_KEY")
-);
-
-/*
- * =========================================================
- * POST /api/stripe/webhook
- * =========================================================
- */
+const stripe = new Stripe(getEnv("STRIPE_SECRET_KEY"));
 
 export async function POST(request: Request) {
   console.log("");
@@ -38,129 +22,61 @@ export async function POST(request: Request) {
   console.log("RCS STRIPE WEBHOOK RECEIVED");
   console.log("========================================");
 
-  /*
-   * =======================================================
-   * STRIPE SIGNATURE
-   * =======================================================
-   */
-
-  const signature =
-    request.headers.get("stripe-signature");
+  const signature = request.headers.get("stripe-signature");
 
   if (!signature) {
-    console.error(
-      "Missing Stripe signature."
-    );
+    console.error("Missing Stripe signature.");
 
     return NextResponse.json(
-      {
-        error: "Missing Stripe signature",
-      },
-      {
-        status: 400,
-      }
+      { error: "Missing Stripe signature" },
+      { status: 400 }
     );
   }
-
-  /*
-   * =======================================================
-   * READ RAW BODY
-   *
-   * IMPORTANT:
-   *
-   * Stripe signature verification requires the
-   * ORIGINAL RAW REQUEST BODY.
-   * =======================================================
-   */
 
   let body: string;
 
   try {
     body = await request.text();
   } catch (error) {
-    console.error(
-      "Could not read Stripe webhook body:",
-      error
-    );
+    console.error("Could not read Stripe webhook body:", error);
 
     return NextResponse.json(
-      {
-        error:
-          "Could not read webhook body",
-      },
-      {
-        status: 400,
-      }
+      { error: "Could not read webhook body" },
+      { status: 400 }
     );
   }
-
-  /*
-   * =======================================================
-   * VERIFY WEBHOOK
-   * =======================================================
-   */
 
   let event: Stripe.Event;
 
   try {
-    const webhookSecret = getEnv(
-      "STRIPE_WEBHOOK_SECRET"
-    );
+    const webhookSecret = getEnv("STRIPE_WEBHOOK_SECRET");
 
-    event =
-      stripe.webhooks.constructEvent(
-        body,
-        signature,
-        webhookSecret
-      );
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      webhookSecret
+    );
   } catch (error) {
-    console.error(
-      "STRIPE SIGNATURE VERIFICATION FAILED"
-    );
-
+    console.error("STRIPE SIGNATURE VERIFICATION FAILED");
     console.error(error);
 
     return NextResponse.json(
       {
-        error:
-          "Webhook signature verification failed",
+        error: "Webhook signature verification failed",
       },
-      {
-        status: 400,
-      }
+      { status: 400 }
     );
   }
 
-  console.log(
-    "Stripe event:",
-    event.type
-  );
-
-  console.log(
-    "Stripe event ID:",
-    event.id
-  );
-
-  /*
-   * =======================================================
-   * SUPABASE ADMIN CLIENT
-   * =======================================================
-   */
+  console.log("Stripe event:", event.type);
+  console.log("Stripe event ID:", event.id);
 
   let supabase;
 
   try {
-    const supabaseUrl = getEnv(
-      "NEXT_PUBLIC_SUPABASE_URL"
-    );
-
-    const serviceRoleKey = getEnv(
-      "SUPABASE_SERVICE_ROLE_KEY"
-    );
-
     supabase = createClient(
-      supabaseUrl,
-      serviceRoleKey,
+      getEnv("NEXT_PUBLIC_SUPABASE_URL"),
+      getEnv("SUPABASE_SERVICE_ROLE_KEY"),
       {
         auth: {
           autoRefreshToken: false,
@@ -169,78 +85,46 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
-    console.error(
-      "SUPABASE ADMIN CLIENT ERROR"
-    );
-
+    console.error("SUPABASE ADMIN CLIENT ERROR");
     console.error(error);
 
     return NextResponse.json(
       {
-        error:
-          "Supabase server configuration is missing",
+        error: "Supabase server configuration is missing",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
-
-  /*
-   * =======================================================
-   * HANDLE STRIPE EVENT
-   * =======================================================
-   */
 
   try {
     /*
      * =====================================================
-     * CHECKOUT COMPLETED
+     * CHECKOUT SESSION COMPLETED
      * =====================================================
      */
 
-    if (
-      event.type ===
-      "checkout.session.completed"
-    ) {
+    if (event.type === "checkout.session.completed") {
       const session =
         event.data.object as Stripe.Checkout.Session;
 
       console.log("");
-      console.log(
-        "CHECKOUT SESSION COMPLETED"
-      );
-
-      console.log(
-        "Session ID:",
-        session.id
-      );
-
-      console.log(
-        "Payment status:",
-        session.payment_status
-      );
-
-      console.log(
-        "Session metadata:",
-        session.metadata
-      );
+      console.log("CHECKOUT SESSION COMPLETED");
+      console.log("Session ID:", session.id);
+      console.log("Payment status:", session.payment_status);
+      console.log("Metadata:", session.metadata);
 
       /*
-       * ===================================================
-       * ONLY PROCESS PAID CHECKOUTS
-       * ===================================================
+       * Only continue when Stripe confirms payment.
        */
 
-      if (
-        session.payment_status !== "paid"
-      ) {
+      if (session.payment_status !== "paid") {
         console.log(
           "Checkout completed but payment is not marked as paid."
         );
 
         return NextResponse.json({
           received: true,
+          paymentRecorded: false,
         });
       }
 
@@ -250,51 +134,10 @@ export async function POST(request: Request) {
        * ===================================================
        */
 
-      const jobIdRaw =
-        session.metadata?.job_id;
-
-      const bidIdRaw =
-        session.metadata?.bid_id;
-
-      const customerId =
-        session.metadata?.customer_id;
-
-      const driverId =
-        session.metadata?.driver_id;
-
-      const jobReference =
-        session.metadata?.job_reference;
-
-      console.log(
-        "job_id:",
-        jobIdRaw
-      );
-
-      console.log(
-        "bid_id:",
-        bidIdRaw
-      );
-
-      console.log(
-        "customer_id:",
-        customerId
-      );
-
-      console.log(
-        "driver_id:",
-        driverId
-      );
-
-      console.log(
-        "job_reference:",
-        jobReference
-      );
-
-      /*
-       * ===================================================
-       * CHECK REQUIRED METADATA
-       * ===================================================
-       */
+      const jobIdRaw = session.metadata?.job_id;
+      const bidIdRaw = session.metadata?.bid_id;
+      const customerId = session.metadata?.customer_id;
+      const driverId = session.metadata?.driver_id;
 
       if (
         !jobIdRaw ||
@@ -311,42 +154,39 @@ export async function POST(request: Request) {
             error:
               "Stripe checkout session is missing required metadata",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
-      const jobId = Number(
-        jobIdRaw
-      );
-
-      const bidId = Number(
-        bidIdRaw
-      );
+      const jobId = Number(jobIdRaw);
+      const bidId = Number(bidIdRaw);
 
       if (
         !Number.isInteger(jobId) ||
         !Number.isInteger(bidId)
       ) {
-        console.error(
-          "Invalid job or bid ID."
-        );
-
-        console.error({
-          jobIdRaw,
-          bidIdRaw,
-        });
+        console.error("Invalid job or bid ID.");
 
         return NextResponse.json(
           {
-            error:
-              "Invalid job or bid ID",
+            error: "Invalid job or bid ID",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
+      }
+
+      /*
+       * ===================================================
+       * GET PAYMENT INTENT ID
+       * ===================================================
+       */
+
+      let paymentIntentId: string | null = null;
+
+      if (typeof session.payment_intent === "string") {
+        paymentIntentId = session.payment_intent;
+      } else if (session.payment_intent) {
+        paymentIntentId = session.payment_intent.id;
       }
 
       /*
@@ -363,55 +203,43 @@ export async function POST(request: Request) {
         .select(
           `
             id,
+            reference,
             customer_id,
             status,
             accepted_bid_id,
             assigned_driver_id,
             assigned_bid_id,
-            journey_status
+            journey_status,
+            payment_status,
+            stripe_checkout_session_id,
+            stripe_payment_intent_id
           `
         )
         .eq("id", jobId)
         .single();
 
-      if (jobError) {
-        console.error(
-          "SUPABASE JOB LOOKUP ERROR"
-        );
-
+      if (jobError || !job) {
+        console.error("JOB LOOKUP ERROR");
         console.error(jobError);
 
         return NextResponse.json(
           {
-            error:
-              "Could not find job",
-            details:
-              jobError.message,
+            error: "Could not find job",
+            details: jobError?.message,
           },
-          {
-            status: 500,
-          }
+          { status: 500 }
         );
       }
 
-      if (!job) {
-        console.error(
-          `Job ${jobId} was not found.`
-        );
-
-        return NextResponse.json(
-          {
-            error: "Job not found",
-          },
-          {
-            status: 404,
-          }
-        );
-      }
-
+      console.log("JOB FOUND:", job.id);
+      console.log("Current status:", job.status);
       console.log(
-        "JOB FOUND:",
-        job.id
+        "Current payment status:",
+        job.payment_status
+      );
+      console.log(
+        "Current assigned driver:",
+        job.assigned_driver_id
       );
 
       /*
@@ -420,70 +248,15 @@ export async function POST(request: Request) {
        * ===================================================
        */
 
-      if (
-        job.customer_id !== customerId
-      ) {
-        console.error(
-          "CUSTOMER ID MISMATCH"
-        );
-
-        console.error({
-          jobCustomerId:
-            job.customer_id,
-          stripeCustomerId:
-            customerId,
-        });
+      if (job.customer_id !== customerId) {
+        console.error("CUSTOMER ID MISMATCH");
 
         return NextResponse.json(
           {
-            error:
-              "Customer does not own this job",
+            error: "Customer does not own this job",
           },
-          {
-            status: 403,
-          }
+          { status: 403 }
         );
-      }
-
-      /*
-       * ===================================================
-       * IDEMPOTENCY
-       *
-       * Stripe can retry webhook events.
-       *
-       * If the job is already assigned,
-       * don't assign another driver.
-       * ===================================================
-       */
-
-      const alreadyAssigned =
-        Boolean(
-          job.accepted_bid_id
-        ) ||
-        Boolean(
-          job.assigned_driver_id
-        ) ||
-        Boolean(
-          job.assigned_bid_id
-        ) ||
-        [
-          "assigned",
-          "in_progress",
-          "completed",
-        ].includes(
-          job.status || ""
-        );
-
-      if (alreadyAssigned) {
-        console.log(
-          `JOB ${jobId} IS ALREADY ASSIGNED`
-        );
-
-        return NextResponse.json({
-          received: true,
-          alreadyAssigned: true,
-          jobId,
-        });
       }
 
       /*
@@ -503,52 +276,30 @@ export async function POST(request: Request) {
             job_id,
             driver_id,
             amount,
-            status
+            status,
+            platform_fee_percent,
+            platform_fee,
+            driver_payout
           `
         )
         .eq("id", bidId)
         .eq("job_id", jobId)
         .single();
 
-      if (bidError) {
-        console.error(
-          "SUPABASE BID LOOKUP ERROR"
-        );
-
+      if (bidError || !bid) {
+        console.error("BID LOOKUP ERROR");
         console.error(bidError);
 
         return NextResponse.json(
           {
-            error:
-              "Could not find bid",
-            details:
-              bidError.message,
+            error: "Could not find bid",
+            details: bidError?.message,
           },
-          {
-            status: 500,
-          }
+          { status: 500 }
         );
       }
 
-      if (!bid) {
-        console.error(
-          `Bid ${bidId} was not found for job ${jobId}.`
-        );
-
-        return NextResponse.json(
-          {
-            error: "Bid not found",
-          },
-          {
-            status: 404,
-          }
-        );
-      }
-
-      console.log(
-        "BID FOUND:",
-        bid.id
-      );
+      console.log("BID FOUND:", bid.id);
 
       /*
        * ===================================================
@@ -556,42 +307,176 @@ export async function POST(request: Request) {
        * ===================================================
        */
 
-      if (
-        bid.driver_id !== driverId
-      ) {
-        console.error(
-          "DRIVER ID MISMATCH"
-        );
-
-        console.error({
-          bidDriverId:
-            bid.driver_id,
-          stripeDriverId:
-            driverId,
-        });
+      if (bid.driver_id !== driverId) {
+        console.error("DRIVER ID MISMATCH");
 
         return NextResponse.json(
           {
-            error:
-              "Driver does not match bid",
+            error: "Driver does not match bid",
           },
-          {
-            status: 403,
-          }
+          { status: 403 }
         );
       }
 
       /*
        * ===================================================
-       * CHECK BID STATUS
+       * IMPORTANT PAYMENT STEP
        *
-       * A rejected bid must never be accepted.
+       * We update payment_status BEFORE checking whether
+       * the job is already assigned.
+       *
+       * This is what was missing from the old webhook.
+       *
+       * The database wallet trigger will then create the
+       * driver's earning.
        * ===================================================
        */
 
-      if (
-        bid.status === "rejected"
-      ) {
+      const {
+        data: paidJob,
+        error: paymentUpdateError,
+      } = await supabase
+        .from("jobs")
+        .update({
+          payment_status: "paid",
+          stripe_checkout_session_id: session.id,
+          stripe_payment_intent_id: paymentIntentId,
+        })
+        .eq("id", jobId)
+        .eq("customer_id", customerId)
+        .select(
+          `
+            id,
+            reference,
+            status,
+            payment_status,
+            accepted_bid_id,
+            assigned_bid_id,
+            assigned_driver_id,
+            journey_status,
+            stripe_checkout_session_id,
+            stripe_payment_intent_id
+          `
+        )
+        .single();
+
+      if (paymentUpdateError) {
+        console.error("PAYMENT STATUS UPDATE ERROR");
+        console.error(paymentUpdateError);
+
+        return NextResponse.json(
+          {
+            error: "Could not mark job as paid",
+            details: paymentUpdateError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      console.log("");
+      console.log("PAYMENT RECORDED");
+      console.log("Job:", jobId);
+      console.log("Payment status:", paidJob.payment_status);
+      console.log(
+        "Stripe session:",
+        paidJob.stripe_checkout_session_id
+      );
+      console.log(
+        "Payment intent:",
+        paidJob.stripe_payment_intent_id
+      );
+
+      /*
+       * ===================================================
+       * CHECK WHETHER JOB IS ALREADY ASSIGNED
+       * ===================================================
+       */
+
+      const alreadyAssigned =
+        Boolean(job.accepted_bid_id) ||
+        Boolean(job.assigned_driver_id) ||
+        Boolean(job.assigned_bid_id) ||
+        [
+          "assigned",
+          "in_progress",
+          "completed",
+        ].includes(job.status || "");
+
+      /*
+       * ===================================================
+       * ALREADY ASSIGNED
+       *
+       * Payment has already been recorded above.
+       *
+       * Do NOT reassign the driver.
+       * ===================================================
+       */
+
+      if (alreadyAssigned) {
+        console.log(
+          `JOB ${jobId} IS ALREADY ASSIGNED`
+        );
+
+        /*
+         * Verify the assignment still matches the paid bid.
+         */
+
+        if (
+          job.assigned_driver_id &&
+          job.assigned_driver_id !== bid.driver_id
+        ) {
+          console.error(
+            "EXISTING ASSIGNED DRIVER DOES NOT MATCH PAYMENT"
+          );
+
+          return NextResponse.json(
+            {
+              error:
+                "Job is already assigned to a different driver",
+            },
+            { status: 409 }
+          );
+        }
+
+        if (
+          job.assigned_bid_id &&
+          Number(job.assigned_bid_id) !== bidId
+        ) {
+          console.error(
+            "EXISTING ASSIGNED BID DOES NOT MATCH PAYMENT"
+          );
+
+          return NextResponse.json(
+            {
+              error:
+                "Job is already assigned to a different bid",
+            },
+            { status: 409 }
+          );
+        }
+
+        console.log(
+          "Payment successfully recorded on existing assignment."
+        );
+
+        return NextResponse.json({
+          received: true,
+          success: true,
+          paymentRecorded: true,
+          alreadyAssigned: true,
+          jobId,
+          bidId,
+          driverId: bid.driver_id,
+        });
+      }
+
+      /*
+       * ===================================================
+       * CHECK BID
+       * ===================================================
+       */
+
+      if (bid.status === "rejected") {
         console.error(
           `Bid ${bidId} has already been rejected.`
         );
@@ -601,15 +486,13 @@ export async function POST(request: Request) {
             error:
               "This bid is no longer available",
           },
-          {
-            status: 409,
-          }
+          { status: 409 }
         );
       }
 
       /*
        * ===================================================
-       * ACCEPT SELECTED BID
+       * ACCEPT BID
        * ===================================================
        */
 
@@ -624,34 +507,21 @@ export async function POST(request: Request) {
         .eq("job_id", jobId);
 
       if (acceptBidError) {
-        console.error(
-          "ACCEPT BID ERROR"
-        );
-
-        console.error(
-          acceptBidError
-        );
+        console.error("ACCEPT BID ERROR");
+        console.error(acceptBidError);
 
         return NextResponse.json(
           {
-            error:
-              "Could not accept bid",
-            details:
-              acceptBidError.message,
+            error: "Could not accept bid",
+            details: acceptBidError.message,
           },
-          {
-            status: 500,
-          }
+          { status: 500 }
         );
       }
 
-      console.log(
-        `Bid ${bidId} accepted.`
-      );
-
       /*
        * ===================================================
-       * REJECT ALL OTHER BIDS
+       * REJECT OTHER BIDS
        * ===================================================
        */
 
@@ -666,27 +536,21 @@ export async function POST(request: Request) {
         .neq("id", bidId);
 
       if (rejectBidsError) {
-        /*
-         * We don't fail the payment because
-         * rejection of another bid is secondary.
-         */
-
         console.error(
           "REJECT OTHER BIDS ERROR"
         );
 
-        console.error(
-          rejectBidsError
-        );
-      } else {
-        console.log(
-          "Other bids rejected."
-        );
+        console.error(rejectBidsError);
       }
 
       /*
        * ===================================================
        * ASSIGN DRIVER
+       * ===================================================
+       *
+       * Payment was already recorded above.
+       *
+       * This update assigns the selected driver.
        * ===================================================
        */
 
@@ -699,47 +563,37 @@ export async function POST(request: Request) {
           status: "assigned",
           accepted_bid_id: bidId,
           assigned_bid_id: bidId,
-          assigned_driver_id:
-            bid.driver_id,
-          journey_status:
-            "assigned",
+          assigned_driver_id: bid.driver_id,
+          journey_status: "assigned",
         })
         .eq("id", jobId)
-        .eq(
-          "customer_id",
-          customerId
-        )
+        .eq("customer_id", customerId)
         .select(
           `
             id,
+            reference,
             status,
             accepted_bid_id,
             assigned_bid_id,
             assigned_driver_id,
-            journey_status
+            journey_status,
+            payment_status,
+            stripe_checkout_session_id,
+            stripe_payment_intent_id
           `
         )
         .single();
 
       if (assignError) {
-        console.error(
-          "ASSIGN DRIVER ERROR"
-        );
-
-        console.error(
-          assignError
-        );
+        console.error("ASSIGN DRIVER ERROR");
+        console.error(assignError);
 
         return NextResponse.json(
           {
-            error:
-              "Could not assign driver",
-            details:
-              assignError.message,
+            error: "Could not assign driver",
+            details: assignError.message,
           },
-          {
-            status: 500,
-          }
+          { status: 500 }
         );
       }
 
@@ -750,38 +604,30 @@ export async function POST(request: Request) {
        */
 
       console.log("");
+      console.log("========================================");
+      console.log("RCS PAYMENT SUCCESSFUL");
+      console.log("========================================");
+      console.log(`Job: ${jobId}`);
+      console.log(`Bid: ${bidId}`);
+      console.log(`Driver: ${bid.driver_id}`);
       console.log(
-        "========================================"
+        `Payment status: ${updatedJob.payment_status}`
       );
-
       console.log(
-        "RCS PAYMENT SUCCESSFUL"
+        `Stripe session: ${updatedJob.stripe_checkout_session_id}`
       );
-
       console.log(
-        `Job ${jobId} assigned to driver ${bid.driver_id}`
+        `Payment intent: ${updatedJob.stripe_payment_intent_id}`
       );
-
-      console.log(
-        `Bid ${bidId} accepted`
-      );
-
-      console.log(
-        "Updated job:",
-        updatedJob
-      );
-
-      console.log(
-        "========================================"
-      );
+      console.log("========================================");
 
       return NextResponse.json({
         received: true,
         success: true,
+        paymentRecorded: true,
         jobId,
         bidId,
-        driverId:
-          bid.driver_id,
+        driverId: bid.driver_id,
       });
     }
 
@@ -831,11 +677,6 @@ export async function POST(request: Request) {
         session.id
       );
 
-      console.log(
-        "Expired session metadata:",
-        session.metadata
-      );
-
       return NextResponse.json({
         received: true,
       });
@@ -856,28 +697,16 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("");
-    console.error(
-      "========================================"
-    );
-
-    console.error(
-      "STRIPE WEBHOOK PROCESSING ERROR"
-    );
-
+    console.error("========================================");
+    console.error("STRIPE WEBHOOK PROCESSING ERROR");
+    console.error("========================================");
     console.error(error);
-
-    console.error(
-      "========================================"
-    );
 
     return NextResponse.json(
       {
-        error:
-          "Webhook processing failed",
+        error: "Webhook processing failed",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
