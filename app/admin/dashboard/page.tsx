@@ -68,6 +68,9 @@ export default function AdminDashboard() {
     PayoutRequest[]
   >([]);
 
+  const [customersCount, setCustomersCount] =
+    useState(0);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -77,13 +80,6 @@ export default function AdminDashboard() {
   const refreshTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /*
-   * LOAD DASHBOARD THROUGH SECURE ADMIN API
-   *
-   * The browser no longer queries jobs/drivers/bids
-   * directly. The API verifies the logged-in admin
-   * and uses the Supabase service role server-side.
-   */
   const loadDashboard = useCallback(
     async (silent = false) => {
       if (silent) {
@@ -156,6 +152,12 @@ export default function AdminDashboard() {
             ? (data.payoutRequests as PayoutRequest[])
             : []
         );
+
+        setCustomersCount(
+          typeof data.customersCount === "number"
+            ? data.customersCount
+            : 0
+        );
       } catch (error) {
         console.error(
           "Admin dashboard error:",
@@ -175,20 +177,10 @@ export default function AdminDashboard() {
     []
   );
 
-  /*
-   * INITIAL LOAD
-   */
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
 
-  /*
-   * SUPABASE REALTIME
-   *
-   * Realtime events trigger a fresh secure API
-   * request rather than querying protected data
-   * directly from the browser.
-   */
   useEffect(() => {
     const supabase = createClient();
 
@@ -250,6 +242,17 @@ export default function AdminDashboard() {
           scheduleRealtimeRefresh();
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "profiles",
+        },
+        () => {
+          scheduleRealtimeRefresh();
+        }
+      )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           setRealtimeState("live");
@@ -280,9 +283,6 @@ export default function AdminDashboard() {
     };
   }, [loadDashboard]);
 
-  /*
-   * 15 SECOND FALLBACK
-   */
   useEffect(() => {
     const interval = window.setInterval(() => {
       void loadDashboard(true);
@@ -607,8 +607,8 @@ export default function AdminDashboard() {
 
             <StatCard
               title="Customers"
-              number={uniqueCustomers(jobs)}
-              description="With jobs"
+              number={customersCount}
+              description="Registered customers"
               icon="CUS"
               href="/admin/customers"
             />
@@ -849,8 +849,8 @@ export default function AdminDashboard() {
             <ManagementCard
               href="/admin/customers"
               title="Customers"
-              description="View customers and their jobs."
-              number={uniqueCustomers(jobs)}
+              description="View registered customers."
+              number={customersCount}
             />
 
             <ManagementCard
@@ -1453,12 +1453,4 @@ function formatStatus(
 
 function formatMoney(value: number) {
   return Number(value || 0).toFixed(2);
-}
-
-function uniqueCustomers(jobs: Job[]) {
-  return new Set(
-    jobs
-      .map((job) => job.customer_id)
-      .filter(Boolean)
-  ).size;
 }
