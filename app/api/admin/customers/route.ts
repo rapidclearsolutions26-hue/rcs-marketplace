@@ -1,28 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const adminEmail = process.env.ADMIN_EMAIL;
-
-type CustomerJob = {
-  id: number;
-  reference: string | null;
-  customer_id: string | null;
-  job_type: string | null;
-  postcode: string | null;
-  address: string | null;
-  load_size: string | null;
-  description: string | null;
-  preferred_date: string | null;
-  preferred_time: string | null;
-  status: string | null;
-  journey_status: string | null;
-  payment_status: string | null;
-  accepted_bid_id: number | null;
-  assigned_driver_id: string | null;
-  created_at: string | null;
-};
 
 function getAdminClient() {
   if (!supabaseUrl || !serviceRoleKey) {
@@ -45,24 +27,21 @@ async function verifyAdmin(request: Request) {
       ok: false as const,
       response: NextResponse.json(
         {
-          error:
-            "Admin environment is not configured.",
+          error: "Admin environment is not configured.",
         },
         { status: 500 },
       ),
     };
   }
 
-  const authorization =
-    request.headers.get("authorization");
+  const authorization = request.headers.get("authorization");
 
   if (!authorization?.startsWith("Bearer ")) {
     return {
       ok: false as const,
       response: NextResponse.json(
         {
-          error:
-            "Missing authorization token.",
+          error: "Missing authorization token.",
         },
         { status: 401 },
       ),
@@ -97,25 +76,25 @@ async function verifyAdmin(request: Request) {
       ok: false as const,
       response: NextResponse.json(
         {
-          error:
-            "Invalid authentication.",
+          error: "Invalid authentication.",
         },
         { status: 401 },
       ),
     };
   }
 
+  const configuredAdminEmail = adminEmail;
+
   if (
     !user.email ||
     user.email.toLowerCase() !==
-      adminEmail.toLowerCase()
+      configuredAdminEmail.toLowerCase()
   ) {
     return {
       ok: false as const,
       response: NextResponse.json(
         {
-          error:
-            "Admin access required.",
+          error: "Admin access required.",
         },
         { status: 403 },
       ),
@@ -124,19 +103,46 @@ async function verifyAdmin(request: Request) {
 
   return {
     ok: true as const,
-    supabase,
-    user,
+    adminEmail: configuredAdminEmail,
   };
 }
 
+type CustomerJob = {
+  id: number;
+  reference: string | null;
+  customer_id: string | null;
+  job_type: string | null;
+  postcode: string | null;
+  address: string | null;
+  load_size: string | null;
+  description: string | null;
+  preferred_date: string | null;
+  preferred_time: string | null;
+  status: string | null;
+  journey_status: string | null;
+  payment_status: string | null;
+  accepted_bid_id: number | null;
+  assigned_driver_id: string | null;
+  created_at: string | null;
+};
+
+type CustomerRecord = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  created_at: string | null;
+  last_sign_in_at: string | null;
+  job_count: number;
+  total_job_value: number;
+  paid_job_value: number;
+  jobs: CustomerJob[];
+};
+
 async function getAllAuthUsers(
   supabase: ReturnType<typeof getAdminClient>,
-) {
-  const users: Awaited<
-    ReturnType<
-      typeof supabase.auth.admin.listUsers
-    >
-  >["data"]["users"] = [];
+): Promise<User[]> {
+  const users: User[] = [];
 
   let page = 1;
   const perPage = 1000;
@@ -158,9 +164,7 @@ async function getAllAuthUsers(
 
     users.push(...data.users);
 
-    if (
-      data.users.length < perPage
-    ) {
+    if (data.users.length < perPage) {
       break;
     }
 
@@ -170,20 +174,11 @@ async function getAllAuthUsers(
   return users;
 }
 
-function getFullName(
-  user: {
-    user_metadata?: Record<
-      string,
-      unknown
-    > | null;
-  },
-) {
-  const metadata =
-    user.user_metadata ?? {};
+function getFullName(user: User) {
+  const metadata = user.user_metadata ?? {};
 
   const fullName =
-    typeof metadata.full_name ===
-    "string"
+    typeof metadata.full_name === "string"
       ? metadata.full_name.trim()
       : "";
 
@@ -192,74 +187,41 @@ function getFullName(
   }
 
   const name =
-    typeof metadata.name ===
-    "string"
+    typeof metadata.name === "string"
       ? metadata.name.trim()
       : "";
 
   return name || null;
 }
 
-function getPhone(
-  user: {
-    phone?: string | null;
-    user_metadata?: Record<
-      string,
-      unknown
-    > | null;
-  },
-) {
+function getPhone(user: User) {
   if (user.phone) {
     return user.phone;
   }
 
-  const metadata =
-    user.user_metadata ?? {};
+  const metadata = user.user_metadata ?? {};
 
   const phone =
-    typeof metadata.phone ===
-    "string"
+    typeof metadata.phone === "string"
       ? metadata.phone.trim()
       : "";
 
   return phone || null;
 }
 
-export async function GET(
-  request: Request,
-) {
+export async function GET(request: Request) {
   try {
-    const verification =
-      await verifyAdmin(request);
+    const verification = await verifyAdmin(request);
 
     if (!verification.ok) {
       return verification.response;
     }
 
-    const { supabase } =
-      verification;
+    const supabase = getAdminClient();
+    const configuredAdminEmail = verification.adminEmail;
 
-    /*
-     * Load all Auth users.
-     *
-     * Customer accounts are currently
-     * stored in Supabase Auth, so this
-     * gives the admin area the customer
-     * account information without exposing
-     * Auth administration to the browser.
-     */
-    const authUsers =
-      await getAllAuthUsers(
-        supabase,
-      );
+    const authUsers = await getAllAuthUsers(supabase);
 
-    /*
-     * Load every job.
-     *
-     * We intentionally select only the
-     * real columns currently present in
-     * public.jobs.
-     */
     const {
       data: jobs,
       error: jobsError,
@@ -285,12 +247,9 @@ export async function GET(
         created_at
       `,
       )
-      .order(
-        "created_at",
-        {
-          ascending: false,
-        },
-      );
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (jobsError) {
       console.error(
@@ -300,26 +259,16 @@ export async function GET(
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load customer jobs.",
-          details:
-            jobsError.message,
+          error: "Failed to load customer jobs.",
+          details: jobsError.message,
         },
         { status: 500 },
       );
     }
 
-    const customerJobs =
-      (jobs ?? []) as CustomerJob[];
+    const customerJobs = (jobs ?? []) as CustomerJob[];
 
-    /*
-     * Create a map of jobs by customer.
-     */
-    const jobsByCustomer =
-      new Map<
-        string,
-        CustomerJob[]
-      >();
+    const jobsByCustomer = new Map<string, CustomerJob[]>();
 
     for (const job of customerJobs) {
       if (!job.customer_id) {
@@ -327,125 +276,57 @@ export async function GET(
       }
 
       const existing =
-        jobsByCustomer.get(
-          job.customer_id,
-        ) ?? [];
+        jobsByCustomer.get(job.customer_id) ?? [];
 
       existing.push(job);
 
-      jobsByCustomer.set(
-        job.customer_id,
-        existing,
-      );
+      jobsByCustomer.set(job.customer_id, existing);
     }
 
-    /*
-     * Build customer records from
-     * Supabase Auth users.
-     *
-     * We include users who have no jobs
-     * yet because the admin should be able
-     * to see registered customers even
-     * before they post their first job.
-     */
-    const customers = authUsers
+    const customers: CustomerRecord[] = authUsers
       .map((user) => {
         const jobsForCustomer =
-          jobsByCustomer.get(
-            user.id,
-          ) ?? [];
-
-        const totalJobValue =
-          jobsForCustomer.reduce(
-            (total, job) => {
-              /*
-               * The jobs table does not
-               * contain a price column.
-               *
-               * Therefore job value is
-               * calculated from the accepted
-               * bid when one exists below.
-               *
-               * It is populated separately
-               * using the bids query.
-               */
-              return total;
-            },
-            0,
-          );
+          jobsByCustomer.get(user.id) ?? [];
 
         return {
           id: user.id,
-          email:
-            user.email ?? null,
-          full_name:
-            getFullName(user),
-          phone:
-            getPhone(user),
-          created_at:
-            user.created_at ??
-            null,
-          last_sign_in_at:
-            user.last_sign_in_at ??
-            null,
-          job_count:
-            jobsForCustomer.length,
-          total_job_value:
-            totalJobValue,
+          email: user.email ?? null,
+          full_name: getFullName(user),
+          phone: getPhone(user),
+          created_at: user.created_at ?? null,
+          last_sign_in_at: user.last_sign_in_at ?? null,
+          job_count: jobsForCustomer.length,
+          total_job_value: 0,
           paid_job_value: 0,
-          jobs:
-            jobsForCustomer,
+          jobs: jobsForCustomer,
         };
       })
       .filter((customer) => {
-        /*
-         * The admin account itself should
-         * not appear as a customer.
-         */
         return (
           !customer.email ||
           customer.email.toLowerCase() !==
-            adminEmail.toLowerCase()
+            configuredAdminEmail.toLowerCase()
         );
       });
 
-    /*
-     * Load bids for the customer's jobs.
-     *
-     * The current jobs schema does not
-     * contain the customer price, so the
-     * accepted bid amount is the correct
-     * source for completed/assigned job
-     * value.
-     */
     const acceptedBidIds = [
       ...new Set(
         customerJobs
-          .map(
-            (job) =>
-              job.accepted_bid_id,
-          )
+          .map((job) => job.accepted_bid_id)
           .filter(
-            (
-              id,
-            ): id is number =>
-              typeof id ===
-              "number",
+            (id): id is number =>
+              typeof id === "number",
           ),
       ),
     ];
 
-    let bids: {
+    let bids: Array<{
       id: number;
-      amount:
-        | number
-        | null;
+      amount: number | null;
       job_id: number;
-    }[] = [];
+    }> = [];
 
-    if (
-      acceptedBidIds.length > 0
-    ) {
+    if (acceptedBidIds.length > 0) {
       const {
         data,
         error,
@@ -458,10 +339,7 @@ export async function GET(
           job_id
         `,
         )
-        .in(
-          "id",
-          acceptedBidIds,
-        );
+        .in("id", acceptedBidIds);
 
       if (error) {
         console.error(
@@ -473,8 +351,7 @@ export async function GET(
           {
             error:
               "Failed to load customer bid values.",
-            details:
-              error.message,
+            details: error.message,
           },
           { status: 500 },
         );
@@ -483,170 +360,91 @@ export async function GET(
       bids = data ?? [];
     }
 
-    const bidById =
-      new Map(
-        bids.map((bid) => [
-          bid.id,
-          bid,
-        ]),
-      );
-
-    /*
-     * Add accepted bid values to
-     * each customer.
-     */
-    const enrichedCustomers =
-      customers.map(
-        (customer) => {
-          let totalJobValue = 0;
-          let paidJobValue = 0;
-
-          for (const job of customer.jobs) {
-            if (
-              job.accepted_bid_id
-            ) {
-              const bid =
-                bidById.get(
-                  job.accepted_bid_id,
-                );
-
-              const amount =
-                Number(
-                  bid?.amount ?? 0,
-                );
-
-              totalJobValue +=
-                amount;
-
-              if (
-                String(
-                  job.payment_status ??
-                    "",
-                ).toLowerCase() ===
-                "paid"
-              ) {
-                paidJobValue +=
-                  amount;
-              }
-            }
-          }
-
-          return {
-            ...customer,
-            total_job_value:
-              Number(
-                totalJobValue.toFixed(
-                  2,
-                ),
-              ),
-            paid_job_value:
-              Number(
-                paidJobValue.toFixed(
-                  2,
-                ),
-              ),
-          };
-        },
-      );
-
-    /*
-     * Sort customers with the newest
-     * registered accounts first.
-     */
-    enrichedCustomers.sort(
-      (a, b) => {
-        const aTime =
-          a.created_at
-            ? new Date(
-                a.created_at,
-              ).getTime()
-            : 0;
-
-        const bTime =
-          b.created_at
-            ? new Date(
-                b.created_at,
-              ).getTime()
-            : 0;
-
-        return bTime - aTime;
-      },
+    const bidById = new Map(
+      bids.map((bid) => [bid.id, bid]),
     );
 
-    const totalCustomers =
-      enrichedCustomers.length;
+    const enrichedCustomers = customers.map((customer) => {
+      let totalJobValue = 0;
+      let paidJobValue = 0;
 
-    const customersWithJobs =
-      enrichedCustomers.filter(
-        (customer) =>
-          customer.job_count >
-          0,
-      ).length;
+      for (const job of customer.jobs) {
+        if (job.accepted_bid_id) {
+          const bid = bidById.get(job.accepted_bid_id);
+          const amount = Number(bid?.amount ?? 0);
 
-    const totalJobs =
-      customerJobs.filter(
-        (job) =>
-          job.customer_id !==
-          null,
-      ).length;
+          totalJobValue += amount;
 
-    const totalJobValue =
-      enrichedCustomers.reduce(
-        (total, customer) =>
-          total +
-          Number(
-            customer.total_job_value ??
-              0,
-          ),
-        0,
-      );
+          if (
+            String(job.payment_status ?? "").toLowerCase() ===
+            "paid"
+          ) {
+            paidJobValue += amount;
+          }
+        }
+      }
 
-    const paidJobValue =
-      enrichedCustomers.reduce(
-        (total, customer) =>
-          total +
-          Number(
-            customer.paid_job_value ??
-              0,
-          ),
-        0,
-      );
+      return {
+        ...customer,
+        total_job_value: Number(totalJobValue.toFixed(2)),
+        paid_job_value: Number(paidJobValue.toFixed(2)),
+      };
+    });
+
+    enrichedCustomers.sort((a, b) => {
+      const aTime = a.created_at
+        ? new Date(a.created_at).getTime()
+        : 0;
+
+      const bTime = b.created_at
+        ? new Date(b.created_at).getTime()
+        : 0;
+
+      return bTime - aTime;
+    });
+
+    const totalCustomers = enrichedCustomers.length;
+
+    const customersWithJobs = enrichedCustomers.filter(
+      (customer) => customer.job_count > 0,
+    ).length;
+
+    const totalJobs = customerJobs.filter(
+      (job) => job.customer_id !== null,
+    ).length;
+
+    const totalJobValue = enrichedCustomers.reduce(
+      (total, customer) =>
+        total + Number(customer.total_job_value ?? 0),
+      0,
+    );
+
+    const paidJobValue = enrichedCustomers.reduce(
+      (total, customer) =>
+        total + Number(customer.paid_job_value ?? 0),
+      0,
+    );
 
     return NextResponse.json(
       {
-        customers:
-          enrichedCustomers,
+        customers: enrichedCustomers,
         stats: {
           totalCustomers,
           customersWithJobs,
           totalJobs,
-          totalJobValue:
-            Number(
-              totalJobValue.toFixed(
-                2,
-              ),
-            ),
-          paidJobValue:
-            Number(
-              paidJobValue.toFixed(
-                2,
-              ),
-            ),
+          totalJobValue: Number(totalJobValue.toFixed(2)),
+          paidJobValue: Number(paidJobValue.toFixed(2)),
         },
       },
       {
         status: 200,
         headers: {
-          "Cache-Control":
-            "no-store",
+          "Cache-Control": "no-store",
         },
       },
     );
   } catch (error) {
-    console.error(
-      "Admin customers API error:",
-      error,
-    );
+    console.error("Admin customers API error:", error);
 
     return NextResponse.json(
       {

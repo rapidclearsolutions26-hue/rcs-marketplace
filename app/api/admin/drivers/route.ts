@@ -2,18 +2,61 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const adminEmail = process.env.ADMIN_EMAIL;
 
-const DRIVER_DOCUMENT_BUCKET =
-  "driver-documents";
+const DRIVER_DOCUMENT_BUCKET = "driver-documents";
 
 type DriverStatus =
   | "pending"
   | "approved"
   | "rejected"
   | "suspended";
+
+type DriverRecord = {
+  id: string;
+  full_name: string | null;
+  trading_name: string | null;
+  company_name: string | null;
+  phone: string | null;
+  email: string | null;
+  vehicle_type: string | null;
+  approved: boolean | null;
+  application_status: string | null;
+
+  address?: string | null;
+  postcode?: string | null;
+  company_number?: string | null;
+  years_trading?: number | null;
+
+  waste_carrier_number?: string | null;
+  waste_carrier_type?: string | null;
+  waste_carrier_expiry?: string | null;
+  waste_licence_url?: string | null;
+
+  insurance_provider?: string | null;
+  insurance_policy_number?: string | null;
+  insurance_expiry?: string | null;
+  insurance_certificate_url?: string | null;
+
+  vehicle_registration?: string | null;
+  vehicle_make?: string | null;
+  vehicle_model?: string | null;
+  vehicle_capacity?: string | null;
+  van_photo_url?: string | null;
+
+  created_at?: string | null;
+};
+
+type AdminDocumentUrls = {
+  waste_licence: string | null;
+  insurance_certificate: string | null;
+  van_photo: string | null;
+};
+
+type EnrichedDriver = DriverRecord & {
+  admin_document_urls: AdminDocumentUrls;
+};
 
 function getAdminClient() {
   if (!supabaseUrl || !serviceRoleKey) {
@@ -22,45 +65,35 @@ function getAdminClient() {
     );
   }
 
-  return createClient(
-    supabaseUrl,
-    serviceRoleKey,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
     },
-  );
+  });
 }
-
-/* ===================================================== */
-/* ADMIN AUTH                                             */
-/* ===================================================== */
 
 async function verifyAdmin(request: Request) {
   if (!adminEmail) {
-    throw new Error(
-      "ADMIN_EMAIL is not configured.",
-    );
+    throw new Error("ADMIN_EMAIL is not configured.");
   }
 
-  const authorization =
-    request.headers.get("authorization");
+  const authorization = request.headers.get("authorization");
 
   if (!authorization?.startsWith("Bearer ")) {
     return {
-      authorized: false,
+      authorized: false as const,
       error: "Missing authorization token.",
     };
   }
 
-  const accessToken =
-    authorization.slice("Bearer ".length);
+  const accessToken = authorization
+    .slice("Bearer ".length)
+    .trim();
 
   if (!accessToken) {
     return {
-      authorized: false,
+      authorized: false as const,
       error: "Missing access token.",
     };
   }
@@ -79,33 +112,30 @@ async function verifyAdmin(request: Request) {
     );
 
     return {
-      authorized: false,
-      error:
-        "Invalid or expired admin session.",
+      authorized: false as const,
+      error: "Invalid or expired admin session.",
     };
   }
+
+  const configuredAdminEmail = adminEmail;
 
   if (
     !user.email ||
     user.email.toLowerCase() !==
-      adminEmail.toLowerCase()
+      configuredAdminEmail.toLowerCase()
   ) {
     return {
-      authorized: false,
+      authorized: false as const,
       error:
         "You are not authorised to access this area.",
     };
   }
 
   return {
-    authorized: true,
+    authorized: true as const,
     user,
   };
 }
-
-/* ===================================================== */
-/* STORAGE PATH                                           */
-/* ===================================================== */
 
 function getStoragePath(
   value: string | null | undefined,
@@ -120,18 +150,6 @@ function getStoragePath(
     return null;
   }
 
-  /*
-   * Handle a full Supabase Storage URL.
-   *
-   * Examples:
-   *
-   * https://project.supabase.co/storage/v1/object/public/driver-documents/...
-   *
-   * https://project.supabase.co/storage/v1/object/sign/driver-documents/...
-   *
-   * https://project.supabase.co/storage/v1/object/authenticated/driver-documents/...
-   */
-
   if (
     path.startsWith("http://") ||
     path.startsWith("https://")
@@ -139,42 +157,33 @@ function getStoragePath(
     try {
       const url = new URL(path);
 
-      const pathname =
-        decodeURIComponent(url.pathname);
+      const pathname = decodeURIComponent(url.pathname);
 
-      const marker =
-        "/storage/v1/object/";
+      const marker = "/storage/v1/object/";
 
-      const markerIndex =
-        pathname.indexOf(marker);
+      const markerIndex = pathname.indexOf(marker);
 
       if (markerIndex === -1) {
         return null;
       }
 
-      const objectPart =
-        pathname.slice(
-          markerIndex + marker.length,
-        );
+      const objectPart = pathname.slice(
+        markerIndex + marker.length,
+      );
 
-      const parts =
-        objectPart.split("/");
+      const parts = objectPart.split("/");
 
-      const bucketIndex =
-        parts.findIndex(
-          (part) =>
-            part ===
-            DRIVER_DOCUMENT_BUCKET,
-        );
+      const bucketIndex = parts.findIndex(
+        (part) => part === DRIVER_DOCUMENT_BUCKET,
+      );
 
       if (bucketIndex === -1) {
         return null;
       }
 
-      const objectPath =
-        parts
-          .slice(bucketIndex + 1)
-          .join("/");
+      const objectPath = parts
+        .slice(bucketIndex + 1)
+        .join("/");
 
       return objectPath || null;
     } catch (error) {
@@ -187,16 +196,7 @@ function getStoragePath(
     }
   }
 
-  /*
-   * Remove accidental leading slash.
-   */
-
   path = path.replace(/^\/+/, "");
-
-  /*
-   * If the stored value contains the bucket
-   * name, remove it.
-   */
 
   if (
     path.startsWith(
@@ -207,11 +207,6 @@ function getStoragePath(
       `${DRIVER_DOCUMENT_BUCKET}/`.length,
     );
   }
-
-  /*
-   * Remove common storage prefixes if they
-   * somehow exist in the database.
-   */
 
   const prefixes = [
     "storage/v1/object/public/",
@@ -240,10 +235,6 @@ function getStoragePath(
   return path || null;
 }
 
-/* ===================================================== */
-/* SIGNED URL                                              */
-/* ===================================================== */
-
 async function createDriverDocumentUrl(
   supabase: ReturnType<typeof getAdminClient>,
   value: string | null | undefined,
@@ -259,10 +250,7 @@ async function createDriverDocumentUrl(
     error,
   } = await supabase.storage
     .from(DRIVER_DOCUMENT_BUCKET)
-    .createSignedUrl(
-      path,
-      60 * 30,
-    );
+    .createSignedUrl(path, 60 * 30);
 
   if (error) {
     console.error(
@@ -280,14 +268,10 @@ async function createDriverDocumentUrl(
   return data?.signedUrl ?? null;
 }
 
-/* ===================================================== */
-/* ADD ADMIN URLS                                        */
-/* ===================================================== */
-
 async function enrichDriver(
   supabase: ReturnType<typeof getAdminClient>,
-  driver: Record<string, unknown>,
-) {
+  driver: DriverRecord,
+): Promise<EnrichedDriver> {
   const [
     wasteLicenceUrl,
     insuranceCertificateUrl,
@@ -295,26 +279,15 @@ async function enrichDriver(
   ] = await Promise.all([
     createDriverDocumentUrl(
       supabase,
-      driver.waste_licence_url as
-        | string
-        | null
-        | undefined,
+      driver.waste_licence_url,
     ),
-
     createDriverDocumentUrl(
       supabase,
-      driver.insurance_certificate_url as
-        | string
-        | null
-        | undefined,
+      driver.insurance_certificate_url,
     ),
-
     createDriverDocumentUrl(
       supabase,
-      driver.van_photo_url as
-        | string
-        | null
-        | undefined,
+      driver.van_photo_url,
     ),
   ]);
 
@@ -322,26 +295,17 @@ async function enrichDriver(
     ...driver,
 
     admin_document_urls: {
-      waste_licence:
-        wasteLicenceUrl,
-
+      waste_licence: wasteLicenceUrl,
       insurance_certificate:
         insuranceCertificateUrl,
-
-      van_photo:
-        vanPhotoUrl,
+      van_photo: vanPhotoUrl,
     },
   };
 }
 
-/* ===================================================== */
-/* GET                                                    */
-/* ===================================================== */
-
 export async function GET(request: Request) {
   try {
-    const admin =
-      await verifyAdmin(request);
+    const admin = await verifyAdmin(request);
 
     if (!admin.authorized) {
       return NextResponse.json(
@@ -354,8 +318,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const supabase =
-      getAdminClient();
+    const supabase = getAdminClient();
 
     const {
       data,
@@ -386,10 +349,7 @@ export async function GET(request: Request) {
     }
 
     const rawDrivers =
-      (data ?? []) as Record<
-        string,
-        unknown
-      >[];
+      (data ?? []) as DriverRecord[];
 
     const drivers =
       await Promise.all(
@@ -407,37 +367,29 @@ export async function GET(request: Request) {
       pending: drivers.filter(
         (driver) =>
           String(
-            driver.application_status ??
-              "",
-          ).toLowerCase() ===
-          "pending",
+            driver.application_status ?? "",
+          ).toLowerCase() === "pending",
       ).length,
 
       approved: drivers.filter(
         (driver) =>
           String(
-            driver.application_status ??
-              "",
-          ).toLowerCase() ===
-          "approved",
+            driver.application_status ?? "",
+          ).toLowerCase() === "approved",
       ).length,
 
       rejected: drivers.filter(
         (driver) =>
           String(
-            driver.application_status ??
-              "",
-          ).toLowerCase() ===
-          "rejected",
+            driver.application_status ?? "",
+          ).toLowerCase() === "rejected",
       ).length,
 
       suspended: drivers.filter(
         (driver) =>
           String(
-            driver.application_status ??
-              "",
-          ).toLowerCase() ===
-          "suspended",
+            driver.application_status ?? "",
+          ).toLowerCase() === "suspended",
       ).length,
     };
 
@@ -449,8 +401,7 @@ export async function GET(request: Request) {
       {
         status: 200,
         headers: {
-          "Cache-Control":
-            "no-store, max-age=0",
+          "Cache-Control": "no-store, max-age=0",
         },
       },
     );
@@ -474,14 +425,9 @@ export async function GET(request: Request) {
   }
 }
 
-/* ===================================================== */
-/* PATCH                                                  */
-/* ===================================================== */
-
 export async function PATCH(request: Request) {
   try {
-    const admin =
-      await verifyAdmin(request);
+    const admin = await verifyAdmin(request);
 
     if (!admin.authorized) {
       return NextResponse.json(
@@ -504,8 +450,7 @@ export async function PATCH(request: Request) {
     } catch {
       return NextResponse.json(
         {
-          error:
-            "Invalid request body.",
+          error: "Invalid request body.",
         },
         {
           status: 400,
@@ -513,17 +458,13 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const driverId =
-      body.driverId;
-
-    const status =
-      body.status;
+    const driverId = body.driverId;
+    const status = body.status;
 
     if (!driverId) {
       return NextResponse.json(
         {
-          error:
-            "Driver ID is required.",
+          error: "Driver ID is required.",
         },
         {
           status: 400,
@@ -531,13 +472,12 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const allowedStatuses:
-      DriverStatus[] = [
-        "pending",
-        "approved",
-        "rejected",
-        "suspended",
-      ];
+    const allowedStatuses: DriverStatus[] = [
+      "pending",
+      "approved",
+      "rejected",
+      "suspended",
+    ];
 
     if (
       !status ||
@@ -545,8 +485,7 @@ export async function PATCH(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error:
-            "Invalid driver status.",
+          error: "Invalid driver status.",
         },
         {
           status: 400,
@@ -554,13 +493,11 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const supabase =
-      getAdminClient();
+    const supabase = getAdminClient();
 
     const {
       data: existingDriver,
-      error:
-        existingDriverError,
+      error: existingDriverError,
     } = await supabase
       .from("drivers")
       .select("*")
@@ -575,10 +512,8 @@ export async function PATCH(request: Request) {
 
       return NextResponse.json(
         {
-          error:
-            "Unable to find the driver.",
-          details:
-            existingDriverError.message,
+          error: "Unable to find the driver.",
+          details: existingDriverError.message,
         },
         {
           status: 500,
@@ -589,8 +524,7 @@ export async function PATCH(request: Request) {
     if (!existingDriver) {
       return NextResponse.json(
         {
-          error:
-            "Driver not found.",
+          error: "Driver not found.",
         },
         {
           status: 404,
@@ -605,8 +539,7 @@ export async function PATCH(request: Request) {
       .from("drivers")
       .update({
         application_status: status,
-        approved:
-          status === "approved",
+        approved: status === "approved",
       })
       .eq("id", driverId)
       .select("*")
@@ -622,8 +555,7 @@ export async function PATCH(request: Request) {
         {
           error:
             "Unable to update driver status.",
-          details:
-            updateError.message,
+          details: updateError.message,
         },
         {
           status: 500,
@@ -634,10 +566,7 @@ export async function PATCH(request: Request) {
     const enrichedDriver =
       await enrichDriver(
         supabase,
-        updatedDriver as Record<
-          string,
-          unknown
-        >,
+        updatedDriver as DriverRecord,
       );
 
     return NextResponse.json(
@@ -648,8 +577,7 @@ export async function PATCH(request: Request) {
       {
         status: 200,
         headers: {
-          "Cache-Control":
-            "no-store, max-age=0",
+          "Cache-Control": "no-store, max-age=0",
         },
       },
     );

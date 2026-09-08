@@ -30,7 +30,7 @@ type Job = {
   assigned_driver_id: string | null;
   assigned_bid_id: number | null;
   accepted_bid_id: number | null;
-  created_at: string;
+  created_at: string | null;
 };
 
 type Bid = {
@@ -38,10 +38,11 @@ type Bid = {
   job_id: number;
   driver_id: string;
   amount: number | null;
-  notes: string | null;
+  message: string | null;
   status: string | null;
-  created_at: string;
+  created_at: string | null;
   updated_at?: string | null;
+  accepted_at?: string | null;
   platform_fee_percent: number | null;
   platform_fee: number | null;
   driver_payout: number | null;
@@ -93,7 +94,7 @@ function formatDate(value: string | null | undefined) {
   }).format(date);
 }
 
-function getStatusClasses(status: string | null) {
+function getStatusClasses(status: string | null | undefined) {
   const value = String(status ?? "").toLowerCase();
 
   if (value === "accepted") {
@@ -111,7 +112,7 @@ function getStatusClasses(status: string | null) {
   return "border-white/10 bg-white/5 text-gray-300";
 }
 
-function getJobStatusClasses(status: string | null) {
+function getJobStatusClasses(status: string | null | undefined) {
   const value = String(status ?? "").toLowerCase();
 
   if (
@@ -184,6 +185,7 @@ export default function AdminBidsPage() {
         }
 
         setBids(data.bids ?? []);
+
         setStats(
           data.stats ?? {
             total: 0,
@@ -255,7 +257,8 @@ export default function AdminBidsPage() {
       const postcode =
         bid.job?.postcode?.toLowerCase() ?? "";
 
-      const notes = bid.notes?.toLowerCase() ?? "";
+      const message =
+        bid.message?.toLowerCase() ?? "";
 
       const bidId = String(bid.id);
 
@@ -266,7 +269,7 @@ export default function AdminBidsPage() {
         email.includes(searchValue) ||
         reference.includes(searchValue) ||
         postcode.includes(searchValue) ||
-        notes.includes(searchValue) ||
+        message.includes(searchValue) ||
         bidId.includes(searchValue)
       );
     });
@@ -817,16 +820,26 @@ function BidModal({
                 label="Submitted"
                 value={formatDate(bid.created_at)}
               />
+
+              <Detail
+                label="Updated"
+                value={formatDate(bid.updated_at)}
+              />
+
+              <Detail
+                label="Accepted"
+                value={formatDate(bid.accepted_at)}
+              />
             </div>
 
-            {bid.notes && (
+            {bid.message && (
               <div className="mt-5">
                 <p className="text-xs font-black uppercase tracking-[0.15em] text-gray-500">
-                  Driver notes
+                  Driver message
                 </p>
 
                 <div className="mt-2 rounded-xl border border-[#17382b] bg-[#0b1b14] p-4 text-sm leading-6 text-gray-300">
-                  {bid.notes}
+                  {bid.message}
                 </div>
               </div>
             )}
