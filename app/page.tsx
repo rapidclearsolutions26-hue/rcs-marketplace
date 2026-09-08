@@ -510,6 +510,15 @@ export default function Home() {
                 Contact
               </Link>
 
+              {/* ADMIN LOGIN */}
+
+              <Link
+                href="/admin/login"
+                className="text-gray-700 transition hover:text-[#79c51c]"
+              >
+                Admin Login
+              </Link>
+
             </div>
 
           </div>
