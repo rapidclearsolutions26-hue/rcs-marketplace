@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rapid Clear Solutions</string>
+    <string name="title_activity_main">Rapid Clear Solutions</string>
+    <string name="package_name">com.rapidclearsolutions.marketplace</string>
+    <string name="custom_url_scheme">com.rapidclearsolutions.marketplace</string>
+</resources>
