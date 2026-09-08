@@ -389,7 +389,7 @@ export default function DriverDashboard() {
         "approved")
   ) {
     return (
-      <main className="min-h-screen bg-[#06100c] pb-20 text-white">
+      <main className="min-h-screen bg-[#06100c] pb-20 pt-[env(safe-area-inset-top)] text-white">
         <DriverHeader
           driver={driver}
           refreshing={refreshing}
@@ -430,7 +430,7 @@ export default function DriverDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#06100c] pb-24 text-white">
+    <main className="min-h-screen bg-[#06100c] pb-24 pt-[env(safe-area-inset-top)] text-white">
       <DriverHeader
         driver={driver}
         refreshing={refreshing}
@@ -672,7 +672,7 @@ function DriverHeader({
   onLogout: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[#17382b] bg-[#081710]/95 backdrop-blur-xl">
+    <header className="-mt-[env(safe-area-inset-top)] sticky top-0 z-40 border-b border-[#17382b] bg-[#081710]/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
         <Link
           href="/driver/dashboard"
@@ -923,7 +923,7 @@ function QuickLink({
 
 function LoadingScreen() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#06100c] px-5 text-white">
+    <main className="flex min-h-screen items-center justify-center bg-[#06100c] px-5 pt-[env(safe-area-inset-top)] text-white">
       <div className="text-center">
         <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-[#17382b] border-t-[#1BBB8C]" />
 
@@ -949,9 +949,9 @@ function ErrorScreen({
   onLogout: () => void;
 }) {
   return (
-    <main className="min-h-screen bg-[#06100c] text-white">
-      <header className="border-b border-[#17382b] bg-[#081710]">
-        <div className="flex items-center justify-between px-4 py-4">
+    <main className="min-h-screen bg-[#06100c] pt-[env(safe-area-inset-top)] text-white">
+      <header className="-mt-[env(safe-area-inset-top)] border-b border-[#17382b] bg-[#081710] pt-[env(safe-area-inset-top)]">
+        <div className="flex items-center justify-between gap-3 px-4 py-4">
           <Link
             href="/"
             className="text-base font-black"
@@ -965,7 +965,7 @@ function ErrorScreen({
           <button
             type="button"
             onClick={onLogout}
-            className="rounded-xl border border-[#29483a] px-3 py-2 text-xs font-bold"
+            className="min-h-10 rounded-xl border border-[#29483a] px-3 py-2 text-xs font-bold"
           >
             Log out
           </button>
