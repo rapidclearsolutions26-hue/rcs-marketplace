@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -121,6 +124,7 @@ export async function GET(
       driversResult,
       bidsResult,
       payoutRequestsResult,
+      customersResult,
     ] = await Promise.all([
       supabase
         .from("jobs")
@@ -151,6 +155,14 @@ export async function GET(
         .order("requested_at", {
           ascending: false,
         }),
+
+      supabase
+        .from("profiles")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("role", "customer"),
     ]);
 
     if (jobsResult.error) {
@@ -215,15 +227,51 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({
-      jobs: jobsResult.data || [],
-      drivers:
-        driversResult.data || [],
-      bids: bidsResult.data || [],
-      payoutRequests:
-        payoutRequestsResult.data ||
-        [],
-    });
+    if (
+      customersResult.error
+    ) {
+      console.error(
+        "Admin customers error:",
+        customersResult.error
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            `Customers: ${customersResult.error.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        jobs:
+          jobsResult.data || [],
+
+        drivers:
+          driversResult.data || [],
+
+        bids:
+          bidsResult.data || [],
+
+        payoutRequests:
+          payoutRequestsResult.data ||
+          [],
+
+        customersCount:
+          customersResult.count || 0,
+
+        updatedAt:
+          new Date().toISOString(),
+      },
+      {
+        headers: {
+          "Cache-Control":
+            "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     console.error(
       "Admin dashboard API error:",
