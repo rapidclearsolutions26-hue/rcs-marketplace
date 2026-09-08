@@ -106,7 +106,6 @@ export default function DriverDashboard() {
   const getCustomerPrice = useCallback(
     (jobId: number) => {
       const bid = getBidForJob(jobId);
-
       return Number(bid?.amount || 0);
     },
     [getBidForJob]
@@ -115,7 +114,6 @@ export default function DriverDashboard() {
   const getRcsFee = useCallback(
     (jobId: number) => {
       const customerPrice = getCustomerPrice(jobId);
-
       return customerPrice * (RCS_FEE_PERCENT / 100);
     },
     [getCustomerPrice]
@@ -460,11 +458,7 @@ export default function DriverDashboard() {
         );
 
         /*
-         * LOAD CUSTOMER PHOTOS
-         *
-         * Photos are needed for available jobs
-         * so drivers can inspect the waste before
-         * submitting a bid.
+         * CUSTOMER PHOTOS
          */
 
         await loadJobPhotos(
@@ -506,7 +500,6 @@ export default function DriverDashboard() {
   async function logout() {
     try {
       const supabase = createClient();
-
       await supabase.auth.signOut();
     } catch (error) {
       console.error(
@@ -523,14 +516,14 @@ export default function DriverDashboard() {
       <main className="min-h-screen bg-[#06100c] text-white">
         <div className="flex min-h-screen items-center justify-center px-5">
           <div className="text-center">
-            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[#17382b] border-t-[#1BBB8C]" />
+            <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-[#17382b] border-t-[#1BBB8C]" />
 
             <p className="mt-5 text-lg font-black">
-              Loading driver dashboard...
+              Loading dashboard...
             </p>
 
             <p className="mt-2 text-sm text-[#71867c]">
-              Checking your jobs and bids
+              Checking your jobs
             </p>
           </div>
         </div>
@@ -542,10 +535,10 @@ export default function DriverDashboard() {
     return (
       <main className="min-h-screen bg-[#06100c] text-white">
         <header className="border-b border-[#17382b] bg-[#081710]">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-5 sm:py-5">
             <Link
               href="/"
-              className="text-xl font-black"
+              className="text-base font-black sm:text-xl"
             >
               RAPID CLEAR{" "}
               <span className="text-[#1BBB8C]">
@@ -556,20 +549,20 @@ export default function DriverDashboard() {
             <button
               type="button"
               onClick={logout}
-              className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold"
+              className="rounded-xl border border-[#29483a] px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm"
             >
               Log out
             </button>
           </div>
         </header>
 
-        <div className="mx-auto max-w-3xl px-5 py-16">
-          <div className="rounded-3xl border border-red-900/50 bg-[#0b1b14] p-8 text-center">
-            <h1 className="text-3xl font-black">
+        <div className="mx-auto max-w-3xl px-4 py-10 sm:px-5 sm:py-16">
+          <div className="rounded-3xl border border-red-900/50 bg-[#0b1b14] p-6 text-center sm:p-8">
+            <h1 className="text-2xl font-black sm:text-3xl">
               Driver account problem
             </h1>
 
-            <p className="mt-4 text-[#8fa39a]">
+            <p className="mt-4 text-sm leading-6 text-[#8fa39a] sm:text-base">
               {errorMessage}
             </p>
 
@@ -578,7 +571,7 @@ export default function DriverDashboard() {
               onClick={() =>
                 loadDashboard()
               }
-              className="mt-7 rounded-xl bg-[#1BBB8C] px-6 py-3 font-black text-[#06100c]"
+              className="mt-7 min-h-12 rounded-xl bg-[#1BBB8C] px-6 py-3 font-black text-[#06100c]"
             >
               Try again
             </button>
@@ -597,10 +590,10 @@ export default function DriverDashboard() {
     return (
       <main className="min-h-screen bg-[#06100c] text-white">
         <header className="border-b border-[#17382b] bg-[#081710]">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-5 sm:py-5">
             <Link
               href="/"
-              className="text-xl font-black"
+              className="text-base font-black sm:text-xl"
             >
               RAPID CLEAR{" "}
               <span className="text-[#1BBB8C]">
@@ -611,24 +604,24 @@ export default function DriverDashboard() {
             <button
               type="button"
               onClick={logout}
-              className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold"
+              className="rounded-xl border border-[#29483a] px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm"
             >
               Log out
             </button>
           </div>
         </header>
 
-        <div className="mx-auto max-w-3xl px-5 py-16">
-          <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-8 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#123529] text-2xl font-black text-[#1BBB8C]">
+        <div className="mx-auto max-w-3xl px-4 py-10 sm:px-5 sm:py-16">
+          <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 text-center sm:p-8">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#123529] text-2xl font-black text-[#1BBB8C] sm:h-16 sm:w-16">
               !
             </div>
 
-            <h1 className="mt-6 text-3xl font-black">
+            <h1 className="mt-6 text-2xl font-black sm:text-3xl">
               Application under review
             </h1>
 
-            <p className="mx-auto mt-4 max-w-xl leading-7 text-[#8fa39a]">
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#8fa39a] sm:text-base sm:leading-7">
               Your driver account needs to be approved
               before you can view and bid on available work.
             </p>
@@ -636,7 +629,7 @@ export default function DriverDashboard() {
             <button
               type="button"
               onClick={logout}
-              className="mt-7 rounded-xl bg-[#1BBB8C] px-6 py-3 font-black text-[#06100c]"
+              className="mt-7 min-h-12 rounded-xl bg-[#1BBB8C] px-6 py-3 font-black text-[#06100c]"
             >
               Log out
             </button>
@@ -648,25 +641,30 @@ export default function DriverDashboard() {
 
   return (
     <main className="min-h-screen bg-[#06100c] text-white">
-      <header className="sticky top-0 z-30 border-b border-[#17382b] bg-[#081710]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
+      <header className="sticky top-0 z-40 border-b border-[#17382b] bg-[#081710]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
           <Link
             href="/"
-            className="text-lg font-black sm:text-xl"
+            className="shrink-0 text-base font-black sm:text-xl"
           >
-            RAPID CLEAR{" "}
+            <span className="hidden sm:inline">
+              RAPID CLEAR{" "}
+            </span>
+            <span className="sm:hidden">
+              RCS{" "}
+            </span>
             <span className="text-[#1BBB8C]">
-              SOLUTIONS
+              MARKETPLACE
             </span>
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-xs text-[#687d73]">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="hidden min-w-0 text-right sm:block">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#687d73]">
                 Driver
               </p>
 
-              <p className="text-sm font-bold">
+              <p className="max-w-[180px] truncate text-sm font-bold">
                 {driver?.full_name ||
                   "Driver"}
               </p>
@@ -678,17 +676,24 @@ export default function DriverDashboard() {
                 loadDashboard()
               }
               disabled={refreshing}
-              className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold text-[#aabbb4] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C] disabled:opacity-50"
+              className="flex min-h-10 items-center justify-center rounded-xl border border-[#29483a] px-3 text-xs font-black text-[#aabbb4] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C] disabled:opacity-50 sm:px-4 sm:text-sm"
+              aria-label="Refresh dashboard"
             >
-              {refreshing
-                ? "Refreshing..."
-                : "Refresh"}
+              <span className="sm:hidden">
+                ↻
+              </span>
+
+              <span className="hidden sm:inline">
+                {refreshing
+                  ? "Refreshing..."
+                  : "Refresh"}
+              </span>
             </button>
 
             <button
               type="button"
               onClick={logout}
-              className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold text-[#c5d1cb] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+              className="min-h-10 rounded-xl border border-[#29483a] px-3 text-xs font-black text-[#c5d1cb] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C] sm:px-4 sm:text-sm"
             >
               Log out
             </button>
@@ -696,26 +701,49 @@ export default function DriverDashboard() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:py-10">
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#1BBB8C]">
-              RCS Marketplace
-            </p>
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-8">
+        {/* MOBILE / DESKTOP HERO */}
 
-            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-              Driver Dashboard
-            </h1>
+        <section className="mb-6 rounded-3xl border border-[#17382b] bg-[#0b1b14] p-5 shadow-xl sm:mb-8 sm:p-7">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#1BBB8C]" />
 
-            <p className="mt-2 text-[#82958c]">
-              Find work, submit bids and manage your accepted jobs.
-            </p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1BBB8C] sm:text-xs">
+                  RCS Marketplace
+                </p>
+              </div>
+
+              <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-4xl">
+                Hi,{" "}
+                {driver?.full_name
+                  ?.split(" ")[0] ||
+                  "Driver"}
+                👋
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#82958c] sm:text-base">
+                Find work, place bids and manage your
+                collections.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#29483a] bg-[#07130e] px-4 py-3 sm:min-w-[190px]">
+              <p className="text-[10px] font-black uppercase tracking-wider text-[#657a70]">
+                Auto refresh
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-[#d5dfda]">
+                Every 15 seconds
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
 
         {errorMessage && (
-          <div className="mb-7 rounded-2xl border border-red-900/60 bg-[#230e0e] p-5">
-            <p className="font-semibold text-red-300">
+          <div className="mb-6 rounded-2xl border border-red-900/60 bg-[#230e0e] p-4 sm:mb-7 sm:p-5">
+            <p className="text-sm font-semibold text-red-300">
               {errorMessage}
             </p>
 
@@ -731,36 +759,47 @@ export default function DriverDashboard() {
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            title="Available Jobs"
+        {/* STATS */}
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+          <CompactStatCard
+            title="Available"
             value={availableJobs.length}
-            description="Jobs available to bid on"
+            description="Jobs to bid"
+            icon="◉"
           />
 
-          <StatCard
-            title="My Pending Bids"
+          <CompactStatCard
+            title="Pending bids"
             value={pendingBids.length}
-            description="Bids awaiting customer decision"
+            description="Awaiting decision"
+            icon="£"
           />
 
-          <StatCard
-            title="Active Jobs"
+          <CompactStatCard
+            title="Active"
             value={activeJobs.length}
-            description="Jobs currently in progress"
+            description="In progress"
+            icon="→"
+            active={activeJobs.length > 0}
           />
 
-          <StatCard
-            title="Accepted Work"
+          <CompactStatCard
+            title="Assigned"
             value={acceptedJobs.length}
-            description="Paid jobs assigned to you"
+            description="Paid work"
+            icon="✓"
+            active={acceptedJobs.length > 0}
           />
         </div>
 
-        <section className="mt-10">
+        {/* ASSIGNED */}
+
+        <section className="mt-8 sm:mt-10">
           <SectionHeading
             eyebrow="Paid & Assigned"
-            title="Your Assigned Jobs"
+            title="Your Jobs"
+            count={acceptedJobs.length}
           />
 
           {acceptedJobs.length === 0 ? (
@@ -769,7 +808,7 @@ export default function DriverDashboard() {
               description="When a customer pays for one of your bids, the job will appear here."
             />
           ) : (
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
               {acceptedJobs.map(
                 (job) => (
                   <AssignedJobCard
@@ -791,10 +830,13 @@ export default function DriverDashboard() {
           )}
         </section>
 
-        <section className="mt-10">
+        {/* ACTIVE */}
+
+        <section className="mt-8 sm:mt-10">
           <SectionHeading
             eyebrow="In Progress"
             title="Active Jobs"
+            count={activeJobs.length}
           />
 
           {activeJobs.length === 0 ? (
@@ -803,7 +845,7 @@ export default function DriverDashboard() {
               description="Jobs you start will appear here until they are completed."
             />
           ) : (
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
               {activeJobs.map(
                 (job) => (
                   <AcceptedJobCard
@@ -822,10 +864,13 @@ export default function DriverDashboard() {
           )}
         </section>
 
-        <section className="mt-10">
+        {/* AVAILABLE */}
+
+        <section className="mt-8 sm:mt-10">
           <SectionHeading
             eyebrow="Marketplace"
             title="Available Jobs"
+            count={availableJobs.length}
           />
 
           {availableJobs.length === 0 ? (
@@ -834,7 +879,7 @@ export default function DriverDashboard() {
               description="New customer jobs will appear here when they are available to bid on."
             />
           ) : (
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
               {availableJobs.map(
                 (job) => (
                   <AvailableJobCard
@@ -851,10 +896,13 @@ export default function DriverDashboard() {
           )}
         </section>
 
-        <section className="mt-10 pb-12">
+        {/* PENDING BIDS */}
+
+        <section className="mt-8 pb-10 sm:mt-10 sm:pb-12">
           <SectionHeading
-            eyebrow="Your Bids"
-            title="My Pending Bids"
+            eyebrow="Your Activity"
+            title="Pending Bids"
+            count={pendingBids.length}
           />
 
           {pendingBids.length === 0 ? (
@@ -863,7 +911,7 @@ export default function DriverDashboard() {
               description="Jobs you bid on will appear here while the customer is deciding."
             />
           ) : (
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
               {pendingBids.map(
                 (bid) => (
                   <PendingBidCard
@@ -880,6 +928,54 @@ export default function DriverDashboard() {
   );
 }
 
+function CompactStatCard({
+  title,
+  value,
+  description,
+  icon,
+  active = false,
+}: {
+  title: string;
+  value: number;
+  description: string;
+  icon: string;
+  active?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border p-4 shadow-lg sm:rounded-3xl sm:p-6 ${
+        active
+          ? "border-[#3f8d24] bg-[#10230f]"
+          : "border-[#17382b] bg-[#0b1b14]"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-bold text-[#8b9d95] sm:text-sm">
+          {title}
+        </p>
+
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-black sm:h-9 sm:w-9 sm:rounded-xl sm:text-sm ${
+            active
+              ? "bg-[#1BBB8C] text-[#06100c]"
+              : "bg-[#123529] text-[#1BBB8C]"
+          }`}
+        >
+          {icon}
+        </span>
+      </div>
+
+      <p className="mt-3 text-3xl font-black sm:mt-4 sm:text-4xl">
+        {value}
+      </p>
+
+      <p className="mt-1 text-[11px] text-[#64786e] sm:text-sm">
+        {description}
+      </p>
+    </div>
+  );
+}
+
 function MoneyBox({
   label,
   value,
@@ -891,18 +987,18 @@ function MoneyBox({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 ${
+      className={`rounded-2xl border p-3.5 sm:p-4 ${
         highlight
           ? "border-[#3f8d24] bg-[#162b13]"
           : "border-[#214333] bg-[#08150f]"
       }`}
     >
-      <p className="text-xs font-black uppercase tracking-wide text-[#71867c]">
+      <p className="text-[10px] font-black uppercase tracking-wide text-[#71867c] sm:text-xs">
         {label}
       </p>
 
       <p
-        className={`mt-1 text-2xl font-black ${
+        className={`mt-1 text-xl font-black sm:text-2xl ${
           highlight
             ? "text-[#1BBB8C]"
             : "text-white"
@@ -930,35 +1026,35 @@ function AssignedJobCard({
 }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-[#3f8d24] bg-[#0b1b14] shadow-xl">
-      <div className="border-b border-[#214333] bg-[#10230f] p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+      <div className="border-b border-[#214333] bg-[#10230f] p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-wider text-[#1BBB8C] sm:text-xs">
               {job.reference ||
                 `RC-${String(
                   job.id
                 ).padStart(6, "0")}`}
             </p>
 
-            <h3 className="mt-2 text-xl font-black">
+            <h3 className="mt-1.5 text-lg font-black sm:mt-2 sm:text-xl">
               {job.job_type ||
                 "Waste Collection"}
             </h3>
           </div>
 
-          <span className="rounded-full border border-[#3f8d24] bg-[#183017] px-3 py-1 text-xs font-black text-[#1BBB8C]">
+          <span className="shrink-0 rounded-full border border-[#3f8d24] bg-[#183017] px-2.5 py-1 text-[9px] font-black text-[#1BBB8C] sm:px-3 sm:text-xs">
             {job.status ===
             "in_progress"
               ? "IN PROGRESS"
-              : "PAID & ASSIGNED"}
+              : "ASSIGNED"}
           </span>
         </div>
       </div>
 
-      <div className="space-y-5 p-6">
-        <div className="grid gap-3 sm:grid-cols-3">
+      <div className="space-y-4 p-5 sm:space-y-5 sm:p-6">
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
           <MoneyBox
-            label="Customer paid"
+            label="Customer"
             value={customerPrice}
           />
 
@@ -974,23 +1070,38 @@ function AssignedJobCard({
           />
         </div>
 
-        <div className="rounded-2xl border border-[#214333] bg-[#07130e] p-4">
-          <p className="text-sm font-black text-white">
-            Payment confirmed
-          </p>
+        <div className="rounded-2xl border border-[#3f8d24] bg-[#07130e] p-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#1BBB8C] text-sm font-black text-[#06100c]">
+              ✓
+            </span>
 
-          <p className="mt-1 text-sm text-[#82958c]">
-            The customer has paid and the job
-            has been assigned to you.
-          </p>
+            <div>
+              <p className="text-sm font-black">
+                Payment confirmed
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-[#82958c] sm:text-sm">
+                Customer payment received. This job is assigned to you.
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           <JobLine
             label="Location"
             value={
               job.postcode ||
               "Not provided"
+            }
+          />
+
+          <JobLine
+            label="Load"
+            value={
+              job.load_size ||
+              "Not specified"
             }
           />
 
@@ -1006,26 +1117,18 @@ function AssignedJobCard({
           />
 
           <JobLine
-            label="Collection time"
+            label="Time"
             value={formatPreferredTime(
               job.preferred_time
             )}
-          />
-
-          <JobLine
-            label="Load size"
-            value={
-              job.load_size ||
-              "Not specified"
-            }
           />
         </div>
 
         <Link
           href={`/driver/jobs/${job.id}`}
-          className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
+          className="flex min-h-12 w-full items-center justify-center rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-sm font-black text-[#06100c] transition hover:bg-[#16a77c] sm:text-base"
         >
-          Manage Job
+          Manage Job →
         </Link>
       </div>
     </div>
@@ -1041,23 +1144,23 @@ function AvailableJobCard({
 }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl">
-      <div className="border-b border-[#17382b] p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+      <div className="border-b border-[#17382b] p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-wider text-[#1BBB8C] sm:text-xs">
               {job.reference ||
                 `RC-${String(
                   job.id
                 ).padStart(6, "0")}`}
             </p>
 
-            <h3 className="mt-2 text-xl font-black">
+            <h3 className="mt-1.5 text-lg font-black sm:mt-2 sm:text-xl">
               {job.job_type ||
                 "Waste Collection"}
             </h3>
           </div>
 
-          <span className="rounded-full border border-[#285342] bg-[#10291f] px-3 py-1 text-xs font-black text-[#1BBB8C]">
+          <span className="shrink-0 rounded-full border border-[#285342] bg-[#10291f] px-2.5 py-1 text-[9px] font-black text-[#1BBB8C] sm:px-3 sm:text-xs">
             {job.status ===
             "bidding"
               ? "BIDDING"
@@ -1066,17 +1169,25 @@ function AvailableJobCard({
         </div>
       </div>
 
-      <div className="space-y-5 p-6">
+      <div className="space-y-4 p-5 sm:space-y-5 sm:p-6">
         <CustomerPhotoGallery
           photos={photos}
         />
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4">
           <JobLine
             label="Location"
             value={
               job.postcode ||
               "Postcode not provided"
+            }
+          />
+
+          <JobLine
+            label="Load"
+            value={
+              job.load_size ||
+              "Not specified"
             }
           />
 
@@ -1097,42 +1208,39 @@ function AvailableJobCard({
               job.preferred_time
             )}
           />
-
-          <JobLine
-            label="Load size"
-            value={
-              job.load_size ||
-              "Not specified"
-            }
-          />
         </div>
 
-        <JobLine
-          label="Access"
-          value={
-            job.access_notes ||
-            "No access details provided"
-          }
-        />
+        <div className="rounded-2xl border border-[#214333] bg-[#07130e] p-4">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[#657a70]">
+            Access
+          </p>
 
-        {job.floor && (
-          <JobLine
-            label="Floor"
-            value={job.floor}
-          />
-        )}
+          <p className="mt-1 text-sm leading-5 text-[#aebbb5]">
+            {job.access_notes ||
+              "No access details provided"}
+          </p>
+        </div>
 
-        {job.stairs && (
-          <div className="rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3">
-            <p className="text-sm font-bold text-[#d5dfda]">
-              Stairs involved
-            </p>
+        {(job.floor ||
+          job.stairs) && (
+          <div className="flex flex-wrap gap-2">
+            {job.floor && (
+              <span className="rounded-xl border border-[#29483a] bg-[#081710] px-3 py-2 text-xs font-bold text-[#d5dfda]">
+                Floor: {job.floor}
+              </span>
+            )}
+
+            {job.stairs && (
+              <span className="rounded-xl border border-[#29483a] bg-[#081710] px-3 py-2 text-xs font-bold text-[#d5dfda]">
+                Stairs involved
+              </span>
+            )}
           </div>
         )}
 
         {job.description && (
           <div>
-            <p className="text-xs font-black uppercase tracking-wide text-[#657a70]">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[#657a70]">
               Description
             </p>
 
@@ -1144,9 +1252,9 @@ function AvailableJobCard({
 
         <Link
           href={`/driver/jobs/${job.id}`}
-          className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
+          className="flex min-h-12 w-full items-center justify-center rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-sm font-black text-[#06100c] transition hover:bg-[#16a77c] sm:text-base"
         >
-          View Job & Bid
+          View Job & Bid →
         </Link>
       </div>
     </div>
@@ -1163,13 +1271,13 @@ function CustomerPhotoGallery({
 
   if (photos.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-[#29483a] bg-[#081710] p-5">
+      <div className="rounded-2xl border border-dashed border-[#29483a] bg-[#081710] p-4 sm:p-5">
         <p className="text-sm font-bold text-[#9aaba4]">
           No customer photos
         </p>
 
-        <p className="mt-1 text-xs text-[#657a70]">
-          The customer hasn't uploaded any waste photos for this job.
+        <p className="mt-1 text-xs leading-5 text-[#657a70]">
+          No waste photos have been uploaded for this job.
         </p>
       </div>
     );
@@ -1178,18 +1286,18 @@ function CustomerPhotoGallery({
   return (
     <>
       <div>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase tracking-wide text-[#1BBB8C]">
               Waste photos
             </p>
 
-            <p className="mt-1 text-xs text-[#657a70]">
-              Review the waste before placing your bid.
+            <p className="mt-1 hidden text-xs text-[#657a70] sm:block">
+              Review before placing your bid.
             </p>
           </div>
 
-          <span className="rounded-full bg-[#15392e] px-3 py-1 text-xs font-black text-[#1BBB8C]">
+          <span className="shrink-0 rounded-full bg-[#15392e] px-3 py-1 text-[10px] font-black text-[#1BBB8C]">
             {photos.length}{" "}
             {photos.length === 1
               ? "photo"
@@ -1197,7 +1305,7 @@ function CustomerPhotoGallery({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible">
           {photos.map((photo) => (
             <button
               key={photo.id}
@@ -1207,7 +1315,7 @@ function CustomerPhotoGallery({
                   photo
                 )
               }
-              className="group relative aspect-square overflow-hidden rounded-2xl border border-[#29483a] bg-[#081710] text-left"
+              className="group relative aspect-square w-[150px] shrink-0 overflow-hidden rounded-2xl border border-[#29483a] bg-[#081710] text-left sm:w-auto"
             >
               <img
                 src={photo.url}
@@ -1216,8 +1324,8 @@ function CustomerPhotoGallery({
               />
 
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-8">
-                <p className="text-xs font-bold text-white">
-                  View photo
+                <p className="text-[10px] font-bold text-white sm:text-xs">
+                  Tap to view
                 </p>
               </div>
             </button>
@@ -1227,13 +1335,13 @@ function CustomerPhotoGallery({
 
       {selectedPhoto && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-4 sm:p-5"
           onClick={() =>
             setSelectedPhoto(null)
           }
         >
           <div
-            className="relative max-h-[90vh] max-w-5xl"
+            className="relative flex max-h-[92vh] max-w-5xl items-center justify-center"
             onClick={(event) =>
               event.stopPropagation()
             }
@@ -1249,7 +1357,7 @@ function CustomerPhotoGallery({
               onClick={() =>
                 setSelectedPhoto(null)
               }
-              className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/80 text-xl font-black text-white hover:bg-[#1BBB8C] hover:text-[#06100c]"
+              className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/80 text-2xl font-black text-white transition hover:bg-[#1BBB8C] hover:text-[#06100c]"
               aria-label="Close photo"
             >
               ×
@@ -1277,14 +1385,14 @@ function PendingBidCard({
     driverAmount - rcsFee;
 
   return (
-    <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl">
-      <div className="flex items-start justify-between gap-4">
+    <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-5 shadow-xl sm:p-6">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-wide text-[#657a70]">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[#657a70]">
             Job
           </p>
 
-          <p className="mt-1 text-lg font-black">
+          <p className="mt-1 text-base font-black sm:text-lg">
             RC-
             {String(
               bid.job_id
@@ -1292,12 +1400,12 @@ function PendingBidCard({
           </p>
         </div>
 
-        <span className="rounded-full border border-[#29483a] bg-[#18271f] px-3 py-1 text-xs font-black text-[#b8c6c0]">
+        <span className="shrink-0 rounded-full border border-[#29483a] bg-[#18271f] px-2.5 py-1 text-[9px] font-black text-[#b8c6c0] sm:px-3 sm:text-xs">
           BID PENDING
         </span>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      <div className="mt-5 grid grid-cols-3 gap-2.5 sm:mt-6 sm:gap-3">
         <MoneyBox
           label="Your bid"
           value={driverAmount}
@@ -1317,13 +1425,12 @@ function PendingBidCard({
 
       <div className="mt-4 rounded-2xl border border-[#214333] bg-[#07130e] p-4">
         <p className="text-sm font-black text-white">
-          If your bid is accepted
+          Awaiting customer
         </p>
 
-        <p className="mt-1 text-sm leading-6 text-[#82958c]">
-          RCS takes {RCS_FEE_PERCENT}% from
-          the accepted bid. You receive the
-          remaining 90%.
+        <p className="mt-1 text-xs leading-5 text-[#82958c] sm:text-sm">
+          If accepted, RCS takes {RCS_FEE_PERCENT}%
+          and you receive the remaining 90%.
         </p>
       </div>
 
@@ -1335,9 +1442,9 @@ function PendingBidCard({
 
       <Link
         href={`/driver/jobs/${bid.job_id}`}
-        className="mt-5 block w-full rounded-xl border border-[#29483a] px-5 py-3 text-center font-black text-white hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+        className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl border border-[#29483a] px-5 py-3 text-sm font-black text-white transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
       >
-        View Job
+        View Job →
       </Link>
     </div>
   );
@@ -1356,32 +1463,32 @@ function AcceptedJobCard({
     job.status === "in_progress";
 
   return (
-    <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-wide text-[#1BBB8C]">
+    <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-5 shadow-xl sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[#1BBB8C] sm:text-xs">
             {job.reference ||
               `RC-${String(
                 job.id
               ).padStart(6, "0")}`}
           </p>
 
-          <h3 className="mt-2 text-xl font-black">
+          <h3 className="mt-1.5 text-lg font-black sm:text-xl">
             {job.job_type ||
               "Waste Collection"}
           </h3>
         </div>
 
-        <span className="rounded-full bg-[#15392e] px-3 py-1 text-xs font-black text-[#1BBB8C]">
+        <span className="shrink-0 rounded-full bg-[#15392e] px-2.5 py-1 text-[9px] font-black text-[#1BBB8C] sm:px-3 sm:text-xs">
           {isActive
             ? "IN PROGRESS"
             : "ACCEPTED"}
         </span>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3">
         <MoneyBox
-          label={`RCS ${RCS_FEE_PERCENT}% deducted`}
+          label={`RCS ${RCS_FEE_PERCENT}%`}
           value={rcsFee}
         />
 
@@ -1392,13 +1499,20 @@ function AcceptedJobCard({
         />
       </div>
 
-      <div className="mt-6 space-y-5">
+      <div className="mt-5 grid grid-cols-2 gap-4">
         <JobLine
           label="Location"
           value={
             job.postcode ||
             "Not provided"
           }
+        />
+
+        <JobLine
+          label="Time"
+          value={formatPreferredTime(
+            job.preferred_time
+          )}
         />
 
         <JobLine
@@ -1411,20 +1525,13 @@ function AcceptedJobCard({
               : "Not provided"
           }
         />
-
-        <JobLine
-          label="Time"
-          value={formatPreferredTime(
-            job.preferred_time
-          )}
-        />
       </div>
 
       <Link
         href={`/driver/jobs/${job.id}`}
-        className="mt-6 block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
+        className="mt-5 flex min-h-12 w-full items-center justify-center rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-sm font-black text-[#06100c] transition hover:bg-[#16a77c] sm:text-base"
       >
-        Manage Job
+        Manage Job →
       </Link>
     </div>
   );
@@ -1433,45 +1540,29 @@ function AcceptedJobCard({
 function SectionHeading({
   eyebrow,
   title,
+  count,
 }: {
   eyebrow: string;
   title: string;
+  count?: number;
 }) {
   return (
-    <div className="mb-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
-        {eyebrow}
-      </p>
+    <div className="mb-4 flex items-end justify-between gap-3 sm:mb-5">
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1BBB8C] sm:text-xs">
+          {eyebrow}
+        </p>
 
-      <h2 className="mt-1 text-2xl font-black">
-        {title}
-      </h2>
-    </div>
-  );
-}
+        <h2 className="mt-1 text-xl font-black sm:text-2xl">
+          {title}
+        </h2>
+      </div>
 
-function StatCard({
-  title,
-  value,
-  description,
-}: {
-  title: string;
-  value: number;
-  description: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl">
-      <p className="text-sm font-bold text-[#8b9d95]">
-        {title}
-      </p>
-
-      <p className="mt-3 text-4xl font-black">
-        {value}
-      </p>
-
-      <p className="mt-2 text-sm text-[#64786e]">
-        {description}
-      </p>
+      {typeof count === "number" && (
+        <span className="rounded-full border border-[#29483a] bg-[#0b1b14] px-3 py-1 text-xs font-black text-[#8fa39a]">
+          {count}
+        </span>
+      )}
     </div>
   );
 }
@@ -1484,12 +1575,12 @@ function JobLine({
   value: string;
 }) {
   return (
-    <div>
-      <p className="text-xs font-black uppercase tracking-wide text-[#657a70]">
+    <div className="min-w-0">
+      <p className="text-[9px] font-black uppercase tracking-wide text-[#657a70] sm:text-xs">
         {label}
       </p>
 
-      <p className="mt-1 text-sm font-semibold text-[#d5dfda]">
+      <p className="mt-1 break-words text-xs font-semibold leading-5 text-[#d5dfda] sm:text-sm">
         {value}
       </p>
     </div>
@@ -1504,14 +1595,14 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="rounded-3xl border border-dashed border-[#29483a] bg-[#081710] px-6 py-12 text-center">
-      <div className="mx-auto h-1.5 w-14 rounded-full bg-[#1BBB8C]" />
+    <div className="rounded-3xl border border-dashed border-[#29483a] bg-[#081710] px-5 py-9 text-center sm:px-6 sm:py-12">
+      <div className="mx-auto h-1.5 w-12 rounded-full bg-[#1BBB8C]" />
 
-      <h3 className="mt-5 text-xl font-black">
+      <h3 className="mt-4 text-lg font-black sm:mt-5 sm:text-xl">
         {title}
       </h3>
 
-      <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#71857b]">
+      <p className="mx-auto mt-2 max-w-lg text-xs leading-5 text-[#71857b] sm:text-sm sm:leading-6">
         {description}
       </p>
     </div>
