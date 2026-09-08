@@ -483,6 +483,8 @@ export default function DriverDashboard() {
           </div>
         )}
 
+        {/* MAIN DRIVER SECTIONS */}
+
         <section className="mt-5 grid grid-cols-2 gap-3 sm:mt-8 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardBox
             href="/driver/jobs"
@@ -516,6 +518,57 @@ export default function DriverDashboard() {
             description="Your paid work"
           />
         </section>
+
+        {/* WALLET */}
+
+        <section className="mt-5 sm:mt-6">
+          <Link
+            href="/driver/wallet"
+            className="group block overflow-hidden rounded-3xl border border-[#1BBB8C]/40 bg-gradient-to-br from-[#0b1b14] to-[#081710] p-5 shadow-xl transition hover:-translate-y-0.5 hover:border-[#1BBB8C] sm:p-6"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#1BBB8C]/15 text-2xl font-black text-[#1BBB8C]">
+                  £
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+                    Driver Wallet
+                  </p>
+
+                  <h2 className="mt-1 text-lg font-black sm:text-xl">
+                    Earnings & payouts
+                  </h2>
+
+                  <p className="mt-1 text-xs leading-5 text-[#82958c] sm:text-sm">
+                    View your earnings, payment details and request your Friday payout.
+                  </p>
+                </div>
+              </div>
+
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#123529] text-lg font-black text-[#1BBB8C] transition group-hover:bg-[#1BBB8C] group-hover:text-[#06100c]">
+                →
+              </span>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="rounded-full border border-[#29483a] bg-[#07130e] px-3 py-1.5 text-[10px] font-bold text-[#9fb5aa]">
+                Weekly Friday payouts
+              </span>
+
+              <span className="rounded-full border border-[#29483a] bg-[#07130e] px-3 py-1.5 text-[10px] font-bold text-[#9fb5aa]">
+                Payment details
+              </span>
+
+              <span className="rounded-full border border-[#29483a] bg-[#07130e] px-3 py-1.5 text-[10px] font-bold text-[#9fb5aa]">
+                Earnings history
+              </span>
+            </div>
+          </Link>
+        </section>
+
+        {/* NEXT JOB */}
 
         <section className="mt-7 sm:mt-10">
           <div className="mb-4 flex items-center justify-between">
@@ -565,6 +618,8 @@ export default function DriverDashboard() {
           )}
         </section>
 
+        {/* DRIVER TOOLS */}
+
         <section className="mt-7 pb-5 sm:mt-10">
           <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-5 sm:p-6">
             <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
@@ -591,9 +646,9 @@ export default function DriverDashboard() {
               />
 
               <QuickLink
-                href="/driver/register"
-                title="Driver account"
-                description="View your driver area"
+                href="/driver/wallet"
+                title="Open your wallet"
+                description="View earnings and request your Friday payout"
               />
             </div>
           </div>
