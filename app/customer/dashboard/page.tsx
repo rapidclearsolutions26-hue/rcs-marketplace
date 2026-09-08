@@ -377,13 +377,13 @@ export default function CustomerDashboard() {
    */
 
   return (
-    <main className="min-h-screen bg-[#06100c] pb-28 text-white">
+    <main className="min-h-screen bg-[#06100c] pb-28 pt-[env(safe-area-inset-top)] text-white">
 
       {/* ================================================= */}
       {/* HEADER */}
       {/* ================================================= */}
 
-      <header className="sticky top-0 z-40 border-b border-[#17382b] bg-[#081710]/95 backdrop-blur">
+      <header className="sticky top-0 z-40 -mt-[env(safe-area-inset-top)] border-b border-[#17382b] bg-[#081710]/95 pt-[env(safe-area-inset-top)] backdrop-blur">
 
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
 
@@ -772,7 +772,7 @@ export default function CustomerDashboard() {
 
       {showInstallModal && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] backdrop-blur-sm"
           onClick={() =>
             setShowInstallModal(false)
           }
