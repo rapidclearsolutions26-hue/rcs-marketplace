@@ -5,6 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+  }>;
+};
+
 type Job = {
   id: number;
   reference: string | null;
@@ -58,6 +65,101 @@ export default function CustomerDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const [installPrompt, setInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+
+  const [showInstallModal, setShowInstallModal] =
+    useState(false);
+
+  const [isInstalled, setIsInstalled] =
+    useState(false);
+
+  /*
+   * =========================================================
+   * PWA INSTALL
+   * =========================================================
+   */
+
+  useEffect(() => {
+    function handleBeforeInstallPrompt(event: Event) {
+      event.preventDefault();
+
+      setInstallPrompt(
+        event as BeforeInstallPromptEvent
+      );
+    }
+
+    function checkInstalled() {
+      const standalone =
+        window.matchMedia(
+          "(display-mode: standalone)"
+        ).matches;
+
+      const iosStandalone =
+        "standalone" in window.navigator &&
+        Boolean(
+          (
+            window.navigator as Navigator & {
+              standalone?: boolean;
+            }
+          ).standalone
+        );
+
+      setIsInstalled(
+        standalone || iosStandalone
+      );
+    }
+
+    checkInstalled();
+
+    window.addEventListener(
+      "beforeinstallprompt",
+      handleBeforeInstallPrompt
+    );
+
+    window.addEventListener(
+      "appinstalled",
+      checkInstalled
+    );
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt
+      );
+
+      window.removeEventListener(
+        "appinstalled",
+        checkInstalled
+      );
+    };
+  }, []);
+
+  async function handleInstallApp() {
+    if (installPrompt) {
+      try {
+        await installPrompt.prompt();
+
+        const choice =
+          await installPrompt.userChoice;
+
+        if (choice.outcome === "accepted") {
+          setInstallPrompt(null);
+          setShowInstallModal(false);
+        }
+      } catch (error) {
+        console.error(
+          "PWA install error:",
+          error
+        );
+      }
+
+      return;
+    }
+
+    setShowInstallModal(true);
+  }
+
   /*
    * =========================================================
    * LOAD DASHBOARD
@@ -75,19 +177,16 @@ export default function CustomerDashboard() {
       setErrorMessage("");
 
       try {
-        /*
-         * -----------------------------------------------------
-         * GET LOGGED IN CUSTOMER
-         * -----------------------------------------------------
-         */
-
         const {
           data: { user },
           error: authError,
         } = await supabase.auth.getUser();
 
         if (authError) {
-          console.error("Customer auth error:", authError);
+          console.error(
+            "Customer auth error:",
+            authError
+          );
 
           setErrorMessage(
             "We couldn't verify your customer account."
@@ -101,12 +200,6 @@ export default function CustomerDashboard() {
           return;
         }
 
-        /*
-         * -----------------------------------------------------
-         * LOAD CUSTOMER JOBS
-         * -----------------------------------------------------
-         */
-
         const { data, error } = await supabase
           .from("jobs")
           .select(JOB_SELECT)
@@ -116,7 +209,10 @@ export default function CustomerDashboard() {
           });
 
         if (error) {
-          console.error("Customer jobs error:", error);
+          console.error(
+            "Customer jobs error:",
+            error
+          );
 
           setErrorMessage(
             error.message ||
@@ -160,8 +256,6 @@ export default function CustomerDashboard() {
    * =========================================================
    * AUTO REFRESH
    * =========================================================
-   *
-   * Checks for new bids/status changes every 15 seconds.
    */
 
   useEffect(() => {
@@ -215,9 +309,10 @@ export default function CustomerDashboard() {
 
   const biddingJobs = useMemo(() => {
     return jobs.filter((job) => {
-      const status = normaliseStatus(job.status);
-
-      return status === "bidding";
+      return (
+        normaliseStatus(job.status) ===
+        "bidding"
+      );
     });
   }, [jobs]);
 
@@ -282,7 +377,7 @@ export default function CustomerDashboard() {
    */
 
   return (
-    <main className="min-h-screen bg-[#06100c] pb-24 text-white">
+    <main className="min-h-screen bg-[#06100c] pb-28 text-white">
 
       {/* ================================================= */}
       {/* HEADER */}
@@ -290,31 +385,52 @@ export default function CustomerDashboard() {
 
       <header className="sticky top-0 z-40 border-b border-[#17382b] bg-[#081710]/95 backdrop-blur">
 
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
 
           <Link
             href="/"
-            className="text-base font-black tracking-tight sm:text-lg"
+            className="flex items-center gap-2"
           >
-            RAPID CLEAR{" "}
-            <span className="text-[#1BBB8C]">
-              SOLUTIONS
+            <span className="text-base font-black tracking-tight sm:text-lg">
+              RAPID CLEAR{" "}
+              <span className="text-[#1BBB8C]">
+                SOLUTIONS
+              </span>
             </span>
           </Link>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-xl border border-[#29483a] px-3.5 py-2 text-xs font-bold text-[#b8c6c0] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-2">
+
+            {!isInstalled && (
+              <button
+                type="button"
+                onClick={handleInstallApp}
+                className="rounded-xl border border-[#29483a] px-3 py-2 text-xs font-bold text-[#b8c6c0] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+              >
+                Install App
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-xl border border-[#29483a] px-3.5 py-2 text-xs font-bold text-[#b8c6c0] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+            >
+              Log out
+            </button>
+
+          </div>
 
         </div>
 
       </header>
 
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-10">
+
+      {/* ================================================= */}
+      {/* CONTENT */}
+      {/* ================================================= */}
+
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
 
         {/* ================================================= */}
         {/* WELCOME */}
@@ -330,27 +446,31 @@ export default function CustomerDashboard() {
             Your dashboard
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-[#82958c] sm:text-base">
-            Manage your collections and choose
-            the right driver.
+          <p className="mt-2 max-w-xl text-sm leading-6 text-[#82958c] sm:text-base">
+            Manage your collections, review driver quotes
+            and keep track of your jobs.
           </p>
 
         </section>
 
+
         {/* ================================================= */}
-        {/* MAIN POST JOB BUTTON */}
+        {/* POST JOB */}
         {/* ================================================= */}
 
         <Link
           href="/customer/post-job"
-          className="mt-6 flex min-h-[64px] w-full items-center justify-center rounded-2xl bg-[#1BBB8C] px-5 text-base font-black text-[#06100c] shadow-lg shadow-[#1BBB8C]/10 transition active:scale-[0.98] hover:bg-[#16a77c]"
+          className="mt-6 flex min-h-[68px] w-full items-center justify-center rounded-2xl bg-[#1BBB8C] px-5 text-base font-black text-[#06100c] shadow-lg shadow-[#1BBB8C]/10 transition active:scale-[0.98] hover:bg-[#16a77c]"
         >
-          <span className="mr-2 text-xl">
+
+          <span className="mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-[#06100c]/10 text-xl">
             +
           </span>
 
           POST A NEW JOB
+
         </Link>
+
 
         {/* ================================================= */}
         {/* ACTION REQUIRED */}
@@ -361,12 +481,12 @@ export default function CustomerDashboard() {
 
             <Link
               href="/customer/quotes"
-              className="block overflow-hidden rounded-2xl border border-[#3f8d24] bg-[#10230f] transition active:scale-[0.99]"
+              className="block overflow-hidden rounded-2xl border border-[#3f8d24] bg-[#10230f] transition active:scale-[0.99] hover:border-[#79c51c]"
             >
 
               <div className="flex items-center gap-4 p-5">
 
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1BBB8C] text-xl font-black text-[#06100c]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1BBB8C] text-lg font-black text-[#06100c]">
                   £
                 </div>
 
@@ -381,21 +501,20 @@ export default function CustomerDashboard() {
                   </h2>
 
                   <p className="mt-1 text-sm text-[#82958c]">
-                    Tap to compare your quotes.
+                    Review and compare your available quotes.
                   </p>
 
                 </div>
 
-                <div className="text-2xl font-black text-[#1BBB8C]">
+                <span className="text-2xl font-black text-[#1BBB8C]">
                   →
-                </div>
+                </span>
 
               </div>
 
               {actionRequiredCount > 1 && (
                 <div className="border-t border-[#214333] px-5 py-3 text-xs font-bold text-[#91a99e]">
-                  {actionRequiredCount} jobs have
-                  quotes available
+                  {actionRequiredCount} jobs have quotes available
                 </div>
               )}
 
@@ -404,8 +523,9 @@ export default function CustomerDashboard() {
           </section>
         )}
 
+
         {/* ================================================= */}
-        {/* ACTIVE JOB */}
+        {/* ACTIVE COLLECTION */}
         {/* ================================================= */}
 
         {activeJobs.length > 0 && (
@@ -418,22 +538,23 @@ export default function CustomerDashboard() {
 
             <div className="space-y-3">
 
-              {activeJobs.slice(0, 1).map(
-                (job) => (
+              {activeJobs
+                .slice(0, 1)
+                .map((job) => (
                   <ActiveJobCard
                     key={job.id}
                     job={job}
                   />
-                )
-              )}
+                ))}
 
             </div>
 
           </section>
         )}
 
+
         {/* ================================================= */}
-        {/* QUICK MENU */}
+        {/* QUICK ACCESS */}
         {/* ================================================= */}
 
         <section className="mt-8">
@@ -457,7 +578,7 @@ export default function CustomerDashboard() {
             />
 
             <QuickAction
-              href="#my-jobs"
+              href="/customer/jobs"
               icon="▣"
               title="My Jobs"
               subtitle={`${jobs.length} total`}
@@ -483,6 +604,7 @@ export default function CustomerDashboard() {
               </span>
 
               <span>
+
                 <span className="block text-sm font-black">
                   {refreshing
                     ? "Refreshing..."
@@ -492,6 +614,7 @@ export default function CustomerDashboard() {
                 <span className="mt-0.5 block text-xs text-[#71867c]">
                   Check for updates
                 </span>
+
               </span>
 
             </button>
@@ -500,8 +623,9 @@ export default function CustomerDashboard() {
 
         </section>
 
+
         {/* ================================================= */}
-        {/* SMALL SUMMARY */}
+        {/* SUMMARY */}
         {/* ================================================= */}
 
         <section className="mt-8">
@@ -529,6 +653,7 @@ export default function CustomerDashboard() {
 
         </section>
 
+
         {/* ================================================= */}
         {/* ERROR */}
         {/* ================================================= */}
@@ -551,26 +676,27 @@ export default function CustomerDashboard() {
           </div>
         )}
 
+
         {/* ================================================= */}
-        {/* MY JOBS */}
+        {/* RECENT JOBS */}
         {/* ================================================= */}
 
-        <section
-          id="my-jobs"
-          className="mt-10"
-        >
+        <section className="mt-10">
 
           <div className="flex items-end justify-between gap-4">
 
             <SectionTitle
               eyebrow="Activity"
-              title="My jobs"
+              title="Recent jobs"
             />
 
             {jobs.length > 0 && (
-              <span className="mb-5 text-xs font-bold text-[#657a70]">
-                {jobs.length} total
-              </span>
+              <Link
+                href="/customer/jobs"
+                className="mb-5 text-xs font-black text-[#1BBB8C]"
+              >
+                View all →
+              </Link>
             )}
 
           </div>
@@ -580,12 +706,14 @@ export default function CustomerDashboard() {
           ) : (
             <div className="space-y-3">
 
-              {jobs.map((job) => (
-                <CustomerJobCard
-                  key={job.id}
-                  job={job}
-                />
-              ))}
+              {jobs
+                .slice(0, 5)
+                .map((job) => (
+                  <CustomerJobCard
+                    key={job.id}
+                    job={job}
+                  />
+                ))}
 
             </div>
           )}
@@ -594,13 +722,14 @@ export default function CustomerDashboard() {
 
       </div>
 
+
       {/* ================================================= */}
-      {/* MOBILE BOTTOM NAV */}
+      {/* CUSTOMER APP NAV */}
       {/* ================================================= */}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#17382b] bg-[#081710]/95 backdrop-blur">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#17382b] bg-[#081710]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
 
-        <div className="mx-auto grid max-w-4xl grid-cols-4">
+        <div className="mx-auto grid max-w-5xl grid-cols-4">
 
           <BottomNavItem
             href="/customer/dashboard"
@@ -610,7 +739,7 @@ export default function CustomerDashboard() {
           />
 
           <BottomNavItem
-            href="#my-jobs"
+            href="/customer/jobs"
             icon="▣"
             label="Jobs"
           />
@@ -636,9 +765,134 @@ export default function CustomerDashboard() {
 
       </nav>
 
+
+      {/* ================================================= */}
+      {/* INSTALL APP MODAL */}
+      {/* ================================================= */}
+
+      {showInstallModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+          onClick={() =>
+            setShowInstallModal(false)
+          }
+        >
+
+          <div
+            className="w-full max-w-md rounded-3xl border border-[#29483a] bg-[#0b1b14] p-6 shadow-2xl"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            <div className="flex items-start justify-between gap-4">
+
+              <div>
+
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+                  Rapid Clear Solutions
+                </p>
+
+                <h2 className="mt-2 text-2xl font-black">
+                  Install the app
+                </h2>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowInstallModal(false)
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#29483a] text-lg font-black text-[#71867c] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+                aria-label="Close"
+              >
+                ×
+              </button>
+
+            </div>
+
+
+            {installPrompt ? (
+              <>
+                <p className="mt-5 text-sm leading-6 text-[#82958c]">
+                  Add Rapid Clear Solutions to your
+                  home screen for quick access to your
+                  customer portal.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleInstallApp}
+                  className="mt-6 flex min-h-[52px] w-full items-center justify-center rounded-xl bg-[#1BBB8C] px-5 text-sm font-black text-[#06100c] transition hover:bg-[#16a77c]"
+                >
+                  INSTALL APP
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mt-5 text-sm leading-6 text-[#82958c]">
+                  You can add Rapid Clear Solutions
+                  to your phone's home screen for
+                  faster access.
+                </p>
+
+                <div className="mt-5 rounded-2xl border border-[#17382b] bg-[#081710] p-4">
+
+                  <p className="text-sm font-black">
+                    On iPhone
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-[#71867c]">
+                    Open this website in Safari,
+                    tap the Share button, then choose
+                    <span className="font-bold text-[#d5dfda]">
+                      {" Add to Home Screen"}
+                    </span>.
+                  </p>
+
+                </div>
+
+                <div className="mt-3 rounded-2xl border border-[#17382b] bg-[#081710] p-4">
+
+                  <p className="text-sm font-black">
+                    On Android
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-[#71867c]">
+                    Open the browser menu and choose
+                    <span className="font-bold text-[#d5dfda]">
+                      {" Install app"}
+                    </span>
+                    {" or "}
+                    <span className="font-bold text-[#d5dfda]">
+                      {"Add to Home screen"}
+                    </span>.
+                  </p>
+
+                </div>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowInstallModal(false)
+              }
+              className="mt-4 w-full rounded-xl border border-[#29483a] px-5 py-3 text-sm font-bold text-[#b8c6c0] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+            >
+              Maybe later
+            </button>
+
+          </div>
+
+        </div>
+      )}
+
     </main>
   );
 }
+
 
 /* ========================================================= */
 /* ACTIVE JOB CARD                                           */
@@ -652,27 +906,27 @@ function ActiveJobCard({
   return (
     <Link
       href={`/customer/jobs/${job.id}`}
-      className="block rounded-2xl border border-[#3f8d24] bg-[#0b1b14] p-5 transition active:scale-[0.99]"
+      className="block rounded-2xl border border-[#3f8d24] bg-[#0b1b14] p-5 transition active:scale-[0.99] hover:border-[#79c51c]"
     >
 
       <div className="flex items-start gap-4">
 
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#123529] text-xl">
-          🚚
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#123529] text-lg text-[#1BBB8C]">
+          RCS
         </div>
 
         <div className="min-w-0 flex-1">
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start justify-between gap-3">
 
-            <div>
+            <div className="min-w-0">
 
-              <p className="text-xs font-black uppercase tracking-wide text-[#1BBB8C]">
+              <p className="truncate text-xs font-black uppercase tracking-wide text-[#1BBB8C]">
                 {job.reference ||
                   `RC-${String(job.id).padStart(6, "0")}`}
               </p>
 
-              <h3 className="mt-1 font-black">
+              <h3 className="mt-1 truncate font-black">
                 {job.job_type ||
                   "Waste Collection"}
               </h3>
@@ -691,9 +945,7 @@ function ActiveJobCard({
               label="Date"
               value={
                 job.preferred_date
-                  ? formatDate(
-                      job.preferred_date
-                    )
+                  ? formatDate(job.preferred_date)
                   : "Not set"
               }
             />
@@ -729,6 +981,7 @@ function ActiveJobCard({
   );
 }
 
+
 /* ========================================================= */
 /* CUSTOMER JOB CARD                                         */
 /* ========================================================= */
@@ -752,30 +1005,22 @@ function CustomerJobCard({
 
       <div className="flex items-center gap-4">
 
-        {/* ICON */}
-
         <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg ${
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${
             isCompleted
               ? "bg-[#102019] text-[#657a70]"
               : "bg-[#123529] text-[#1BBB8C]"
           }`}
         >
-          🚚
+          RCS
         </div>
-
-        {/* MAIN */}
 
         <div className="min-w-0 flex-1">
 
-          <div className="flex items-center gap-2">
-
-            <p className="truncate text-sm font-black">
-              {job.job_type ||
-                "Waste Collection"}
-            </p>
-
-          </div>
+          <p className="truncate text-sm font-black">
+            {job.job_type ||
+              "Waste Collection"}
+          </p>
 
           <p className="mt-1 truncate text-xs text-[#71867c]">
             {job.postcode ||
@@ -790,17 +1035,13 @@ function CustomerJobCard({
 
             {job.preferred_date && (
               <span className="truncate text-xs text-[#657a70]">
-                {formatDate(
-                  job.preferred_date
-                )}
+                {formatDate(job.preferred_date)}
               </span>
             )}
 
           </div>
 
         </div>
-
-        {/* ARROW */}
 
         <div className="shrink-0 text-xl font-black text-[#52665d]">
           →
@@ -811,6 +1052,7 @@ function CustomerJobCard({
     </Link>
   );
 }
+
 
 /* ========================================================= */
 /* QUICK ACTION                                              */
@@ -865,6 +1107,7 @@ function QuickAction({
   );
 }
 
+
 /* ========================================================= */
 /* BOTTOM NAV                                                */
 /* ========================================================= */
@@ -885,10 +1128,10 @@ function BottomNavItem({
   return (
     <Link
       href={href}
-      className={`relative flex min-h-[64px] flex-col items-center justify-center gap-1 text-[11px] font-bold ${
+      className={`relative flex min-h-[64px] flex-col items-center justify-center gap-1 text-[11px] font-bold transition ${
         active
           ? "text-[#1BBB8C]"
-          : "text-[#687d73]"
+          : "text-[#687d73] hover:text-[#b8c6c0]"
       }`}
     >
 
@@ -911,6 +1154,7 @@ function BottomNavItem({
     </Link>
   );
 }
+
 
 /* ========================================================= */
 /* SUMMARY ITEM                                              */
@@ -946,6 +1190,7 @@ function SummaryItem({
   );
 }
 
+
 /* ========================================================= */
 /* MINI DETAIL                                               */
 /* ========================================================= */
@@ -971,6 +1216,7 @@ function MiniDetail({
     </div>
   );
 }
+
 
 /* ========================================================= */
 /* STATUS BADGE                                              */
@@ -1058,6 +1304,7 @@ function StatusBadge({
   );
 }
 
+
 /* ========================================================= */
 /* SECTION TITLE                                             */
 /* ========================================================= */
@@ -1084,6 +1331,7 @@ function SectionTitle({
   );
 }
 
+
 /* ========================================================= */
 /* EMPTY STATE                                               */
 /* ========================================================= */
@@ -1092,8 +1340,8 @@ function EmptyJobs() {
   return (
     <div className="rounded-2xl border border-dashed border-[#29483a] bg-[#081710] px-5 py-10 text-center">
 
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#123529] text-2xl">
-        🚚
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#123529] text-sm font-black text-[#1BBB8C]">
+        RCS
       </div>
 
       <h3 className="mt-5 text-xl font-black">
@@ -1115,6 +1363,7 @@ function EmptyJobs() {
     </div>
   );
 }
+
 
 /* ========================================================= */
 /* HELPERS                                                   */
