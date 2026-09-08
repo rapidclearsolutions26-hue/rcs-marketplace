@@ -3,7 +3,6 @@ import type {
   Viewport,
 } from "next";
 import "./globals.css";
-import InstallPWA from "./components/pwa/InstallPWA";
 
 export const metadata: Metadata = {
   title: "Rapid Clear Solutions",
@@ -56,13 +55,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        {children}
-
-        <div className="mx-auto max-w-5xl px-4 pb-6 sm:px-6">
-          <InstallPWA />
-        </div>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
