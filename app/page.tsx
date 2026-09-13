@@ -1,25 +1,42 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 
 export default function Home() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050705] text-white">
       {/* ========================================================= */}
       {/* HEADER */}
       {/* ========================================================= */}
 
-      <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#050705]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
-          <Link href="/" className="shrink-0">
+      <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:h-[76px] sm:px-6 lg:px-8">
+          {/* LOGO */}
+
+          <Link
+            href="/"
+            className="shrink-0"
+            onClick={closeMobileMenu}
+          >
             <Image
               src="/rapid-clear-logo.png"
               alt="Rapid Clear Solutions"
               width={220}
               height={90}
               priority
-              className="h-12 w-auto object-contain sm:h-14"
+              className="h-10 w-auto object-contain sm:h-14"
             />
           </Link>
+
+          {/* DESKTOP NAV */}
 
           <nav className="hidden items-center gap-8 lg:flex">
             <Link
@@ -51,10 +68,12 @@ export default function Home() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-2">
+          {/* DESKTOP LOGIN BUTTONS */}
+
+          <div className="hidden items-center gap-2 lg:flex">
             <Link
               href="/customer/login"
-              className="hidden rounded-lg border border-white/[0.12] px-4 py-2.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/[0.04] sm:block"
+              className="rounded-lg border border-white/[0.12] px-4 py-2.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/[0.04]"
             >
               Customer Login
             </Link>
@@ -66,6 +85,106 @@ export default function Home() {
               Driver Login
             </Link>
           </div>
+
+          {/* MOBILE MENU BUTTON */}
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.03] text-white transition hover:border-[#79c51c]/50 hover:text-[#79c51c] lg:hidden"
+          >
+            {mobileMenuOpen ? (
+              <span className="text-2xl leading-none">×</span>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+              </div>
+            )}
+          </button>
+        </div>
+
+        {/* ======================================================= */}
+        {/* MOBILE MENU */}
+        {/* ======================================================= */}
+
+        <div
+          className={`overflow-hidden border-t border-white/[0.07] bg-[#080b08] transition-all duration-300 lg:hidden ${
+            mobileMenuOpen
+              ? "max-h-[600px] opacity-100"
+              : "max-h-0 border-t-0 opacity-0"
+          }`}
+        >
+          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+            {/* Main customer action */}
+
+            <Link
+              href="/customer/post-job"
+              onClick={closeMobileMenu}
+              className="mb-3 flex w-full items-center justify-between rounded-xl bg-[#79c51c] px-5 py-4 text-sm font-black text-black"
+            >
+              <span>GET A QUOTE</span>
+              <span className="text-lg">→</span>
+            </Link>
+
+            {/* Customer Login */}
+
+            <Link
+              href="/customer/login"
+              onClick={closeMobileMenu}
+              className="mb-2 flex w-full items-center justify-between rounded-xl border border-white/[0.12] bg-white/[0.025] px-5 py-4 text-sm font-bold text-white"
+            >
+              <span>CUSTOMER LOGIN</span>
+              <span className="text-gray-500">→</span>
+            </Link>
+
+            {/* Driver Login */}
+
+            <Link
+              href="/driver/login"
+              onClick={closeMobileMenu}
+              className="mb-2 flex w-full items-center justify-between rounded-xl border border-[#79c51c]/30 bg-[#79c51c]/[0.05] px-5 py-4 text-sm font-bold text-[#79c51c]"
+            >
+              <span>DRIVER LOGIN</span>
+              <span>→</span>
+            </Link>
+
+            {/* Divider */}
+
+            <div className="my-3 h-px bg-white/[0.07]" />
+
+            {/* Other navigation */}
+
+            <Link
+              href="/driver/register"
+              onClick={closeMobileMenu}
+              className="flex w-full items-center justify-between border-b border-white/[0.06] px-2 py-4 text-sm font-semibold text-gray-300"
+            >
+              <span>FOR DRIVERS</span>
+              <span className="text-gray-600">→</span>
+            </Link>
+
+            <Link
+              href="#how-it-works"
+              onClick={closeMobileMenu}
+              className="flex w-full items-center justify-between border-b border-white/[0.06] px-2 py-4 text-sm font-semibold text-gray-300"
+            >
+              <span>HOW IT WORKS</span>
+              <span className="text-gray-600">→</span>
+            </Link>
+
+            <Link
+              href="/contact"
+              onClick={closeMobileMenu}
+              className="flex w-full items-center justify-between px-2 py-4 text-sm font-semibold text-gray-300"
+            >
+              <span>CONTACT</span>
+              <span className="text-gray-600">→</span>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -74,37 +193,35 @@ export default function Home() {
       {/* ========================================================= */}
 
       <section className="relative overflow-hidden border-b border-white/[0.07]">
-        {/* Subtle background */}
-
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_45%,rgba(121,197,28,0.10),transparent_30%)]" />
 
         <div className="pointer-events-none absolute inset-0 opacity-[0.025] [background-image:linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] [background-size:80px_80px]" />
 
-        <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-5 py-16 sm:px-6 sm:py-20 lg:min-h-[690px] lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-16">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-5 py-12 sm:px-6 sm:py-20 lg:min-h-[690px] lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-16">
           {/* LEFT */}
 
           <div className="relative z-10">
-            <div className="mb-7 flex items-center gap-3">
+            <div className="mb-6 flex items-center gap-3 sm:mb-7">
               <span className="h-2 w-2 rounded-full bg-[#79c51c]" />
 
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#79c51c]">
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#79c51c] sm:text-xs">
                 RCS Marketplace
               </span>
             </div>
 
-            <h1 className="max-w-3xl text-[3.7rem] font-black uppercase leading-[0.9] tracking-[-0.05em] sm:text-6xl md:text-7xl lg:text-[5.6rem] xl:text-[6.5rem]">
+            <h1 className="max-w-3xl text-[3.35rem] font-black uppercase leading-[0.9] tracking-[-0.05em] sm:text-6xl md:text-7xl lg:text-[5.6rem] xl:text-[6.5rem]">
               Waste removal
               <span className="block text-[#79c51c]">
                 made simple.
               </span>
             </h1>
 
-            <p className="mt-7 max-w-xl text-lg leading-8 text-gray-400">
+            <p className="mt-6 max-w-xl text-base leading-7 text-gray-400 sm:mt-7 sm:text-lg sm:leading-8">
               Post your waste removal job, receive bids from approved RCS
               drivers and choose the option that works for you.
             </p>
 
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row">
               <Link
                 href="/customer/post-job"
                 className="rounded-lg bg-[#79c51c] px-7 py-4 text-center text-sm font-black text-black transition duration-200 hover:bg-[#91db32]"
@@ -121,7 +238,7 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-x-7 gap-y-3">
+            <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 sm:mt-8 sm:gap-x-7">
               <HeroFeature text="Approved drivers" />
               <HeroFeature text="Photo-based quotes" />
               <HeroFeature text="Secure checkout" />
@@ -130,20 +247,20 @@ export default function Home() {
 
           {/* RIGHT — TRUCK */}
 
-          <div className="relative flex min-h-[400px] items-center justify-center lg:min-h-[590px]">
+          <div className="relative flex min-h-[340px] items-center justify-center sm:min-h-[400px] lg:min-h-[590px]">
             {/* Glow */}
 
-            <div className="absolute right-[10%] top-1/2 h-[380px] w-[380px] -translate-y-1/2 rounded-full bg-[#79c51c]/10 blur-[110px]" />
+            <div className="absolute right-[10%] top-1/2 h-[300px] w-[300px] -translate-y-1/2 rounded-full bg-[#79c51c]/10 blur-[90px] sm:h-[380px] sm:w-[380px] sm:blur-[110px]" />
 
-            {/* Simple frame */}
+            {/* Frame */}
 
-            <div className="absolute right-0 top-1/2 h-[390px] w-[92%] -translate-y-1/2 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] sm:h-[470px] lg:h-[510px]" />
+            <div className="absolute right-0 top-1/2 h-[330px] w-[92%] -translate-y-1/2 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] sm:h-[470px] lg:h-[510px]" />
 
             {/* Green accent */}
 
             <div className="absolute bottom-[7%] right-[7%] h-px w-[35%] bg-gradient-to-r from-transparent to-[#79c51c]" />
 
-            <div className="absolute right-[7%] top-[13%] h-[90px] w-px bg-gradient-to-b from-[#79c51c] to-transparent" />
+            <div className="absolute right-[7%] top-[13%] h-[70px] w-px bg-gradient-to-b from-[#79c51c] to-transparent sm:h-[90px]" />
 
             <Image
               src="/rapid-clear-solutions-removal-truck.png"
@@ -154,14 +271,14 @@ export default function Home() {
               className="relative z-10 w-[112%] max-w-[760px] object-contain drop-shadow-[0_35px_60px_rgba(0,0,0,0.8)]"
             />
 
-            {/* Small information panel */}
+            {/* Information panel */}
 
-            <div className="absolute bottom-[8%] left-0 z-20 rounded-xl border border-white/[0.1] bg-[#0b100b]/95 px-5 py-4 shadow-2xl backdrop-blur-xl sm:left-[2%]">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500">
+            <div className="absolute bottom-[5%] left-0 z-20 max-w-[88%] rounded-xl border border-white/[0.1] bg-[#0b100b]/95 px-4 py-3 shadow-2xl backdrop-blur-xl sm:bottom-[8%] sm:left-[2%] sm:px-5 sm:py-4">
+              <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-500 sm:text-[10px]">
                 The RCS Marketplace
               </p>
 
-              <p className="mt-1 text-sm font-bold text-white">
+              <p className="mt-1 text-xs font-bold text-white sm:text-sm">
                 One place to arrange your collection.
               </p>
             </div>
@@ -201,7 +318,7 @@ export default function Home() {
       {/* SERVICES */}
       {/* ========================================================= */}
 
-      <section className="border-b border-white/[0.07] bg-[#050705] py-24 sm:py-28">
+      <section className="border-b border-white/[0.07] bg-[#050705] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
@@ -224,7 +341,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:mt-12 sm:grid-cols-3 lg:grid-cols-4">
             <ServiceCard title="House Clearance" number="01" />
             <ServiceCard title="Garden Waste" number="02" />
             <ServiceCard title="Builders Waste" number="03" />
@@ -243,10 +360,10 @@ export default function Home() {
 
       <section
         id="how-it-works"
-        className="border-b border-white/[0.07] bg-[#080b08] py-24 sm:py-28"
+        className="border-b border-white/[0.07] bg-[#080b08] py-20 sm:py-28"
       >
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr]">
+          <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr] lg:gap-12">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#79c51c]">
                 How It Works
@@ -297,12 +414,12 @@ export default function Home() {
       {/* CUSTOMER / DRIVER SPLIT */}
       {/* ========================================================= */}
 
-      <section className="border-b border-white/[0.07] bg-[#050705] py-24 sm:py-28">
+      <section className="border-b border-white/[0.07] bg-[#050705] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="grid gap-5 lg:grid-cols-2">
             {/* CUSTOMER */}
 
-            <div className="group relative overflow-hidden rounded-2xl border border-[#79c51c]/20 bg-[#0a1109] p-8 sm:p-10">
+            <div className="group relative overflow-hidden rounded-2xl border border-[#79c51c]/20 bg-[#0a1109] p-7 sm:p-10">
               <div className="absolute right-[-80px] top-[-80px] h-56 w-56 rounded-full bg-[#79c51c]/10 blur-[80px]" />
 
               <div className="relative">
@@ -332,7 +449,7 @@ export default function Home() {
 
             {/* DRIVER */}
 
-            <div className="group relative overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0a0d0a] p-8 sm:p-10">
+            <div className="group relative overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0a0d0a] p-7 sm:p-10">
               <div className="absolute right-[-80px] top-[-80px] h-56 w-56 rounded-full bg-white/[0.025] blur-[80px]" />
 
               <div className="relative">
@@ -367,9 +484,9 @@ export default function Home() {
       {/* MARKETPLACE EXPLANATION */}
       {/* ========================================================= */}
 
-      <section className="border-b border-white/[0.07] bg-[#080b08] py-24 sm:py-28">
+      <section className="border-b border-white/[0.07] bg-[#080b08] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-14">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#79c51c]">
                 The Marketplace
@@ -423,7 +540,7 @@ export default function Home() {
       {/* FINAL CTA */}
       {/* ========================================================= */}
 
-      <section className="relative overflow-hidden bg-[#050705] py-24 sm:py-32">
+      <section className="relative overflow-hidden bg-[#050705] py-20 sm:py-32">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(121,197,28,0.09),transparent_45%)]" />
 
         <div className="relative mx-auto max-w-5xl px-5 text-center sm:px-6">
