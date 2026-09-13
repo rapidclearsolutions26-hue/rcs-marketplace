@@ -8,7 +8,7 @@ import {
 } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
 
 const wasteTypes = [
   "House clearance",
@@ -39,38 +39,10 @@ const locations = [
   "Multiple areas",
 ];
 
-function getSupabaseClient() {
-  const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-  const key =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env
-      .NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !key) {
-    throw new Error(
-      "Supabase is not configured.",
-    );
-  }
-
-  return createClient(
-    url,
-    key,
-    {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-      },
-    },
-  );
-}
-
 export default function PostJobPage() {
-  const [loading, setLoading] =
-    useState(false);
+  const supabase = createClient();
 
+  const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] =
     useState(true);
 
@@ -99,66 +71,9 @@ export default function PostJobPage() {
     useState(false);
 
   /*
-   * -------------------------------------------------------
-   * CHECK CUSTOMER LOGIN
-   * -------------------------------------------------------
-   */
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function checkCustomer() {
-      try {
-        const supabase =
-          getSupabaseClient();
-
-        const {
-          data: {
-            session,
-          },
-        } =
-          await supabase.auth.getSession();
-
-        if (!mounted) {
-          return;
-        }
-
-        if (session?.user) {
-          setIsLoggedIn(true);
-
-          setCustomerEmail(
-            session.user.email || "",
-          );
-        } else {
-          setIsLoggedIn(false);
-        }
-      } catch (error) {
-        console.error(
-          "Customer session check failed:",
-          error,
-        );
-
-        if (mounted) {
-          setIsLoggedIn(false);
-        }
-      } finally {
-        if (mounted) {
-          setCheckingSession(false);
-        }
-      }
-    }
-
-    checkCustomer();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  /*
-   * -------------------------------------------------------
+   * =========================================================
    * JOB DETAILS
-   * -------------------------------------------------------
+   * =========================================================
    */
 
   const [wasteType, setWasteType] =
@@ -192,9 +107,9 @@ export default function PostJobPage() {
     useState<File[]>([]);
 
   /*
-   * -------------------------------------------------------
+   * =========================================================
    * NEW CUSTOMER DETAILS
-   * -------------------------------------------------------
+   * =========================================================
    */
 
   const [fullName, setFullName] =
@@ -213,9 +128,9 @@ export default function PostJobPage() {
     useState("");
 
   /*
-   * -------------------------------------------------------
+   * =========================================================
    * TODAY
-   * -------------------------------------------------------
+   * =========================================================
    */
 
   const today = useMemo(() => {
@@ -224,23 +139,133 @@ export default function PostJobPage() {
     const year =
       date.getFullYear();
 
-    const month =
-      String(
-        date.getMonth() + 1,
-      ).padStart(2, "0");
+    const month = String(
+      date.getMonth() + 1,
+    ).padStart(2, "0");
 
-    const day =
-      String(
-        date.getDate(),
-      ).padStart(2, "0");
+    const day = String(
+      date.getDate(),
+    ).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
   }, []);
 
   /*
-   * -------------------------------------------------------
+   * =========================================================
+   * CHECK LOGGED-IN CUSTOMER
+   * =========================================================
+   *
+   * IMPORTANT:
+   * This uses the exact same Supabase client used by the
+   * customer dashboard.
+   */
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkCustomerSession() {
+      try {
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (!mounted) {
+          return;
+        }
+
+        if (error) {
+          console.error(
+            "Customer session error:",
+            error,
+          );
+
+          setIsLoggedIn(false);
+          setCustomerEmail("");
+
+          return;
+        }
+
+        if (user) {
+          console.log(
+            "Logged-in customer detected:",
+            user.id,
+          );
+
+          setIsLoggedIn(true);
+
+          setCustomerEmail(
+            user.email || "",
+          );
+
+          /*
+           * Pre-fill the new customer fields internally.
+           * They are not shown to an existing customer.
+           *
+           * This also means the API can safely fall back
+           * to these values if needed.
+           */
+
+          setEmail(
+            user.email || "",
+          );
+
+          const metadata =
+            user.user_metadata || {};
+
+          if (
+            typeof metadata.full_name ===
+            "string"
+          ) {
+            setFullName(
+              metadata.full_name,
+            );
+          }
+
+          if (
+            typeof metadata.phone ===
+            "string"
+          ) {
+            setPhone(
+              metadata.phone,
+            );
+          }
+        } else {
+          console.log(
+            "No logged-in customer detected.",
+          );
+
+          setIsLoggedIn(false);
+          setCustomerEmail("");
+        }
+      } catch (error) {
+        console.error(
+          "Customer session check failed:",
+          error,
+        );
+
+        if (mounted) {
+          setIsLoggedIn(false);
+          setCustomerEmail("");
+        }
+      } finally {
+        if (mounted) {
+          setCheckingSession(false);
+        }
+      }
+    }
+
+    checkCustomerSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, [supabase]);
+
+  /*
+   * =========================================================
    * PHOTO SELECTION
-   * -------------------------------------------------------
+   * =========================================================
    */
 
   function handlePhotos(
@@ -251,9 +276,7 @@ export default function PostJobPage() {
         event.target.files || [],
       );
 
-    if (
-      !selectedFiles.length
-    ) {
+    if (!selectedFiles.length) {
       return;
     }
 
@@ -311,9 +334,9 @@ export default function PostJobPage() {
   }
 
   /*
-   * -------------------------------------------------------
+   * =========================================================
    * VALIDATION
-   * -------------------------------------------------------
+   * =========================================================
    */
 
   function validateForm() {
@@ -350,9 +373,7 @@ export default function PostJobPage() {
     }
 
     /*
-     * -----------------------------------------------------
-     * ONLY VALIDATE ACCOUNT DETAILS FOR NEW CUSTOMERS
-     * -----------------------------------------------------
+     * Existing customers do NOT need account validation.
      */
 
     if (!isLoggedIn) {
@@ -362,6 +383,15 @@ export default function PostJobPage() {
 
       if (!email.trim()) {
         return "Please enter your email address.";
+      }
+
+      const emailIsValid =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          email.trim(),
+        );
+
+      if (!emailIsValid) {
+        return "Please enter a valid email address.";
       }
 
       if (!phone.trim()) {
@@ -392,9 +422,9 @@ export default function PostJobPage() {
   }
 
   /*
-   * -------------------------------------------------------
+   * =========================================================
    * SUBMIT JOB
-   * -------------------------------------------------------
+   * =========================================================
    */
 
   async function submitJob(
@@ -404,6 +434,67 @@ export default function PostJobPage() {
 
     setErrorMessage("");
     setSuccessMessage("");
+
+    /*
+     * -------------------------------------------------------
+     * GET THE CURRENT SESSION AGAIN
+     * -------------------------------------------------------
+     *
+     * This is important because we don't want to rely only
+     * on the state from when the page first loaded.
+     */
+
+    let currentUserId: string | null =
+      null;
+
+    let currentAccessToken = "";
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } =
+        await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error(
+          "Session error:",
+          sessionError,
+        );
+      }
+
+      if (session?.user) {
+        currentUserId =
+          session.user.id;
+
+        currentAccessToken =
+          session.access_token;
+
+        /*
+         * Make absolutely sure the page state matches
+         * the actual Supabase session.
+         */
+
+        setIsLoggedIn(true);
+
+        setCustomerEmail(
+          session.user.email || "",
+        );
+      } else {
+        setIsLoggedIn(false);
+      }
+    } catch (error) {
+      console.error(
+        "Unable to read customer session:",
+        error,
+      );
+    }
+
+    /*
+     * -------------------------------------------------------
+     * VALIDATION
+     * -------------------------------------------------------
+     */
 
     const validationError =
       validateForm();
@@ -421,40 +512,35 @@ export default function PostJobPage() {
       return;
     }
 
+    /*
+     * -------------------------------------------------------
+     * EXISTING CUSTOMER SAFETY CHECK
+     * -------------------------------------------------------
+     *
+     * If the customer was logged in when they opened the
+     * page, but their session has disappeared, don't create
+     * a brand-new account by accident.
+     */
+
+    if (
+      isLoggedIn &&
+      !currentUserId
+    ) {
+      setErrorMessage(
+        "Your customer session has expired. Please log in again before posting a new job.",
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
+      return;
+    }
+
     setLoading(true);
 
     try {
-      /*
-       * -----------------------------------------------------
-       * GET CURRENT SESSION
-       * -----------------------------------------------------
-       */
-
-      let accessToken = "";
-
-      if (isLoggedIn) {
-        const supabase =
-          getSupabaseClient();
-
-        const {
-          data: {
-            session,
-          },
-        } =
-          await supabase.auth.getSession();
-
-        if (!session) {
-          setIsLoggedIn(false);
-
-          throw new Error(
-            "Your customer session has expired. Please log in again.",
-          );
-        }
-
-        accessToken =
-          session.access_token;
-      }
-
       /*
        * -----------------------------------------------------
        * BUILD FORM DATA
@@ -465,8 +551,8 @@ export default function PostJobPage() {
         new FormData();
 
       /*
-       * Existing customers don't need these fields.
-       * New customers still send them.
+       * Existing customers don't need to submit their
+       * account details.
        */
 
       if (!isLoggedIn) {
@@ -492,6 +578,12 @@ export default function PostJobPage() {
           password,
         );
       }
+
+      /*
+       * -----------------------------------------------------
+       * JOB DETAILS
+       * -----------------------------------------------------
+       */
 
       formData.append(
         "jobType",
@@ -560,6 +652,12 @@ export default function PostJobPage() {
         preferredTime,
       );
 
+      /*
+       * -----------------------------------------------------
+       * PHOTOS
+       * -----------------------------------------------------
+       */
+
       photos.forEach(
         (photo) => {
           formData.append(
@@ -571,7 +669,7 @@ export default function PostJobPage() {
 
       /*
        * -----------------------------------------------------
-       * SEND TO SERVER
+       * SEND TO API
        * -----------------------------------------------------
        */
 
@@ -580,12 +678,14 @@ export default function PostJobPage() {
           "/api/customer/post-job",
           {
             method: "POST",
+
             headers:
-              accessToken
+              currentAccessToken
                 ? {
-                    Authorization: `Bearer ${accessToken}`,
+                    Authorization: `Bearer ${currentAccessToken}`,
                   }
                 : undefined,
+
             body: formData,
           },
         );
@@ -595,7 +695,7 @@ export default function PostJobPage() {
 
       /*
        * -----------------------------------------------------
-       * EXISTING ACCOUNT
+       * EXISTING ACCOUNT ERROR
        * -----------------------------------------------------
        */
 
@@ -607,6 +707,28 @@ export default function PostJobPage() {
       ) {
         setErrorMessage(
           "An RCS customer account already exists with this email address. Please log in to your existing account before posting a new job.",
+        );
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+
+        return;
+      }
+
+      /*
+       * -----------------------------------------------------
+       * SESSION ERROR
+       * -----------------------------------------------------
+       */
+
+      if (
+        response.status ===
+          401
+      ) {
+        setErrorMessage(
+          "Your customer session has expired. Please log in again.",
         );
 
         window.scrollTo({
@@ -690,16 +812,18 @@ export default function PostJobPage() {
   }
 
   /*
-   * -------------------------------------------------------
+   * =========================================================
    * SUCCESS SCREEN
-   * -------------------------------------------------------
+   * =========================================================
    */
 
   if (jobPosted) {
     return (
       <main className="min-h-screen bg-[#07100b] text-white">
+
         <header className="border-b border-white/10 bg-[#07100b]">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+
             <Link href="/">
               <Image
                 src="/rcs-logo.jpg"
@@ -709,16 +833,20 @@ export default function PostJobPage() {
                 className="h-12 w-auto object-contain"
               />
             </Link>
+
           </div>
         </header>
 
         <div className="mx-auto flex min-h-[calc(100vh-81px)] max-w-3xl items-center px-4 py-12 sm:px-6">
+
           <section className="w-full rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-6 text-center shadow-2xl sm:p-10">
 
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#529027]/15">
+
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#529027] text-3xl font-black text-white">
                 ✓
               </div>
+
             </div>
 
             <p className="mt-7 text-sm font-black uppercase tracking-[0.2em] text-[#71b33d]">
@@ -737,6 +865,7 @@ export default function PostJobPage() {
 
             {jobReference && (
               <div className="mx-auto mt-7 max-w-sm rounded-2xl border border-white/10 bg-[#07100b] p-5">
+
                 <p className="text-xs font-black uppercase tracking-[0.15em] text-[#758177]">
                   Job reference
                 </p>
@@ -744,11 +873,13 @@ export default function PostJobPage() {
                 <p className="mt-2 text-2xl font-black text-white">
                   {jobReference}
                 </p>
+
               </div>
             )}
 
             {confirmationRequired ? (
               <div className="mt-7 rounded-2xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/5 p-5 text-left">
+
                 <div className="flex items-start gap-4">
 
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1BBB8C]/15 text-lg">
@@ -756,6 +887,7 @@ export default function PostJobPage() {
                   </div>
 
                   <div>
+
                     <h2 className="font-black text-[#b8f1dc]">
                       Please confirm your email
                     </h2>
@@ -778,11 +910,15 @@ export default function PostJobPage() {
                       back and log in to your RCS
                       customer account.
                     </p>
+
                   </div>
+
                 </div>
+
               </div>
             ) : (
               <div className="mt-7 rounded-2xl border border-[#529027]/30 bg-[#529027]/5 p-5 text-left">
+
                 <h2 className="font-black text-[#9bd76c]">
                   Your job is now live
                 </h2>
@@ -792,10 +928,12 @@ export default function PostJobPage() {
                   review your job and submit
                   their quotes.
                 </p>
+
               </div>
             )}
 
             <div className="mt-7 rounded-2xl border border-white/10 bg-[#07100b] p-5 text-left">
+
               <h2 className="font-black text-white">
                 What happens next?
               </h2>
@@ -835,6 +973,7 @@ export default function PostJobPage() {
                 />
 
               </div>
+
             </div>
 
             <Link
@@ -859,21 +998,28 @@ export default function PostJobPage() {
             </Link>
 
           </section>
+
         </div>
+
       </main>
     );
   }
 
   /*
-   * -------------------------------------------------------
+   * =========================================================
    * MAIN FORM
-   * -------------------------------------------------------
+   * =========================================================
    */
 
   return (
     <main className="min-h-screen bg-[#07100b] text-white">
 
+      {/* ================================================= */}
+      {/* HEADER */}
+      {/* ================================================= */}
+
       <header className="border-b border-white/10 bg-[#07100b]">
+
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
 
           <Link href="/">
@@ -886,17 +1032,35 @@ export default function PostJobPage() {
             />
           </Link>
 
-          <Link
-            href="/customer/login"
-            className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/5"
-          >
-            Customer Login
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              href="/customer/dashboard"
+              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/5"
+            >
+              Customer Dashboard
+            </Link>
+          ) : (
+            <Link
+              href="/customer/login"
+              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/5"
+            >
+              Customer Login
+            </Link>
+          )}
 
         </div>
+
       </header>
 
+      {/* ================================================= */}
+      {/* CONTENT */}
+      {/* ================================================= */}
+
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+
+        {/* ================================================= */}
+        {/* INTRO */}
+        {/* ================================================= */}
 
         <div className="max-w-3xl">
 
@@ -911,20 +1075,74 @@ export default function PostJobPage() {
           </h1>
 
           <p className="mt-4 text-base leading-7 text-[#aeb9af] sm:text-lg">
-            {isLoggedIn
-              ? "Tell us what needs removing and approved RCS drivers can review your job and submit their price."
-              : "Tell us what needs removing and approved RCS drivers can review your job and submit their price."}
+            Tell us what needs removing and
+            approved RCS drivers can review
+            your job and submit their price.
           </p>
 
         </div>
 
+        {/* ================================================= */}
+        {/* SESSION CHECK */}
+        {/* ================================================= */}
+
         {checkingSession && (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-[#0d1810] p-4">
-            <p className="text-sm font-bold text-[#aeb9af]">
-              Checking your RCS customer account...
-            </p>
+          <div className="mt-6 rounded-2xl border border-[#17382b] bg-[#0d1810] p-4">
+
+            <div className="flex items-center gap-3">
+
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#214333] border-t-[#1BBB8C]" />
+
+              <p className="text-sm font-bold text-[#aeb9af]">
+                Checking your RCS customer account...
+              </p>
+
+            </div>
+
           </div>
         )}
+
+        {/* ================================================= */}
+        {/* LOGGED-IN CUSTOMER NOTICE */}
+        {/* ================================================= */}
+
+        {!checkingSession &&
+          isLoggedIn && (
+            <div className="mt-6 rounded-2xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/5 p-5">
+
+              <div className="flex items-start gap-4">
+
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1BBB8C]/15 text-lg">
+                  ✓
+                </div>
+
+                <div className="min-w-0">
+
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+                    You're signed in
+                  </p>
+
+                  <p className="mt-1 break-all text-base font-black text-white">
+                    {customerEmail}
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-[#8f9d91]">
+                    This new job will automatically
+                    be added to your existing RCS
+                    customer account. You don't need
+                    to enter your account details again.
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+        {/* ================================================= */}
+        {/* ERROR */}
+        {/* ================================================= */}
 
         {errorMessage && (
           <div className="mt-8 rounded-2xl border border-red-400/30 bg-red-500/10 p-5">
@@ -944,15 +1162,32 @@ export default function PostJobPage() {
               </Link>
             )}
 
+            {errorMessage.includes(
+              "session has expired",
+            ) && (
+              <Link
+                href="/customer/login"
+                className="mt-4 inline-flex rounded-xl bg-[#1BBB8C] px-5 py-3 text-sm font-black text-[#06100c] transition hover:bg-[#16a77c]"
+              >
+                LOG IN AGAIN →
+              </Link>
+            )}
+
           </div>
         )}
+
+        {/* ================================================= */}
+        {/* FORM */}
+        {/* ================================================= */}
 
         <form
           onSubmit={submitJob}
           className="mt-8 space-y-6"
         >
 
+          {/* ================================================= */}
           {/* STEP 01 */}
+          {/* ================================================= */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -961,6 +1196,7 @@ export default function PostJobPage() {
               <StepNumber number="01" />
 
               <div>
+
                 <h2 className="text-xl font-black sm:text-2xl">
                   What needs removing?
                 </h2>
@@ -969,6 +1205,7 @@ export default function PostJobPage() {
                   Choose the option that best
                   describes your job.
                 </p>
+
               </div>
 
             </div>
@@ -998,9 +1235,12 @@ export default function PostJobPage() {
               )}
 
             </div>
+
           </section>
 
+          {/* ================================================= */}
           {/* STEP 02 */}
+          {/* ================================================= */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1009,6 +1249,7 @@ export default function PostJobPage() {
               <StepNumber number="02" />
 
               <div>
+
                 <h2 className="text-xl font-black sm:text-2xl">
                   Where are we collecting from?
                 </h2>
@@ -1017,6 +1258,7 @@ export default function PostJobPage() {
                   Give the driver everything
                   they need to find you.
                 </p>
+
               </div>
 
             </div>
@@ -1027,6 +1269,7 @@ export default function PostJobPage() {
                 label="Postcode"
                 required
               >
+
                 <input
                   value={postcode}
                   onChange={(e) =>
@@ -1038,12 +1281,14 @@ export default function PostJobPage() {
                   className={inputClass}
                   autoComplete="postal-code"
                 />
+
               </Field>
 
               <Field
                 label="Collection address"
                 required
               >
+
                 <input
                   value={address}
                   onChange={(e) =>
@@ -1055,12 +1300,16 @@ export default function PostJobPage() {
                   className={inputClass}
                   autoComplete="street-address"
                 />
+
               </Field>
 
             </div>
+
           </section>
 
+          {/* ================================================= */}
           {/* STEP 03 */}
+          {/* ================================================= */}
 
           <section className="rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1069,6 +1318,7 @@ export default function PostJobPage() {
               <StepNumber number="03" />
 
               <div>
+
                 <h2 className="text-xl font-black sm:text-2xl">
                   When should we collect it?
                 </h2>
@@ -1077,6 +1327,7 @@ export default function PostJobPage() {
                   Choose the day you want the
                   driver to attend.
                 </p>
+
               </div>
 
             </div>
@@ -1087,6 +1338,7 @@ export default function PostJobPage() {
                 label="Collection date"
                 required
               >
+
                 <input
                   type="date"
                   min={today}
@@ -1101,9 +1353,11 @@ export default function PostJobPage() {
                   className={`${inputClass} [color-scheme:dark]`}
                   required
                 />
+
               </Field>
 
               <Field label="Preferred time">
+
                 <select
                   value={
                     preferredTime
@@ -1115,6 +1369,7 @@ export default function PostJobPage() {
                   }
                   className={inputClass}
                 >
+
                   <option value="">
                     Any time
                   </option>
@@ -1130,7 +1385,9 @@ export default function PostJobPage() {
                   <option value="Evening">
                     Evening
                   </option>
+
                 </select>
+
               </Field>
 
             </div>
@@ -1150,7 +1407,9 @@ export default function PostJobPage() {
 
           </section>
 
+          {/* ================================================= */}
           {/* STEP 04 */}
+          {/* ================================================= */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1159,6 +1418,7 @@ export default function PostJobPage() {
               <StepNumber number="04" />
 
               <div>
+
                 <h2 className="text-xl font-black sm:text-2xl">
                   Help the driver understand
                   the job
@@ -1167,6 +1427,7 @@ export default function PostJobPage() {
                 <p className="mt-1 text-sm text-[#8f9d91]">
                   Give us your best estimate.
                 </p>
+
               </div>
 
             </div>
@@ -1242,11 +1503,14 @@ export default function PostJobPage() {
                 </Field>
 
               </div>
+
             </div>
 
           </section>
 
+          {/* ================================================= */}
           {/* STEP 05 */}
+          {/* ================================================= */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1255,6 +1519,7 @@ export default function PostJobPage() {
               <StepNumber number="05" />
 
               <div>
+
                 <h2 className="text-xl font-black sm:text-2xl">
                   Show us what needs taking
                 </h2>
@@ -1263,6 +1528,7 @@ export default function PostJobPage() {
                   Photos help drivers price
                   your job accurately.
                 </p>
+
               </div>
 
             </div>
@@ -1337,7 +1603,9 @@ export default function PostJobPage() {
 
           </section>
 
+          {/* ================================================= */}
           {/* STEP 06 */}
+          {/* ================================================= */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1346,6 +1614,7 @@ export default function PostJobPage() {
               <StepNumber number="06" />
 
               <div>
+
                 <h2 className="text-xl font-black sm:text-2xl">
                   Tell us more about the job
                 </h2>
@@ -1354,6 +1623,7 @@ export default function PostJobPage() {
                   Anything else the driver
                   should know?
                 </p>
+
               </div>
 
             </div>
@@ -1364,6 +1634,7 @@ export default function PostJobPage() {
                 label="Describe what needs removing"
                 required
               >
+
                 <textarea
                   value={
                     description
@@ -1377,9 +1648,11 @@ export default function PostJobPage() {
                   placeholder="For example: old sofa, wardrobe and several bags of household rubbish..."
                   className={`${inputClass} resize-none`}
                 />
+
               </Field>
 
               <Field label="Access notes">
+
                 <textarea
                   value={
                     accessNotes
@@ -1393,215 +1666,252 @@ export default function PostJobPage() {
                   placeholder="Parking information, narrow access, gates, stairs, keys, or anything else the driver should know."
                   className={`${inputClass} resize-none`}
                 />
+
               </Field>
 
             </div>
 
           </section>
 
-          {/* STEP 07 - ONLY NEW CUSTOMERS */}
+          {/* ================================================= */}
+          {/* STEP 07 - NEW CUSTOMER */}
+          {/* ================================================= */}
 
-          {!isLoggedIn && (
-            <section className="rounded-3xl border border-[#1BBB8C]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+          {!checkingSession &&
+            !isLoggedIn && (
+              <section className="rounded-3xl border border-[#1BBB8C]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
-              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4">
 
-                <StepNumber number="07" />
+                  <StepNumber number="07" />
 
-                <div>
-                  <h2 className="text-xl font-black sm:text-2xl">
-                    Create your RCS customer account
-                  </h2>
+                  <div>
 
-                  <p className="mt-1 text-sm text-[#8f9d91]">
-                    Your account lets you track your
-                    job, view driver quotes and manage
-                    your collection.
-                  </p>
+                    <h2 className="text-xl font-black sm:text-2xl">
+                      Create your RCS customer account
+                    </h2>
+
+                    <p className="mt-1 text-sm text-[#8f9d91]">
+                      Your account lets you track your
+                      job, view driver quotes and manage
+                      your collection.
+                    </p>
+
+                  </div>
+
                 </div>
 
-              </div>
+                <div className="mt-6 rounded-2xl border border-[#1BBB8C]/20 bg-[#1BBB8C]/5 p-4">
 
-              <div className="mt-6 rounded-2xl border border-[#1BBB8C]/20 bg-[#1BBB8C]/5 p-4">
-
-                <p className="text-sm font-bold text-[#b8f1dc]">
-                  No account needed to start your quote
-                </p>
-
-                <p className="mt-1 text-sm leading-6 text-[#8f9d91]">
-                  We only ask for these details at the
-                  end so we can create your account and
-                  keep your job and driver quotes
-                  together.
-                </p>
-
-              </div>
-
-              <div className="mt-6 grid gap-5 sm:grid-cols-2">
-
-                <Field
-                  label="Full name"
-                  required
-                >
-                  <input
-                    type="text"
-                    value={
-                      fullName
-                    }
-                    onChange={(e) =>
-                      setFullName(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="Your full name"
-                    autoComplete="name"
-                    className={inputClass}
-                  />
-                </Field>
-
-                <Field
-                  label="Phone number"
-                  required
-                >
-                  <input
-                    type="tel"
-                    value={
-                      phone
-                    }
-                    onChange={(e) =>
-                      setPhone(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="e.g. 07123 456789"
-                    autoComplete="tel"
-                    className={inputClass}
-                  />
-                </Field>
-
-              </div>
-
-              <div className="mt-5">
-
-                <Field
-                  label="Email address"
-                  required
-                >
-                  <input
-                    type="email"
-                    value={
-                      email
-                    }
-                    onChange={(e) =>
-                      setEmail(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    className={inputClass}
-                  />
-                </Field>
-
-              </div>
-
-              <div className="mt-5 grid gap-5 sm:grid-cols-2">
-
-                <Field
-                  label="Create a password"
-                  required
-                >
-                  <input
-                    type="password"
-                    value={
-                      password
-                    }
-                    onChange={(e) =>
-                      setPassword(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="Minimum 6 characters"
-                    autoComplete="new-password"
-                    className={inputClass}
-                  />
-                </Field>
-
-                <Field
-                  label="Confirm password"
-                  required
-                >
-                  <input
-                    type="password"
-                    value={
-                      confirmPassword
-                    }
-                    onChange={(e) =>
-                      setConfirmPassword(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="Enter your password again"
-                    autoComplete="new-password"
-                    className={inputClass}
-                  />
-                </Field>
-
-              </div>
-
-              <p className="mt-4 text-xs leading-5 text-[#758177]">
-                After your job is posted, we'll send
-                a confirmation email to your email
-                address.
-              </p>
-
-            </section>
-          )}
-
-          {/* EXISTING CUSTOMER ACCOUNT */}
-
-          {isLoggedIn && (
-            <section className="rounded-3xl border border-[#1BBB8C]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
-
-              <div className="flex items-center gap-4">
-
-                <StepNumber number="07" />
-
-                <div>
-                  <h2 className="text-xl font-black sm:text-2xl">
-                    Your RCS customer account
-                  </h2>
-
-                  <p className="mt-1 text-sm text-[#8f9d91]">
-                    This new job will be added to your
-                    existing customer account.
+                  <p className="text-sm font-bold text-[#b8f1dc]">
+                    No account needed to start your quote
                   </p>
+
+                  <p className="mt-1 text-sm leading-6 text-[#8f9d91]">
+                    We only ask for these details at the
+                    end so we can create your account and
+                    keep your job and driver quotes
+                    together.
+                  </p>
+
                 </div>
 
-              </div>
+                <div className="mt-6 grid gap-5 sm:grid-cols-2">
 
-              <div className="mt-6 rounded-2xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/5 p-5">
+                  <Field
+                    label="Full name"
+                    required
+                  >
 
-                <p className="text-sm font-bold uppercase tracking-wide text-[#71b33d]">
-                  Signed in
+                    <input
+                      type="text"
+                      value={
+                        fullName
+                      }
+                      onChange={(e) =>
+                        setFullName(
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Your full name"
+                      autoComplete="name"
+                      className={inputClass}
+                    />
+
+                  </Field>
+
+                  <Field
+                    label="Phone number"
+                    required
+                  >
+
+                    <input
+                      type="tel"
+                      value={
+                        phone
+                      }
+                      onChange={(e) =>
+                        setPhone(
+                          e.target.value,
+                        )
+                      }
+                      placeholder="e.g. 07123 456789"
+                      autoComplete="tel"
+                      className={inputClass}
+                    />
+
+                  </Field>
+
+                </div>
+
+                <div className="mt-5">
+
+                  <Field
+                    label="Email address"
+                    required
+                  >
+
+                    <input
+                      type="email"
+                      value={
+                        email
+                      }
+                      onChange={(e) =>
+                        setEmail(
+                          e.target.value,
+                        )
+                      }
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      className={inputClass}
+                    />
+
+                  </Field>
+
+                </div>
+
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+
+                  <Field
+                    label="Create a password"
+                    required
+                  >
+
+                    <input
+                      type="password"
+                      value={
+                        password
+                      }
+                      onChange={(e) =>
+                        setPassword(
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Minimum 6 characters"
+                      autoComplete="new-password"
+                      className={inputClass}
+                    />
+
+                  </Field>
+
+                  <Field
+                    label="Confirm password"
+                    required
+                  >
+
+                    <input
+                      type="password"
+                      value={
+                        confirmPassword
+                      }
+                      onChange={(e) =>
+                        setConfirmPassword(
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Enter your password again"
+                      autoComplete="new-password"
+                      className={inputClass}
+                    />
+
+                  </Field>
+
+                </div>
+
+                <p className="mt-4 text-xs leading-5 text-[#758177]">
+                  After your job is posted, we'll send
+                  a confirmation email to your email
+                  address.
                 </p>
 
-                <p className="mt-2 break-all text-lg font-black text-white">
-                  {customerEmail}
-                </p>
+              </section>
+            )}
 
-                <p className="mt-2 text-sm leading-6 text-[#8f9d91]">
-                  You don't need to enter your account
-                  details again. We'll automatically
-                  attach this new job to your RCS account.
-                </p>
+          {/* ================================================= */}
+          {/* STEP 07 - EXISTING CUSTOMER */}
+          {/* ================================================= */}
 
-              </div>
+          {!checkingSession &&
+            isLoggedIn && (
+              <section className="rounded-3xl border border-[#1BBB8C]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
-            </section>
-          )}
+                <div className="flex items-center gap-4">
 
+                  <StepNumber number="07" />
+
+                  <div>
+
+                    <h2 className="text-xl font-black sm:text-2xl">
+                      Your RCS customer account
+                    </h2>
+
+                    <p className="mt-1 text-sm text-[#8f9d91]">
+                      This job will be added to your
+                      existing account.
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/5 p-5">
+
+                  <div className="flex items-start gap-4">
+
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1BBB8C]/15 text-lg font-black text-[#1BBB8C]">
+                      ✓
+                    </div>
+
+                    <div className="min-w-0">
+
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#71b33d]">
+                        Signed in
+                      </p>
+
+                      <p className="mt-2 break-all text-lg font-black text-white">
+                        {customerEmail}
+                      </p>
+
+                      <p className="mt-3 text-sm leading-6 text-[#8f9d91]">
+                        Your existing RCS account will
+                        be used automatically. You do
+                        not need to enter your name,
+                        phone number, email address or
+                        password again.
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </section>
+            )}
+
+          {/* ================================================= */}
           {/* SUBMIT */}
+          {/* ================================================= */}
 
           <section className="rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1656,9 +1966,11 @@ export default function PostJobPage() {
               }
               className="mt-7 w-full rounded-2xl bg-[#529027] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:bg-[#6aad3a] disabled:cursor-not-allowed disabled:opacity-50"
             >
+
               {loading
                 ? "POSTING YOUR JOB..."
                 : "POST JOB & GET DRIVER QUOTES"}
+
             </button>
 
             <p className="mt-4 text-center text-xs text-[#758177]">
@@ -1671,7 +1983,9 @@ export default function PostJobPage() {
           </section>
 
         </form>
+
       </div>
+
     </main>
   );
 }
@@ -1697,6 +2011,7 @@ function NextStep({
       </div>
 
       <div>
+
         <p className="font-black text-white">
           {title}
         </p>
@@ -1704,6 +2019,7 @@ function NextStep({
         <p className="mt-1 text-sm leading-5 text-[#89968b]">
           {text}
         </p>
+
       </div>
 
     </div>
@@ -1741,7 +2057,9 @@ function Field({
 }) {
   return (
     <div>
+
       <label className="mb-2 block text-sm font-black text-[#dfe7e0]">
+
         {label}
 
         {required && (
@@ -1749,9 +2067,11 @@ function Field({
             *
           </span>
         )}
+
       </label>
 
       {children}
+
     </div>
   );
 }
