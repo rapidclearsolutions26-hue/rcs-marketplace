@@ -7,66 +7,70 @@ const services = [
     title: "House Clearance",
     description:
       "Complete house clearances for homes, moves, landlords, probate properties and unwanted contents.",
-    image: "/services/house-clearance.jpg",
+    image: "/house-clearance.jpg",
   },
   {
     number: "02",
     title: "Garden Waste",
     description:
       "Remove garden waste, branches, grass, soil, garden furniture and general outdoor rubbish.",
-    image: "/services/garden-waste.jpg",
+    image: "/garden-waste.jpg",
   },
   {
     number: "03",
     title: "Builders Waste",
     description:
       "Clear building and renovation waste including rubble, timber, plasterboard and general site waste.",
-    image: "/services/builders-waste.jpg",
+    image: "/builders-waste.jpg",
   },
   {
     number: "04",
     title: "Furniture Removal",
     description:
       "Old sofas, beds, wardrobes, tables, chairs and other unwanted furniture collected and removed.",
-    image: "/services/furniture-removal.jpg",
+    image: "/furniture-removal.jpg",
   },
   {
     number: "05",
     title: "Shed & Garage Clearance",
     description:
       "Clear out unwanted items, tools, furniture, garden equipment and general waste from sheds and garages.",
-    image: "/services/shed-garage.jpg",
+    image: "/shed-garage.jpg",
   },
   {
     number: "06",
     title: "General Rubbish",
     description:
       "From household rubbish to unwanted items, post your job and let RCS drivers provide a quote.",
-    image: "/services/general-rubbish.jpg",
+    image: "/general-rubbish.jpg",
   },
   {
     number: "07",
     title: "Scrap Collection",
     description:
       "Arrange collection of suitable scrap metal and unwanted metal items through the RCS Marketplace.",
-    image: "/services/scrap-collection.jpg",
+    image: "/scrap-collection.jpg",
   },
   {
     number: "08",
     title: "Commercial Waste",
     description:
       "Flexible waste removal for businesses, offices, shops, landlords and commercial properties.",
-    image: "/services/commercial-waste.jpg",
+    image: "/commercial-waste.jpg",
   },
 ];
 
 export default function ServicesPage() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050705] text-white">
+      {/* ========================================================= */}
       {/* HEADER */}
+      {/* ========================================================= */}
 
       <header className="pwa-header sticky top-0 z-50 border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:h-[76px] sm:px-6 lg:px-8">
+          {/* LOGO */}
+
           <Link href="/" className="shrink-0">
             <Image
               src="/rapid-clear-logo.png"
@@ -77,6 +81,8 @@ export default function ServicesPage() {
               className="h-10 w-auto object-contain sm:h-14"
             />
           </Link>
+
+          {/* DESKTOP NAV */}
 
           <nav className="hidden items-center gap-8 lg:flex">
             <Link
@@ -115,6 +121,8 @@ export default function ServicesPage() {
             </Link>
           </nav>
 
+          {/* DESKTOP BUTTONS */}
+
           <div className="hidden items-center gap-2 lg:flex">
             <Link
               href="/customer/login"
@@ -131,6 +139,8 @@ export default function ServicesPage() {
             </Link>
           </div>
 
+          {/* MOBILE BUTTON */}
+
           <Link
             href="/customer/post-job"
             className="rounded-lg bg-[#79c51c] px-4 py-3 text-xs font-black text-black lg:hidden"
@@ -140,7 +150,9 @@ export default function ServicesPage() {
         </div>
       </header>
 
+      {/* ========================================================= */}
       {/* HERO */}
+      {/* ========================================================= */}
 
       <section className="relative overflow-hidden border-b border-white/[0.07]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_45%,rgba(121,197,28,0.11),transparent_35%)]" />
@@ -189,7 +201,9 @@ export default function ServicesPage() {
         </div>
       </section>
 
+      {/* ========================================================= */}
       {/* SERVICES */}
+      {/* ========================================================= */}
 
       <section className="bg-[#050705] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
@@ -225,7 +239,9 @@ export default function ServicesPage() {
         </div>
       </section>
 
+      {/* ========================================================= */}
       {/* MARKETPLACE */}
+      {/* ========================================================= */}
 
       <section className="border-y border-white/[0.07] bg-[#080b08] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
@@ -286,7 +302,9 @@ export default function ServicesPage() {
         </div>
       </section>
 
+      {/* ========================================================= */}
       {/* WHY RCS */}
+      {/* ========================================================= */}
 
       <section className="bg-[#050705] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
@@ -335,7 +353,9 @@ export default function ServicesPage() {
         </div>
       </section>
 
+      {/* ========================================================= */}
       {/* FINAL CTA */}
+      {/* ========================================================= */}
 
       <section className="relative overflow-hidden border-t border-white/[0.07] bg-[#080b08] py-20 sm:py-28">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(121,197,28,0.10),transparent_45%)]" />
@@ -357,16 +377,27 @@ export default function ServicesPage() {
             RCS drivers provide their quotes.
           </p>
 
-          <Link
-            href="/customer/post-job"
-            className="mt-9 inline-flex rounded-lg bg-[#79c51c] px-9 py-4 text-sm font-black text-black transition hover:bg-[#91db32]"
-          >
-            GET A QUOTE →
-          </Link>
+          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link
+              href="/customer/post-job"
+              className="rounded-lg bg-[#79c51c] px-8 py-4 text-sm font-black text-black transition hover:bg-[#91db32]"
+            >
+              GET A QUOTE →
+            </Link>
+
+            <Link
+              href="/"
+              className="rounded-lg border border-white/[0.15] px-8 py-4 text-sm font-black transition hover:border-[#79c51c] hover:text-[#79c51c]"
+            >
+              BACK TO HOME
+            </Link>
+          </div>
         </div>
       </section>
 
+      {/* ========================================================= */}
       {/* FOOTER */}
+      {/* ========================================================= */}
 
       <footer className="border-t border-white/[0.07] bg-[#030403]">
         <div className="mx-auto max-w-7xl px-5 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-14 sm:px-6 lg:px-8">
@@ -386,6 +417,13 @@ export default function ServicesPage() {
                 Rapid Clear Solutions connects customers with approved
                 waste-removal drivers through the RCS Marketplace.
               </p>
+
+              <Link
+                href="/customer/post-job"
+                className="mt-6 inline-flex rounded-lg bg-[#79c51c] px-5 py-3 text-xs font-black text-black transition hover:bg-[#91db32]"
+              >
+                GET A QUOTE →
+              </Link>
             </div>
 
             <div>
@@ -460,7 +498,7 @@ export default function ServicesPage() {
               reserved.
             </span>
 
-            <div className="flex gap-5">
+            <div className="flex flex-wrap gap-5">
               <Link
                 href="/privacy"
                 className="transition hover:text-[#79c51c]"
@@ -473,6 +511,13 @@ export default function ServicesPage() {
                 className="transition hover:text-[#79c51c]"
               >
                 Terms
+              </Link>
+
+              <Link
+                href="/cookies"
+                className="transition hover:text-[#79c51c]"
+              >
+                Cookies
               </Link>
             </div>
           </div>
@@ -502,21 +547,17 @@ function ServiceCard({
       href="/customer/post-job"
       className="group relative min-h-[340px] overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0e0a] transition duration-300 hover:-translate-y-1 hover:border-[#79c51c]/40"
     >
-      {/* IMAGE */}
-
       <div className="absolute inset-0">
         <Image
           src={image}
           alt={title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="object-cover opacity-35 transition duration-500 group-hover:scale-105 group-hover:opacity-45"
+          className="object-cover opacity-40 transition duration-500 group-hover:scale-105 group-hover:opacity-50"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050705] via-[#050705]/70 to-[#050705]/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050705] via-[#050705]/75 to-[#050705]/20" />
       </div>
-
-      {/* CONTENT */}
 
       <div className="relative flex min-h-[340px] flex-col justify-between p-6">
         <div className="flex items-center justify-between">
@@ -524,7 +565,7 @@ function ServiceCard({
             {number}
           </span>
 
-          <span className="text-xs font-bold text-gray-500 transition group-hover:text-[#79c51c]">
+          <span className="text-xs font-bold text-gray-400 transition group-hover:text-[#79c51c]">
             →
           </span>
         </div>
@@ -534,7 +575,7 @@ function ServiceCard({
             {title}
           </h3>
 
-          <p className="mt-3 text-xs leading-5 text-gray-400">
+          <p className="mt-3 text-xs leading-5 text-gray-300">
             {description}
           </p>
 
