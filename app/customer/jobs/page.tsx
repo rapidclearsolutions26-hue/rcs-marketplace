@@ -4,156 +4,141 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+const WHATSAPP_NUMBER = "447555980651";
+const WHATSAPP_MESSAGE =
+  "Hi Rapid Clear Solutions, I need help with my customer account.";
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+  WHATSAPP_MESSAGE
+)}`;
+
 type Job = {
-  id: number;
-  reference: string | null;
-  job_type: string | null;
-  postcode: string | null;
-  address: string | null;
-  load_size: string | null;
-  description: string | null;
-  preferred_date: string | null;
-  preferred_time: number | null;
-  status: string | null;
-  journey_status: string | null;
-  payment_status: string | null;
-  created_at: string;
+  id: string;
+  reference?: string | null;
+  job_type?: string | null;
+  postcode?: string | null;
+  address?: string | null;
+  load_size?: string | null;
+  description?: string | null;
+  preferred_date?: string | null;
+  preferred_time?: string | null;
+  status?: string | null;
+  created_at?: string | null;
 };
 
-type Filter = "all" | "open" | "active" | "completed";
+type Filter = "all" | "waiting" | "active" | "completed";
 
-const supabase = createClient();
+const JOB_SELECT =
+  "id,reference,job_type,postcode,address,load_size,description,preferred_date,preferred_time,status,created_at";
 
-function formatDate(date: string | null) {
-  if (!date) return "Date not set";
+const PAGE_GREEN = "#79c51c";
+const PAGE_GREEN_HOVER = "#91db32";
+const BG = "#050705";
+const SECTION = "#080b08";
+const CARD = "#0a0e0a";
 
-  const parsed = new Date(date);
+function normaliseStatus(status?: string | null) {
+  return (status || "").trim().toLowerCase();
+}
 
-  if (Number.isNaN(parsed.getTime())) {
-    return "Date not set";
+function isCompleted(status?: string | null) {
+  const value = normaliseStatus(status);
+  return [
+    "completed",
+    "complete",
+    "collected",
+    "collection completed",
+    "closed",
+    "cancelled",
+    "canceled",
+  ].includes(value);
+}
+
+function isActive(status?: string | null) {
+  const value = normaliseStatus(status);
+  return [
+    "accepted",
+    "assigned",
+    "driver_assigned",
+    "driver assigned",
+    "in progress",
+    "in_progress",
+    "on the way",
+    "on_way",
+    "arriving",
+    "started",
+  ].includes(value);
+}
+
+function statusLabel(status?: string | null) {
+  const value = normaliseStatus(status);
+
+  if (!value) return "Waiting for quotes";
+  if (isCompleted(value)) return "Completed";
+  if (isActive(value)) return "Active";
+
+  return status
+    ? status
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : "Waiting for quotes";
+}
+
+function statusClasses(status?: string | null) {
+  const value = normaliseStatus(status);
+
+  if (isCompleted(value)) {
+    return {
+      dot: "#6b7280",
+      text: "#d1d5db",
+      background: "rgba(107,114,128,0.12)",
+      border: "rgba(107,114,128,0.28)",
+    };
   }
 
-  return parsed.toLocaleDateString("en-GB", {
+  if (isActive(value)) {
+    return {
+      dot: PAGE_GREEN,
+      text: "#b8ef7a",
+      background: "rgba(121,197,28,0.12)",
+      border: "rgba(121,197,28,0.28)",
+    };
+  }
+
+  return {
+    dot: "#f0b429",
+    text: "#f6d68a",
+    background: "rgba(240,180,41,0.12)",
+    border: "rgba(240,180,41,0.28)",
+  };
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "Date to be confirmed";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
 }
 
-function formatTime(time: number | null) {
-  if (time === null || time === undefined) return "Time not set";
-
-  if (time === 8) return "Morning";
-  if (time === 13) return "Afternoon";
-  if (time === 18) return "Evening";
-
-  return `${String(time).padStart(2, "0")}:00`;
-}
-
-function getJobCategory(job: Job): "open" | "active" | "completed" {
-  const journey = (job.journey_status || "").toLowerCase();
-  const status = (job.status || "").toLowerCase();
-
-  if (
-    journey === "completed" ||
-    status === "completed" ||
-    status === "complete"
-  ) {
-    return "completed";
-  }
-
-  if (
-    journey === "assigned" ||
-    journey === "on_way" ||
-    journey === "on the way" ||
-    journey === "in_progress" ||
-    journey === "in progress" ||
-    status === "assigned" ||
-    status === "accepted" ||
-    status === "in_progress"
-  ) {
-    return "active";
-  }
-
-  return "open";
-}
-
-function getStatusLabel(job: Job) {
-  const journey = (job.journey_status || "").toLowerCase();
-  const status = (job.status || "").toLowerCase();
-
-  if (
-    journey === "completed" ||
-    status === "completed" ||
-    status === "complete"
-  ) {
-    return "Completed";
-  }
-
-  if (journey === "on_way" || journey === "on the way") {
-    return "Driver on the way";
-  }
-
-  if (journey === "in_progress" || journey === "in progress") {
-    return "Collection in progress";
-  }
-
-  if (
-    journey === "assigned" ||
-    status === "assigned" ||
-    status === "accepted"
-  ) {
-    return "Driver assigned";
-  }
-
-  if (status === "cancelled" || status === "canceled") {
-    return "Cancelled";
-  }
-
-  return "Waiting for quotes";
-}
-
-function getStatusClasses(job: Job) {
-  const category = getJobCategory(job);
-
-  if (category === "completed") {
-    return "border-white/10 bg-white/[0.04] text-white/60";
-  }
-
-  if (category === "active") {
-    return "border-[#1BBB8C]/30 bg-[#1BBB8C]/10 text-[#1BBB8C]";
-  }
-
-  return "border-amber-400/20 bg-amber-400/10 text-amber-300";
-}
-
-function getJobIcon(jobType: string | null) {
-  const type = (jobType || "").toLowerCase();
-
-  if (type.includes("garden")) return "G";
-  if (type.includes("furniture")) return "F";
-  if (type.includes("builders")) return "B";
-  if (type.includes("scrap")) return "S";
-  if (type.includes("clearance")) return "C";
-
-  return "RCS";
-}
-
 export default function CustomerJobsPage() {
+  const supabase = createClient();
+
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [filter, setFilter] = useState<Filter>("all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const [userName, setUserName] = useState("");
 
   async function loadJobs(showRefresh = false) {
-    try {
-      if (showRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+    if (showRefresh) setRefreshing(true);
 
+    try {
       setError("");
 
       const {
@@ -161,50 +146,32 @@ export default function CustomerJobsPage() {
         error: userError,
       } = await supabase.auth.getUser();
 
-      if (userError) {
-        throw userError;
-      }
+      if (userError) throw userError;
 
       if (!user) {
         window.location.href = "/customer/login";
         return;
       }
 
+      const fullName =
+        (user.user_metadata?.full_name as string | undefined) ||
+        (user.email?.split("@")[0] as string | undefined) ||
+        "Customer";
+
+      setUserName(fullName);
+
       const { data, error: jobsError } = await supabase
         .from("jobs")
-        .select(
-          `
-            id,
-            reference,
-            job_type,
-            postcode,
-            address,
-            load_size,
-            description,
-            preferred_date,
-            preferred_time,
-            status,
-            journey_status,
-            payment_status,
-            created_at
-          `,
-        )
+        .select(JOB_SELECT)
         .eq("customer_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (jobsError) {
-        throw jobsError;
-      }
+      if (jobsError) throw jobsError;
 
       setJobs((data || []) as Job[]);
     } catch (err) {
-      console.error("Failed to load customer jobs:", err);
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "We couldn't load your jobs. Please try again.",
-      );
+      console.error("Customer jobs error:", err);
+      setError("We couldn't load your jobs. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -214,402 +181,558 @@ export default function CustomerJobsPage() {
   useEffect(() => {
     loadJobs();
 
-    const interval = setInterval(() => {
-      loadJobs(true);
+    const interval = window.setInterval(() => {
+      loadJobs();
     }, 15000);
 
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, []);
 
-  const filteredJobs = useMemo(() => {
-    if (filter === "all") {
-      return jobs;
+  const counts = useMemo(() => {
+    let waiting = 0;
+    let active = 0;
+    let completed = 0;
+
+    for (const job of jobs) {
+      if (isCompleted(job.status)) completed += 1;
+      else if (isActive(job.status)) active += 1;
+      else waiting += 1;
     }
 
-    return jobs.filter((job) => getJobCategory(job) === filter);
-  }, [jobs, filter]);
-
-  const counts = useMemo(() => {
     return {
       all: jobs.length,
-      open: jobs.filter((job) => getJobCategory(job) === "open").length,
-      active: jobs.filter((job) => getJobCategory(job) === "active").length,
-      completed: jobs.filter(
-        (job) => getJobCategory(job) === "completed",
-      ).length,
+      waiting,
+      active,
+      completed,
     };
   }, [jobs]);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    window.location.href = "/customer/login";
-  }
+  const visibleJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      if (filter === "completed") return isCompleted(job.status);
+      if (filter === "active") return isActive(job.status);
+      if (filter === "waiting")
+        return !isCompleted(job.status) && !isActive(job.status);
+      return true;
+    });
+  }, [jobs, filter]);
+
+  const firstName = userName.split(" ")[0] || "there";
 
   return (
-    <main className="min-h-screen bg-[#06100c] text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-[#17382b] bg-[#081710]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link
-            href="/customer/dashboard"
-            className="flex items-center gap-3"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1BBB8C] text-xs font-black text-[#06100c]">
-              RCS
-            </div>
+    <main
+      className="min-h-screen text-white"
+      style={{
+        background: BG,
+        fontFamily:
+          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+      }}
+    >
+      <style jsx global>{`
+        * {
+          box-sizing: border-box;
+        }
 
-            <div>
-              <p className="text-sm font-bold tracking-wide">
-                Rapid Clear
+        body {
+          margin: 0;
+          background: ${BG};
+        }
+
+        .rcs-scroll::-webkit-scrollbar {
+          height: 5px;
+        }
+
+        .rcs-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .rcs-scroll::-webkit-scrollbar-thumb {
+          background: rgba(121, 197, 28, 0.25);
+          border-radius: 999px;
+        }
+
+        .rcs-link:hover {
+          color: ${PAGE_GREEN_HOVER} !important;
+        }
+
+        .rcs-button:hover {
+          background: ${PAGE_GREEN_HOVER} !important;
+        }
+
+        .job-card {
+          transition:
+            transform 0.18s ease,
+            border-color 0.18s ease,
+            background 0.18s ease;
+        }
+
+        .job-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(121, 197, 28, 0.35) !important;
+          background: #0c110c !important;
+        }
+
+        @media (min-width: 768px) {
+          .mobile-bottom-nav {
+            display: none !important;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .desktop-only {
+            display: none !important;
+          }
+        }
+      `}</style>
+
+      {/* Header */}
+      <header
+        className="pwa-header sticky top-0 z-50 border-b"
+        style={{
+          background: "rgba(5,7,5,0.94)",
+          borderColor: "rgba(121,197,28,0.14)",
+          backdropFilter: "blur(18px)",
+        }}
+      >
+        <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href="/customer/dashboard" className="flex items-center gap-3">
+            <img
+              src="/rapid-clear-logo.png"
+              alt="Rapid Clear Solutions"
+              className="h-11 w-auto object-contain"
+            />
+            <div className="hidden sm:block">
+              <p className="text-sm font-black tracking-tight text-white">
+                RCS
               </p>
-              <p className="text-xs text-white/40">Customer Portal</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                Customer Portal
+              </p>
             </div>
           </Link>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-white/60 transition hover:border-white/20 hover:text-white"
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-3">
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="desktop-only rounded-xl border px-4 py-2.5 text-sm font-bold text-zinc-200 transition"
+              style={{
+                borderColor: "rgba(121,197,28,0.22)",
+                background: "rgba(121,197,28,0.05)",
+              }}
+            >
+              WhatsApp Support
+            </a>
+
+            <Link
+              href="/customer/post-job"
+              className="rcs-button rounded-xl px-4 py-2.5 text-sm font-black text-black transition"
+              style={{ background: PAGE_GREEN }}
+            >
+              Get a Quote
+            </Link>
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl px-4 pb-32 pt-6 sm:px-6">
-        {/* Page heading */}
-        <section className="mb-6">
-          <Link
-            href="/customer/dashboard"
-            className="mb-4 inline-flex items-center gap-2 text-sm text-white/45 transition hover:text-white"
-          >
-            <span>←</span>
-            Dashboard
-          </Link>
-
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      {/* Main */}
+      <div className="mx-auto max-w-7xl px-4 pb-28 pt-8 sm:px-6 md:pb-12 lg:px-8 lg:pt-10">
+        {/* Hero */}
+        <section
+          className="mb-7 overflow-hidden rounded-3xl border p-6 sm:p-8"
+          style={{
+            background:
+              "radial-gradient(circle at 100% 0%, rgba(121,197,28,0.13), transparent 36%), #080b08",
+            borderColor: "rgba(121,197,28,0.14)",
+          }}
+        >
+          <div className="flex flex-col justify-between gap-7 md:flex-row md:items-end">
             <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#1BBB8C]">
-                Customer portal
+              <p
+                className="mb-2 text-xs font-black uppercase tracking-[0.2em]"
+                style={{ color: PAGE_GREEN }}
+              >
+                Customer Portal
               </p>
 
               <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
                 My Jobs
               </h1>
 
-              <p className="mt-2 max-w-xl text-sm leading-6 text-white/50">
-                View your rubbish collection jobs, check their progress and
-                see your latest bookings.
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
+                Hi {firstName}, keep track of your rubbish removal jobs,
+                quotes and collections in one place.
               </p>
             </div>
 
             <Link
               href="/customer/post-job"
-              className="inline-flex items-center justify-center rounded-xl bg-[#1BBB8C] px-5 py-3 text-sm font-bold text-[#06100c] transition hover:brightness-110"
+              className="rcs-button inline-flex items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-black text-black transition"
+              style={{ background: PAGE_GREEN }}
             >
-              + Post a new job
+              + Post a New Job
             </Link>
           </div>
         </section>
 
-        {/* Summary */}
-        <section className="mb-6 grid grid-cols-3 gap-3">
-          <button
-            type="button"
-            onClick={() => setFilter("open")}
-            className={`rounded-2xl border p-4 text-left transition ${
-              filter === "open"
-                ? "border-[#1BBB8C]/50 bg-[#1BBB8C]/10"
-                : "border-[#17382b] bg-[#0b1b14] hover:border-[#29483a]"
-            }`}
-          >
-            <p className="text-2xl font-black">{counts.open}</p>
-            <p className="mt-1 text-xs text-white/45">Open</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setFilter("active")}
-            className={`rounded-2xl border p-4 text-left transition ${
-              filter === "active"
-                ? "border-[#1BBB8C]/50 bg-[#1BBB8C]/10"
-                : "border-[#17382b] bg-[#0b1b14] hover:border-[#29483a]"
-            }`}
-          >
-            <p className="text-2xl font-black">{counts.active}</p>
-            <p className="mt-1 text-xs text-white/45">Active</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setFilter("completed")}
-            className={`rounded-2xl border p-4 text-left transition ${
-              filter === "completed"
-                ? "border-[#1BBB8C]/50 bg-[#1BBB8C]/10"
-                : "border-[#17382b] bg-[#0b1b14] hover:border-[#29483a]"
-            }`}
-          >
-            <p className="text-2xl font-black">{counts.completed}</p>
-            <p className="mt-1 text-xs text-white/45">Completed</p>
-          </button>
+        {/* Stats */}
+        <section className="mb-7 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[
+            { label: "All Jobs", value: counts.all },
+            { label: "Waiting", value: counts.waiting },
+            { label: "Active", value: counts.active },
+            { label: "Completed", value: counts.completed },
+          ].map((item, index) => (
+            <button
+              key={item.label}
+              onClick={() =>
+                setFilter(
+                  index === 0
+                    ? "all"
+                    : index === 1
+                      ? "waiting"
+                      : index === 2
+                        ? "active"
+                        : "completed"
+                )
+              }
+              className="rounded-2xl border p-4 text-left transition"
+              style={{
+                background: CARD,
+                borderColor:
+                  ((index === 0 && filter === "all") ||
+                    (index === 1 && filter === "waiting") ||
+                    (index === 2 && filter === "active") ||
+                    (index === 3 && filter === "completed"))
+                    ? "rgba(121,197,28,0.38)"
+                    : "rgba(255,255,255,0.07)",
+              }}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                {item.label}
+              </p>
+              <p className="mt-1 text-2xl font-black">{item.value}</p>
+            </button>
+          ))}
         </section>
 
-        {/* Filters */}
-        <section className="mb-5">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+        {/* Toolbar */}
+        <section className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="rcs-scroll flex gap-2 overflow-x-auto pb-1">
             {(
               [
-                ["all", "All jobs", counts.all],
-                ["open", "Waiting", counts.open],
-                ["active", "Active", counts.active],
-                ["completed", "Completed", counts.completed],
-              ] as [Filter, string, number][]
-            ).map(([value, label, count]) => (
+                ["all", "All Jobs"],
+                ["waiting", "Waiting"],
+                ["active", "Active"],
+                ["completed", "Completed"],
+              ] as const
+            ).map(([value, label]) => (
               <button
                 key={value}
-                type="button"
                 onClick={() => setFilter(value)}
-                className={`whitespace-nowrap rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                  filter === value
-                    ? "border-[#1BBB8C] bg-[#1BBB8C] text-[#06100c]"
-                    : "border-[#17382b] bg-[#0b1b14] text-white/60 hover:border-[#29483a] hover:text-white"
-                }`}
+                className="whitespace-nowrap rounded-xl border px-4 py-2.5 text-sm font-bold transition"
+                style={{
+                  background:
+                    filter === value
+                      ? "rgba(121,197,28,0.12)"
+                      : "rgba(255,255,255,0.025)",
+                  borderColor:
+                    filter === value
+                      ? "rgba(121,197,28,0.4)"
+                      : "rgba(255,255,255,0.07)",
+                  color: filter === value ? "#b8ef7a" : "#a1a1aa",
+                }}
               >
                 {label}
-                <span
-                  className={`ml-2 ${
-                    filter === value ? "text-[#06100c]/60" : "text-white/30"
-                  }`}
-                >
-                  {count}
-                </span>
               </button>
             ))}
           </div>
-        </section>
-
-        {/* Refresh */}
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-xs text-white/30">
-            {refreshing ? "Updating..." : "Automatically updated"}
-          </p>
 
           <button
-            type="button"
             onClick={() => loadJobs(true)}
             disabled={refreshing}
-            className="rounded-lg px-3 py-2 text-xs font-semibold text-[#1BBB8C] transition hover:bg-[#1BBB8C]/10 disabled:opacity-40"
+            className="rounded-xl border px-4 py-2.5 text-sm font-bold text-zinc-300 transition disabled:opacity-50"
+            style={{
+              background: "rgba(255,255,255,0.025)",
+              borderColor: "rgba(255,255,255,0.07)",
+            }}
           >
-            Refresh
+            {refreshing ? "Refreshing..." : "Refresh"}
           </button>
-        </div>
+        </section>
 
         {/* Error */}
         {error && (
-          <div className="mb-5 rounded-2xl border border-red-400/20 bg-red-400/10 p-4">
-            <p className="text-sm font-semibold text-red-300">
-              Something went wrong
-            </p>
-
-            <p className="mt-1 text-xs leading-5 text-red-200/70">
-              {error}
-            </p>
-
-            <button
-              type="button"
-              onClick={() => loadJobs()}
-              className="mt-3 rounded-lg bg-red-400/10 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-400/20"
-            >
-              Try again
-            </button>
+          <div
+            className="mb-5 rounded-2xl border p-4 text-sm text-red-200"
+            style={{
+              background: "rgba(127,29,29,0.12)",
+              borderColor: "rgba(248,113,113,0.22)",
+            }}
+          >
+            {error}
           </div>
         )}
 
         {/* Loading */}
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((item) => (
+          <section className="grid gap-4 lg:grid-cols-2">
+            {[1, 2, 3, 4].map((item) => (
               <div
                 key={item}
-                className="animate-pulse rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5"
-              >
-                <div className="flex gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-white/5" />
-
-                  <div className="flex-1">
-                    <div className="h-4 w-40 rounded bg-white/5" />
-                    <div className="mt-3 h-3 w-56 rounded bg-white/5" />
-                    <div className="mt-2 h-3 w-32 rounded bg-white/5" />
-                  </div>
-                </div>
-              </div>
+                className="h-56 animate-pulse rounded-3xl border"
+                style={{
+                  background: CARD,
+                  borderColor: "rgba(255,255,255,0.06)",
+                }}
+              />
             ))}
-          </div>
-        ) : filteredJobs.length === 0 ? (
+          </section>
+        ) : visibleJobs.length === 0 ? (
           /* Empty state */
-          <section className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-8 text-center sm:p-12">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#1BBB8C]/20 bg-[#1BBB8C]/10 text-sm font-black text-[#1BBB8C]">
-              RCS
+          <section
+            className="rounded-3xl border px-6 py-14 text-center sm:px-10"
+            style={{
+              background: CARD,
+              borderColor: "rgba(121,197,28,0.12)",
+            }}
+          >
+            <div
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-2xl"
+              style={{
+                background: "rgba(121,197,28,0.1)",
+                color: PAGE_GREEN,
+              }}
+            >
+              +
             </div>
 
             <h2 className="mt-5 text-xl font-black">
               {filter === "all"
-                ? "No jobs yet"
+                ? "You haven't posted a job yet"
                 : `No ${filter} jobs`}
             </h2>
 
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/45">
-              {filter === "all"
-                ? "Post your first rubbish collection job and let approved RCS drivers send you quotes."
-                : "There aren't any jobs in this section at the moment."}
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-500">
+              Post your rubbish removal job and local RCS drivers can review
+              the details and send you quotes.
             </p>
 
-            {filter === "all" && (
-              <Link
-                href="/customer/post-job"
-                className="mt-6 inline-flex rounded-xl bg-[#1BBB8C] px-5 py-3 text-sm font-bold text-[#06100c]"
-              >
-                Post a job
-              </Link>
-            )}
+            <Link
+              href="/customer/post-job"
+              className="rcs-button mt-6 inline-flex rounded-2xl px-5 py-3.5 text-sm font-black text-black transition"
+              style={{ background: PAGE_GREEN }}
+            >
+              Post a New Job
+            </Link>
           </section>
         ) : (
           /* Jobs */
-          <section className="space-y-3">
-            {filteredJobs.map((job) => {
-              const category = getJobCategory(job);
-              const statusLabel = getStatusLabel(job);
+          <section className="grid gap-4 lg:grid-cols-2">
+            {visibleJobs.map((job) => {
+              const status = statusClasses(job.status);
 
               return (
                 <Link
                   key={job.id}
                   href={`/customer/jobs/${job.id}`}
-                  className="group block rounded-2xl border border-[#17382b] bg-[#0b1b14] p-4 transition hover:border-[#29483a] hover:bg-[#0d2118] sm:p-5"
+                  className="job-card block rounded-3xl border p-5 sm:p-6"
+                  style={{
+                    background: CARD,
+                    borderColor: "rgba(255,255,255,0.07)",
+                  }}
                 >
-                  <div className="flex gap-4">
-                    {/* Job icon */}
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#1BBB8C]/20 bg-[#1BBB8C]/10 text-[10px] font-black tracking-wider text-[#1BBB8C]">
-                      {getJobIcon(job.job_type)}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p
+                        className="text-xs font-black uppercase tracking-[0.16em]"
+                        style={{ color: PAGE_GREEN }}
+                      >
+                        {job.reference || "RCS Job"}
+                      </p>
+
+                      <h2 className="mt-1 truncate text-lg font-black sm:text-xl">
+                        {job.job_type || "Waste Removal"}
+                      </h2>
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      {/* Top row */}
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-bold group-hover:text-[#1BBB8C]">
-                            {job.job_type || "Rubbish collection"}
-                          </p>
+                    <span
+                      className="flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black"
+                      style={{
+                        color: status.text,
+                        background: status.background,
+                        borderColor: status.border,
+                      }}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ background: status.dot }}
+                      />
+                      {statusLabel(job.status)}
+                    </span>
+                  </div>
 
-                          <p className="mt-1 text-xs text-white/35">
-                            {job.reference || `Job #${job.id}`}
-                          </p>
-                        </div>
-
-                        <span
-                          className={`w-fit rounded-full border px-2.5 py-1 text-[11px] font-bold ${getStatusClasses(
-                            job,
-                          )}`}
-                        >
-                          {statusLabel}
-                        </span>
-                      </div>
-
-                      {/* Details */}
-                      <div className="mt-4 grid gap-2 text-xs text-white/50 sm:grid-cols-2">
-                        <div>
-                          <span className="text-white/25">Collection</span>
-                          <p className="mt-0.5 font-semibold text-white/70">
-                            {formatDate(job.preferred_date)}
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className="text-white/25">Time</span>
-                          <p className="mt-0.5 font-semibold text-white/70">
-                            {formatTime(job.preferred_time)}
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className="text-white/25">Location</span>
-                          <p className="mt-0.5 truncate font-semibold text-white/70">
-                            {job.postcode || "Postcode not set"}
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className="text-white/25">Load size</span>
-                          <p className="mt-0.5 font-semibold text-white/70">
-                            {job.load_size || "Not specified"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Payment / action */}
-                      <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
-                        <div>
-                          {job.payment_status === "paid" ? (
-                            <span className="text-xs font-semibold text-[#1BBB8C]">
-                              Payment received
-                            </span>
-                          ) : category === "open" ? (
-                            <span className="text-xs text-white/35">
-                              Waiting for driver quotes
-                            </span>
-                          ) : (
-                            <span className="text-xs text-white/35">
-                              View job details
-                            </span>
-                          )}
-                        </div>
-
-                        <span className="text-lg text-white/25 transition group-hover:translate-x-1 group-hover:text-[#1BBB8C]">
-                          →
-                        </span>
-                      </div>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div
+                      className="rounded-2xl border p-3.5"
+                      style={{
+                        background: "rgba(255,255,255,0.025)",
+                        borderColor: "rgba(255,255,255,0.055)",
+                      }}
+                    >
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-600">
+                        Location
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-zinc-200">
+                        {job.postcode || "Address provided"}
+                      </p>
                     </div>
+
+                    <div
+                      className="rounded-2xl border p-3.5"
+                      style={{
+                        background: "rgba(255,255,255,0.025)",
+                        borderColor: "rgba(255,255,255,0.055)",
+                      }}
+                    >
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-600">
+                        Collection
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-zinc-200">
+                        {formatDate(job.preferred_date)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {job.load_size && (
+                      <span
+                        className="rounded-lg border px-2.5 py-1 text-xs font-semibold text-zinc-400"
+                        style={{
+                          borderColor: "rgba(255,255,255,0.07)",
+                          background: "rgba(255,255,255,0.025)",
+                        }}
+                      >
+                        {job.load_size}
+                      </span>
+                    )}
+
+                    {job.preferred_time && (
+                      <span
+                        className="rounded-lg border px-2.5 py-1 text-xs font-semibold text-zinc-400"
+                        style={{
+                          borderColor: "rgba(255,255,255,0.07)",
+                          background: "rgba(255,255,255,0.025)",
+                        }}
+                      >
+                        {job.preferred_time}
+                      </span>
+                    )}
+                  </div>
+
+                  <div
+                    className="mt-5 flex items-center justify-between border-t pt-4"
+                    style={{ borderColor: "rgba(255,255,255,0.06)" }}
+                  >
+                    <span className="text-xs font-semibold text-zinc-600">
+                      Posted {formatDate(job.created_at)}
+                    </span>
+
+                    <span
+                      className="text-sm font-black"
+                      style={{ color: PAGE_GREEN }}
+                    >
+                      View job →
+                    </span>
                   </div>
                 </Link>
               );
             })}
           </section>
         )}
+
+        {/* Support CTA */}
+        <section
+          className="mt-7 rounded-3xl border p-5 sm:p-6"
+          style={{
+            background: SECTION,
+            borderColor: "rgba(121,197,28,0.12)",
+          }}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-base font-black">Need help with a job?</p>
+              <p className="mt-1 text-sm text-zinc-500">
+                Contact Rapid Clear Solutions directly through WhatsApp.
+              </p>
+            </div>
+
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex justify-center rounded-xl border px-4 py-3 text-sm font-black text-zinc-200 transition"
+              style={{
+                background: "rgba(121,197,28,0.06)",
+                borderColor: "rgba(121,197,28,0.22)",
+              }}
+            >
+              WhatsApp RCS
+            </a>
+          </div>
+        </section>
       </div>
 
       {/* Mobile bottom navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#17382b] bg-[#081710]/95 px-3 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-2xl items-center justify-around">
+      <nav
+        className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 border-t"
+        style={{
+          background: "rgba(5,7,5,0.97)",
+          borderColor: "rgba(121,197,28,0.14)",
+          backdropFilter: "blur(18px)",
+        }}
+      >
+        <div className="mx-auto grid max-w-md grid-cols-4">
           <Link
             href="/customer/dashboard"
-            className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-white/40 transition hover:text-white"
+            className="flex flex-col items-center gap-1 px-2 py-3 text-[11px] font-bold text-zinc-500"
           >
             <span className="text-lg">⌂</span>
-            <span className="text-[10px] font-semibold">Home</span>
+            Home
           </Link>
 
           <Link
             href="/customer/jobs"
-            className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl bg-[#1BBB8C]/10 px-3 py-2 text-[#1BBB8C]"
+            className="flex flex-col items-center gap-1 px-2 py-3 text-[11px] font-black"
+            style={{ color: PAGE_GREEN }}
           >
-            <span className="text-sm font-black">RCS</span>
-            <span className="text-[10px] font-bold">Jobs</span>
-          </Link>
-
-          <Link
-            href="/customer/quotes"
-            className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-white/40 transition hover:text-white"
-          >
-            <span className="text-lg">£</span>
-            <span className="text-[10px] font-semibold">Quotes</span>
+            <span className="text-lg">▣</span>
+            Jobs
           </Link>
 
           <Link
             href="/customer/post-job"
-            className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-white/40 transition hover:text-white"
+            className="flex flex-col items-center gap-1 px-2 py-3 text-[11px] font-bold text-zinc-500"
           >
-            <span className="text-xl leading-none">+</span>
-            <span className="text-[10px] font-semibold">New Job</span>
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-full text-base font-black text-black"
+              style={{ background: PAGE_GREEN }}
+            >
+              +
+            </span>
+            Post Job
           </Link>
+
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="flex flex-col items-center gap-1 px-2 py-3 text-[11px] font-bold text-zinc-500"
+          >
+            <span className="text-lg">↗</span>
+            Support
+          </a>
         </div>
       </nav>
     </main>
