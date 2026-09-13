@@ -72,7 +72,7 @@ export default function AdminDashboard() {
 
   const loadDashboard = useCallback(async (silent = false) => {
     silent ? setRefreshing(true) : setLoading(true);
-    setErrorMessage();
+    setErrorMessage("");
 
     try {
       const supabase = createClient();
