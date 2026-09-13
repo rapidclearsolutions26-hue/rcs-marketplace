@@ -316,8 +316,6 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_35%,rgba(121,197,28,0.07),transparent_35%)]" />
 
         <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          {/* SECTION HEADER */}
-
           <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
             <div className="max-w-2xl">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
@@ -344,8 +342,6 @@ export default function HomePage() {
               View all services →
             </Link>
           </div>
-
-          {/* SERVICE GRID */}
 
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {services.map((service) => (
@@ -425,8 +421,6 @@ export default function HomePage() {
       <section className="bg-[#050705] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="grid overflow-hidden rounded-2xl border border-white/[0.08] lg:grid-cols-2">
-            {/* CUSTOMER */}
-
             <div className="border-b border-white/[0.08] bg-[#0a0e0a] p-8 sm:p-12 lg:border-b-0 lg:border-r">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
                 For Customers
@@ -458,8 +452,6 @@ export default function HomePage() {
                 GET A QUOTE →
               </Link>
             </div>
-
-            {/* DRIVER */}
 
             <div className="bg-[#0d120d] p-8 sm:p-12">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
@@ -522,7 +514,7 @@ export default function HomePage() {
                 once and let the marketplace do the work.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-wrap items-center gap-3">
                 <div className="rounded-lg border border-white/[0.08] bg-[#0a0e0a] px-4 py-3 text-xs font-bold text-gray-400">
                   Customers
                 </div>
@@ -642,6 +634,8 @@ export default function HomePage() {
       <footer className="border-t border-white/[0.07] bg-[#030403]">
         <div className="mx-auto max-w-7xl px-5 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-14 sm:px-6 lg:px-8">
           <div className="grid gap-12 md:grid-cols-4">
+            {/* BRAND */}
+
             <div className="md:col-span-2">
               <Link href="/">
                 <Image
@@ -665,6 +659,8 @@ export default function HomePage() {
                 GET A QUOTE →
               </Link>
             </div>
+
+            {/* CUSTOMERS */}
 
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-white">
@@ -694,6 +690,8 @@ export default function HomePage() {
                 </Link>
               </div>
             </div>
+
+            {/* RCS */}
 
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-white">
@@ -728,9 +726,18 @@ export default function HomePage() {
                 >
                   Services
                 </Link>
+
+                <Link
+                  href="/admin/login"
+                  className="transition hover:text-[#79c51c]"
+                >
+                  Admin Login
+                </Link>
               </div>
             </div>
           </div>
+
+          {/* FOOTER BOTTOM */}
 
           <div className="mt-12 flex flex-col gap-4 border-t border-white/[0.06] pt-6 text-xs text-gray-700 sm:flex-row sm:items-center sm:justify-between">
             <span>
