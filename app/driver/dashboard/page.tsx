@@ -389,7 +389,7 @@ export default function DriverDashboard() {
         "approved")
   ) {
     return (
-      <main className="min-h-screen bg-[#06100c] pb-20 pt-[env(safe-area-inset-top)] text-white">
+      <main className="min-h-screen bg-[#050705] pb-20 pt-[env(safe-area-inset-top)] text-white">
         <DriverHeader
           driver={driver}
           refreshing={refreshing}
@@ -400,8 +400,8 @@ export default function DriverDashboard() {
         />
 
         <div className="mx-auto max-w-2xl px-4 py-8">
-          <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#123529] text-2xl font-black text-[#1BBB8C]">
+          <div className="rounded-3xl border border-[#1d2d1d] bg-[#0a0e0a] p-6 text-center shadow-xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#79c51c]/10 text-2xl font-black text-[#79c51c]">
               !
             </div>
 
@@ -409,7 +409,7 @@ export default function DriverDashboard() {
               Application under review
             </h1>
 
-            <p className="mt-4 text-sm leading-6 text-[#8fa39a]">
+            <p className="mt-4 text-sm leading-6 text-[#8f9b8f]">
               Your driver account needs to be approved
               before you can view and bid on available work.
             </p>
@@ -417,7 +417,7 @@ export default function DriverDashboard() {
             <button
               type="button"
               onClick={logout}
-              className="mt-7 min-h-12 rounded-xl bg-[#1BBB8C] px-6 py-3 font-black text-[#06100c]"
+              className="mt-7 min-h-12 rounded-xl bg-[#79c51c] px-6 py-3 font-black text-[#050705] transition hover:bg-[#91db32]"
             >
               Log out
             </button>
@@ -430,7 +430,7 @@ export default function DriverDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#06100c] pb-24 pt-[env(safe-area-inset-top)] text-white">
+    <main className="min-h-screen bg-[#050705] pb-24 pt-[env(safe-area-inset-top)] text-white">
       <DriverHeader
         driver={driver}
         refreshing={refreshing}
@@ -441,8 +441,8 @@ export default function DriverDashboard() {
       />
 
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-8">
-        <section className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-5 shadow-xl sm:p-7">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1BBB8C] sm:text-xs">
+        <section className="rounded-3xl border border-[#1d2d1d] bg-[#080b08] p-5 shadow-xl sm:p-7">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c] sm:text-xs">
             RCS Marketplace
           </p>
 
@@ -454,19 +454,19 @@ export default function DriverDashboard() {
             👋
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-[#82958c] sm:text-base">
+          <p className="mt-2 text-sm leading-6 text-[#8b958b] sm:text-base">
             Find work, manage your bids and keep track of your collections.
           </p>
 
           {refreshing && (
-            <p className="mt-3 text-xs font-bold text-[#1BBB8C]">
+            <p className="mt-3 text-xs font-bold text-[#79c51c]">
               Updating dashboard...
             </p>
           )}
         </section>
 
         {errorMessage && (
-          <div className="mt-5 rounded-2xl border border-red-900/60 bg-[#230e0e] p-4">
+          <div className="mt-5 rounded-2xl border border-red-900/60 bg-[#160807] p-4">
             <p className="text-sm font-semibold text-red-300">
               {errorMessage}
             </p>
@@ -524,16 +524,16 @@ export default function DriverDashboard() {
         <section className="mt-5 sm:mt-6">
           <Link
             href="/driver/wallet"
-            className="group block overflow-hidden rounded-3xl border border-[#1BBB8C]/40 bg-gradient-to-br from-[#0b1b14] to-[#081710] p-5 shadow-xl transition hover:-translate-y-0.5 hover:border-[#1BBB8C] sm:p-6"
+            className="group block overflow-hidden rounded-3xl border border-[#79c51c]/35 bg-[#080b08] p-5 shadow-xl transition hover:-translate-y-0.5 hover:border-[#79c51c] sm:p-6"
           >
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#1BBB8C]/15 text-2xl font-black text-[#1BBB8C]">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#79c51c]/10 text-2xl font-black text-[#79c51c]">
                   £
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
                     Driver Wallet
                   </p>
 
@@ -541,27 +541,27 @@ export default function DriverDashboard() {
                     Earnings & payouts
                   </h2>
 
-                  <p className="mt-1 text-xs leading-5 text-[#82958c] sm:text-sm">
+                  <p className="mt-1 text-xs leading-5 text-[#818c81] sm:text-sm">
                     View your earnings, payment details and request your Friday payout.
                   </p>
                 </div>
               </div>
 
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#123529] text-lg font-black text-[#1BBB8C] transition group-hover:bg-[#1BBB8C] group-hover:text-[#06100c]">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#79c51c]/10 text-lg font-black text-[#79c51c] transition group-hover:bg-[#79c51c] group-hover:text-[#050705]">
                 →
               </span>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full border border-[#29483a] bg-[#07130e] px-3 py-1.5 text-[10px] font-bold text-[#9fb5aa]">
+              <span className="rounded-full border border-[#202d20] bg-[#050705] px-3 py-1.5 text-[10px] font-bold text-[#9ba59b]">
                 Weekly Friday payouts
               </span>
 
-              <span className="rounded-full border border-[#29483a] bg-[#07130e] px-3 py-1.5 text-[10px] font-bold text-[#9fb5aa]">
+              <span className="rounded-full border border-[#202d20] bg-[#050705] px-3 py-1.5 text-[10px] font-bold text-[#9ba59b]">
                 Payment details
               </span>
 
-              <span className="rounded-full border border-[#29483a] bg-[#07130e] px-3 py-1.5 text-[10px] font-bold text-[#9fb5aa]">
+              <span className="rounded-full border border-[#202d20] bg-[#050705] px-3 py-1.5 text-[10px] font-bold text-[#9ba59b]">
                 Earnings history
               </span>
             </div>
@@ -573,7 +573,7 @@ export default function DriverDashboard() {
         <section className="mt-7 sm:mt-10">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
                 Quick view
               </p>
 
@@ -584,7 +584,7 @@ export default function DriverDashboard() {
 
             <Link
               href="/driver/assigned"
-              className="text-xs font-black text-[#1BBB8C]"
+              className="text-xs font-black text-[#79c51c] transition hover:text-[#91db32]"
             >
               View all →
             </Link>
@@ -595,8 +595,8 @@ export default function DriverDashboard() {
               job={nextJob}
             />
           ) : (
-            <div className="rounded-3xl border border-dashed border-[#29483a] bg-[#081710] p-7 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#123529] text-xl font-black text-[#1BBB8C]">
+            <div className="rounded-3xl border border-dashed border-[#273327] bg-[#080b08] p-7 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#79c51c]/10 text-xl font-black text-[#79c51c]">
                 ✓
               </div>
 
@@ -604,13 +604,13 @@ export default function DriverDashboard() {
                 No assigned work
               </h3>
 
-              <p className="mt-2 text-sm leading-6 text-[#71857b]">
+              <p className="mt-2 text-sm leading-6 text-[#718071]">
                 Browse available jobs and place a bid to get started.
               </p>
 
               <Link
                 href="/driver/jobs"
-                className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#1BBB8C] px-5 py-3 text-sm font-black text-[#06100c]"
+                className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#79c51c] px-5 py-3 text-sm font-black text-[#050705] transition hover:bg-[#91db32]"
               >
                 Find Available Jobs
               </Link>
@@ -621,8 +621,8 @@ export default function DriverDashboard() {
         {/* DRIVER TOOLS */}
 
         <section className="mt-7 pb-5 sm:mt-10">
-          <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-5 sm:p-6">
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+          <div className="rounded-3xl border border-[#1d2d1d] bg-[#080b08] p-5 sm:p-6">
+            <p className="text-xs font-black uppercase tracking-wider text-[#79c51c]">
               Driver tools
             </p>
 
@@ -672,7 +672,7 @@ function DriverHeader({
   onLogout: () => void;
 }) {
   return (
-    <header className="-mt-[env(safe-area-inset-top)] sticky top-0 z-40 border-b border-[#17382b] bg-[#081710]/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+    <header className="-mt-[env(safe-area-inset-top)] sticky top-0 z-40 border-b border-[#1d2d1d] bg-[#050705]/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
         <Link
           href="/driver/dashboard"
@@ -686,14 +686,14 @@ function DriverHeader({
             RCS{" "}
           </span>
 
-          <span className="text-[#1BBB8C]">
+          <span className="text-[#79c51c]">
             MARKETPLACE
           </span>
         </Link>
 
         <div className="flex items-center gap-2">
           <div className="hidden text-right sm:block">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#687d73]">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#667166]">
               Driver
             </p>
 
@@ -707,7 +707,7 @@ function DriverHeader({
             type="button"
             onClick={onRefresh}
             disabled={refreshing}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#29483a] text-lg font-black text-[#aabbb4] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C] disabled:opacity-50 sm:h-10 sm:w-auto sm:px-4 sm:text-sm"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#293329] text-lg font-black text-[#aab2aa] transition hover:border-[#79c51c] hover:text-[#79c51c] disabled:opacity-50 sm:h-10 sm:w-auto sm:px-4 sm:text-sm"
             aria-label="Refresh"
           >
             <span className="sm:hidden">
@@ -724,7 +724,7 @@ function DriverHeader({
           <button
             type="button"
             onClick={onLogout}
-            className="h-10 rounded-xl border border-[#29483a] px-3 text-xs font-black text-[#c5d1cb] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C] sm:px-4 sm:text-sm"
+            className="h-10 rounded-xl border border-[#293329] px-3 text-xs font-black text-[#c5cbc5] transition hover:border-[#79c51c] hover:text-[#79c51c] sm:px-4 sm:text-sm"
           >
             Log out
           </button>
@@ -750,14 +750,14 @@ function DashboardBox({
   return (
     <Link
       href={href}
-      className="group rounded-2xl border border-[#17382b] bg-[#0b1b14] p-4 shadow-lg transition hover:-translate-y-0.5 hover:border-[#1BBB8C] sm:rounded-3xl sm:p-6"
+      className="group rounded-2xl border border-[#1d2d1d] bg-[#0a0e0a] p-4 shadow-lg transition hover:-translate-y-0.5 hover:border-[#79c51c] sm:rounded-3xl sm:p-6"
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold text-[#8b9d95] sm:text-sm">
+        <p className="text-xs font-bold text-[#929b92] sm:text-sm">
           {title}
         </p>
 
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#123529] text-sm font-black text-[#1BBB8C] transition group-hover:bg-[#1BBB8C] group-hover:text-[#06100c]">
+        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#79c51c]/10 text-sm font-black text-[#79c51c] transition group-hover:bg-[#79c51c] group-hover:text-[#050705]">
           {icon}
         </span>
       </div>
@@ -767,11 +767,11 @@ function DashboardBox({
       </p>
 
       <div className="mt-1 flex items-center justify-between gap-2">
-        <p className="text-[10px] text-[#64786e] sm:text-sm">
+        <p className="text-[10px] text-[#687268] sm:text-sm">
           {description}
         </p>
 
-        <span className="text-xs font-black text-[#1BBB8C]">
+        <span className="text-xs font-black text-[#79c51c]">
           →
         </span>
       </div>
@@ -785,11 +785,11 @@ function NextJobCard({
   job: Job;
 }) {
   return (
-    <div className="overflow-hidden rounded-3xl border border-[#3f8d24] bg-[#0b1b14] shadow-xl">
-      <div className="border-b border-[#214333] bg-[#10230f] p-5 sm:p-6">
+    <div className="overflow-hidden rounded-3xl border border-[#79c51c]/50 bg-[#0a0e0a] shadow-xl">
+      <div className="border-b border-[#202d20] bg-[#080b08] p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#1BBB8C]">
+            <p className="text-[10px] font-black uppercase tracking-wider text-[#79c51c]">
               {job.reference ||
                 `RC-${String(
                   job.id
@@ -802,7 +802,7 @@ function NextJobCard({
             </h3>
           </div>
 
-          <span className="rounded-full border border-[#3f8d24] bg-[#183017] px-2.5 py-1 text-[9px] font-black text-[#1BBB8C]">
+          <span className="rounded-full border border-[#79c51c]/50 bg-[#79c51c]/10 px-2.5 py-1 text-[9px] font-black text-[#79c51c]">
             {job.status ===
             "in_progress"
               ? "IN PROGRESS"
@@ -859,7 +859,7 @@ function NextJobCard({
       <div className="px-5 pb-5 sm:px-6 sm:pb-6">
         <Link
           href={`/driver/jobs/${job.id}`}
-          className="flex min-h-12 w-full items-center justify-center rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-sm font-black text-[#06100c] transition hover:bg-[#16a77c] sm:text-base"
+          className="flex min-h-12 w-full items-center justify-center rounded-xl bg-[#79c51c] px-5 py-3.5 text-sm font-black text-[#050705] transition hover:bg-[#91db32] sm:text-base"
         >
           Manage Job →
         </Link>
@@ -877,11 +877,11 @@ function InfoItem({
 }) {
   return (
     <div>
-      <p className="text-[9px] font-black uppercase tracking-wide text-[#657a70]">
+      <p className="text-[9px] font-black uppercase tracking-wide text-[#687268]">
         {label}
       </p>
 
-      <p className="mt-1 break-words text-xs font-semibold leading-5 text-[#d5dfda] sm:text-sm">
+      <p className="mt-1 break-words text-xs font-semibold leading-5 text-[#d5dad5] sm:text-sm">
         {value}
       </p>
     </div>
@@ -900,7 +900,7 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="rounded-2xl border border-[#214333] bg-[#07130e] p-4 transition hover:border-[#1BBB8C]"
+      className="rounded-2xl border border-[#202d20] bg-[#0a0e0a] p-4 transition hover:border-[#79c51c] hover:bg-[#0c110c]"
     >
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -908,12 +908,12 @@ function QuickLink({
             {title}
           </p>
 
-          <p className="mt-1 text-xs leading-5 text-[#71857b]">
+          <p className="mt-1 text-xs leading-5 text-[#718071]">
             {description}
           </p>
         </div>
 
-        <span className="text-[#1BBB8C]">
+        <span className="text-[#79c51c]">
           →
         </span>
       </div>
@@ -923,15 +923,15 @@ function QuickLink({
 
 function LoadingScreen() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#06100c] px-5 pt-[env(safe-area-inset-top)] text-white">
+    <main className="flex min-h-screen items-center justify-center bg-[#050705] px-5 pt-[env(safe-area-inset-top)] text-white">
       <div className="text-center">
-        <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-[#17382b] border-t-[#1BBB8C]" />
+        <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-[#1d2d1d] border-t-[#79c51c]" />
 
         <p className="mt-5 text-lg font-black">
           Loading dashboard...
         </p>
 
-        <p className="mt-2 text-sm text-[#71867c]">
+        <p className="mt-2 text-sm text-[#718071]">
           Checking your jobs
         </p>
       </div>
@@ -949,15 +949,15 @@ function ErrorScreen({
   onLogout: () => void;
 }) {
   return (
-    <main className="min-h-screen bg-[#06100c] pt-[env(safe-area-inset-top)] text-white">
-      <header className="-mt-[env(safe-area-inset-top)] border-b border-[#17382b] bg-[#081710] pt-[env(safe-area-inset-top)]">
+    <main className="min-h-screen bg-[#050705] pt-[env(safe-area-inset-top)] text-white">
+      <header className="-mt-[env(safe-area-inset-top)] border-b border-[#1d2d1d] bg-[#050705] pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between gap-3 px-4 py-4">
           <Link
             href="/"
             className="text-base font-black"
           >
             RCS{" "}
-            <span className="text-[#1BBB8C]">
+            <span className="text-[#79c51c]">
               MARKETPLACE
             </span>
           </Link>
@@ -965,7 +965,7 @@ function ErrorScreen({
           <button
             type="button"
             onClick={onLogout}
-            className="min-h-10 rounded-xl border border-[#29483a] px-3 py-2 text-xs font-bold"
+            className="min-h-10 rounded-xl border border-[#293329] px-3 py-2 text-xs font-bold"
           >
             Log out
           </button>
@@ -973,19 +973,19 @@ function ErrorScreen({
       </header>
 
       <div className="mx-auto max-w-2xl px-4 py-10">
-        <div className="rounded-3xl border border-red-900/50 bg-[#0b1b14] p-6 text-center">
+        <div className="rounded-3xl border border-red-900/50 bg-[#0a0e0a] p-6 text-center">
           <h1 className="text-2xl font-black">
             Driver account problem
           </h1>
 
-          <p className="mt-4 text-sm leading-6 text-[#8fa39a]">
+          <p className="mt-4 text-sm leading-6 text-[#8f998f]">
             {message}
           </p>
 
           <button
             type="button"
             onClick={onRetry}
-            className="mt-7 min-h-12 rounded-xl bg-[#1BBB8C] px-6 py-3 font-black text-[#06100c]"
+            className="mt-7 min-h-12 rounded-xl bg-[#79c51c] px-6 py-3 font-black text-[#050705] transition hover:bg-[#91db32]"
           >
             Try again
           </button>
