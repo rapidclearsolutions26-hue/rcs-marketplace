@@ -2,11 +2,13 @@
 
 import {
   FormEvent,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { createClient } from "@supabase/supabase-js";
 
 const wasteTypes = [
   "House clearance",
@@ -37,8 +39,46 @@ const locations = [
   "Multiple areas",
 ];
 
+function getSupabaseClient() {
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  const key =
+    process.env
+      .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env
+      .NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error(
+      "Supabase is not configured.",
+    );
+  }
+
+  return createClient(
+    url,
+    key,
+    {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+      },
+    },
+  );
+}
+
 export default function PostJobPage() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
+
+  const [checkingSession, setCheckingSession] =
+    useState(true);
+
+  const [isLoggedIn, setIsLoggedIn] =
+    useState(false);
+
+  const [customerEmail, setCustomerEmail] =
+    useState("");
 
   const [errorMessage, setErrorMessage] =
     useState("");
@@ -52,11 +92,73 @@ export default function PostJobPage() {
   const [jobReference, setJobReference] =
     useState("");
 
+  const [jobId, setJobId] =
+    useState<number | null>(null);
+
   const [confirmationRequired, setConfirmationRequired] =
     useState(false);
 
   /*
+   * -------------------------------------------------------
+   * CHECK CUSTOMER LOGIN
+   * -------------------------------------------------------
+   */
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkCustomer() {
+      try {
+        const supabase =
+          getSupabaseClient();
+
+        const {
+          data: {
+            session,
+          },
+        } =
+          await supabase.auth.getSession();
+
+        if (!mounted) {
+          return;
+        }
+
+        if (session?.user) {
+          setIsLoggedIn(true);
+
+          setCustomerEmail(
+            session.user.email || "",
+          );
+        } else {
+          setIsLoggedIn(false);
+        }
+      } catch (error) {
+        console.error(
+          "Customer session check failed:",
+          error,
+        );
+
+        if (mounted) {
+          setIsLoggedIn(false);
+        }
+      } finally {
+        if (mounted) {
+          setCheckingSession(false);
+        }
+      }
+    }
+
+    checkCustomer();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /*
+   * -------------------------------------------------------
    * JOB DETAILS
+   * -------------------------------------------------------
    */
 
   const [wasteType, setWasteType] =
@@ -90,7 +192,9 @@ export default function PostJobPage() {
     useState<File[]>([]);
 
   /*
-   * CUSTOMER DETAILS
+   * -------------------------------------------------------
+   * NEW CUSTOMER DETAILS
+   * -------------------------------------------------------
    */
 
   const [fullName, setFullName] =
@@ -109,7 +213,9 @@ export default function PostJobPage() {
     useState("");
 
   /*
+   * -------------------------------------------------------
    * TODAY
+   * -------------------------------------------------------
    */
 
   const today = useMemo(() => {
@@ -118,42 +224,54 @@ export default function PostJobPage() {
     const year =
       date.getFullYear();
 
-    const month = String(
-      date.getMonth() + 1
-    ).padStart(2, "0");
+    const month =
+      String(
+        date.getMonth() + 1,
+      ).padStart(2, "0");
 
-    const day = String(
-      date.getDate()
-    ).padStart(2, "0");
+    const day =
+      String(
+        date.getDate(),
+      ).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
   }, []);
 
   /*
+   * -------------------------------------------------------
    * PHOTO SELECTION
+   * -------------------------------------------------------
    */
 
   function handlePhotos(
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) {
-    const selectedFiles = Array.from(
-      event.target.files || []
-    );
+    const selectedFiles =
+      Array.from(
+        event.target.files || [],
+      );
 
-    if (!selectedFiles.length) {
+    if (
+      !selectedFiles.length
+    ) {
       return;
     }
 
     const invalidFile =
       selectedFiles.find(
         (file) =>
-          !file.type.startsWith("image/") ||
-          file.size > 10 * 1024 * 1024
+          !file.type.startsWith(
+            "image/",
+          ) ||
+          file.size >
+            10 *
+              1024 *
+              1024,
       );
 
     if (invalidFile) {
       setErrorMessage(
-        "Only image files under 10MB can be uploaded."
+        "Only image files under 10MB can be uploaded.",
       );
     } else {
       setErrorMessage("");
@@ -162,33 +280,40 @@ export default function PostJobPage() {
     const validFiles =
       selectedFiles.filter(
         (file) =>
-          file.type.startsWith("image/") &&
+          file.type.startsWith(
+            "image/",
+          ) &&
           file.size <=
-            10 * 1024 * 1024
+            10 *
+              1024 *
+              1024,
       );
 
     setPhotos((current) =>
-      [...current, ...validFiles].slice(
-        0,
-        10
-      )
+      [
+        ...current,
+        ...validFiles,
+      ].slice(0, 10),
     );
 
     event.target.value = "";
   }
 
   function removePhoto(
-    index: number
+    index: number,
   ) {
     setPhotos((current) =>
       current.filter(
-        (_, i) => i !== index
-      )
+        (_, i) =>
+          i !== index,
+      ),
     );
   }
 
   /*
+   * -------------------------------------------------------
    * VALIDATION
+   * -------------------------------------------------------
    */
 
   function validateForm() {
@@ -225,46 +350,55 @@ export default function PostJobPage() {
     }
 
     /*
-     * CUSTOMER DETAILS
+     * -----------------------------------------------------
+     * ONLY VALIDATE ACCOUNT DETAILS FOR NEW CUSTOMERS
+     * -----------------------------------------------------
      */
 
-    if (!fullName.trim()) {
-      return "Please enter your full name.";
-    }
+    if (!isLoggedIn) {
+      if (!fullName.trim()) {
+        return "Please enter your full name.";
+      }
 
-    if (!email.trim()) {
-      return "Please enter your email address.";
-    }
+      if (!email.trim()) {
+        return "Please enter your email address.";
+      }
 
-    if (!phone.trim()) {
-      return "Please enter your phone number.";
-    }
+      if (!phone.trim()) {
+        return "Please enter your phone number.";
+      }
 
-    if (!password) {
-      return "Please create a password.";
-    }
+      if (!password) {
+        return "Please create a password.";
+      }
 
-    if (password.length < 6) {
-      return "Your password must be at least 6 characters.";
-    }
+      if (password.length < 6) {
+        return "Your password must be at least 6 characters.";
+      }
 
-    if (!confirmPassword) {
-      return "Please confirm your password.";
-    }
+      if (!confirmPassword) {
+        return "Please confirm your password.";
+      }
 
-    if (password !== confirmPassword) {
-      return "Your passwords do not match.";
+      if (
+        password !==
+        confirmPassword
+      ) {
+        return "Your passwords do not match.";
+      }
     }
 
     return "";
   }
 
   /*
+   * -------------------------------------------------------
    * SUBMIT JOB
+   * -------------------------------------------------------
    */
 
   async function submitJob(
-    event: FormEvent<HTMLFormElement>
+    event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
@@ -276,7 +410,7 @@ export default function PostJobPage() {
 
     if (validationError) {
       setErrorMessage(
-        validationError
+        validationError,
       );
 
       window.scrollTo({
@@ -291,115 +425,154 @@ export default function PostJobPage() {
 
     try {
       /*
-       * ==============================================
-       * BUILD FORM DATA
-       * ==============================================
+       * -----------------------------------------------------
+       * GET CURRENT SESSION
+       * -----------------------------------------------------
        */
 
-      const formData = new FormData();
+      let accessToken = "";
 
-      formData.append(
-        "fullName",
-        fullName.trim()
-      );
+      if (isLoggedIn) {
+        const supabase =
+          getSupabaseClient();
 
-      formData.append(
-        "email",
-        email.trim().toLowerCase()
-      );
+        const {
+          data: {
+            session,
+          },
+        } =
+          await supabase.auth.getSession();
 
-      formData.append(
-        "phone",
-        phone.trim()
-      );
+        if (!session) {
+          setIsLoggedIn(false);
 
-      formData.append(
-        "password",
-        password
-      );
+          throw new Error(
+            "Your customer session has expired. Please log in again.",
+          );
+        }
+
+        accessToken =
+          session.access_token;
+      }
+
+      /*
+       * -----------------------------------------------------
+       * BUILD FORM DATA
+       * -----------------------------------------------------
+       */
+
+      const formData =
+        new FormData();
+
+      /*
+       * Existing customers don't need these fields.
+       * New customers still send them.
+       */
+
+      if (!isLoggedIn) {
+        formData.append(
+          "fullName",
+          fullName.trim(),
+        );
+
+        formData.append(
+          "email",
+          email
+            .trim()
+            .toLowerCase(),
+        );
+
+        formData.append(
+          "phone",
+          phone.trim(),
+        );
+
+        formData.append(
+          "password",
+          password,
+        );
+      }
 
       formData.append(
         "jobType",
-        wasteType
+        wasteType,
       );
 
       formData.append(
         "description",
-        description.trim()
+        description.trim(),
       );
 
       formData.append(
         "postcode",
-        postcode.trim().toUpperCase()
+        postcode
+          .trim()
+          .toUpperCase(),
       );
 
       formData.append(
         "address",
-        address.trim()
+        address.trim(),
       );
 
       formData.append(
         "loadSize",
-        loadSize
+        loadSize,
       );
-
-      /*
-       * LOCATION
-       */
 
       formData.append(
         "floor",
-        ""
+        "",
       );
 
       formData.append(
         "stairs",
-        location === "Upstairs"
+        location ===
+          "Upstairs"
           ? "true"
-          : "false"
+          : "false",
       );
 
-      const combinedAccessNotes = [
-        location
-          ? `Waste location: ${location}`
-          : "",
-        accessNotes.trim()
-          ? `Access notes: ${accessNotes.trim()}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
+      const combinedAccessNotes =
+        [
+          location
+            ? `Waste location: ${location}`
+            : "",
+          accessNotes.trim()
+            ? `Access notes: ${accessNotes.trim()}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
 
       formData.append(
         "accessNotes",
-        combinedAccessNotes
+        combinedAccessNotes,
       );
 
       formData.append(
         "preferredDate",
-        collectionDate
+        collectionDate,
       );
 
       formData.append(
         "preferredTime",
-        preferredTime
+        preferredTime,
+      );
+
+      photos.forEach(
+        (photo) => {
+          formData.append(
+            "photos",
+            photo,
+          );
+        },
       );
 
       /*
-       * PHOTOS
-       */
-
-      photos.forEach((photo) => {
-        formData.append(
-          "photos",
-          photo
-        );
-      });
-
-      /*
-       * ==============================================
+       * -----------------------------------------------------
        * SEND TO SERVER
-       * ==============================================
+       * -----------------------------------------------------
        */
 
       const response =
@@ -407,26 +580,33 @@ export default function PostJobPage() {
           "/api/customer/post-job",
           {
             method: "POST",
+            headers:
+              accessToken
+                ? {
+                    Authorization: `Bearer ${accessToken}`,
+                  }
+                : undefined,
             body: formData,
-          }
+          },
         );
 
       const result =
         await response.json();
 
       /*
-       * ==============================================
+       * -----------------------------------------------------
        * EXISTING ACCOUNT
-       * ==============================================
+       * -----------------------------------------------------
        */
 
       if (
-        response.status === 409 &&
+        response.status ===
+          409 &&
         result.code ===
           "ACCOUNT_EXISTS"
       ) {
         setErrorMessage(
-          "An RCS customer account already exists with this email address. Please log in to your existing account before posting a new job."
+          "An RCS customer account already exists with this email address. Please log in to your existing account before posting a new job.",
         );
 
         window.scrollTo({
@@ -438,56 +618,49 @@ export default function PostJobPage() {
       }
 
       /*
-       * ==============================================
+       * -----------------------------------------------------
        * SERVER ERROR
-       * ==============================================
+       * -----------------------------------------------------
        */
 
       if (!response.ok) {
         throw new Error(
           result.error ||
-            "We couldn't post your job. Please try again."
+            "We couldn't post your job. Please try again.",
         );
       }
 
       /*
-       * ==============================================
+       * -----------------------------------------------------
        * SUCCESS
-       * ==============================================
+       * -----------------------------------------------------
        */
 
       const reference =
-        result.reference || "";
+        result.reference ||
+        "";
 
-      const emailConfirmationRequired =
-        Boolean(
-          result.emailConfirmationRequired
-        );
-
-      setJobReference(reference);
-
-      setConfirmationRequired(
-        emailConfirmationRequired
+      setJobReference(
+        reference,
       );
 
-      if (emailConfirmationRequired) {
-        setSuccessMessage(
-          "Your job has been posted successfully."
-        );
-      } else {
-        setSuccessMessage(
-          "Your job has been posted successfully."
-        );
-      }
+      setJobId(
+        result.jobId
+          ? Number(
+              result.jobId,
+            )
+          : null,
+      );
 
-      /*
-       * IMPORTANT:
-       *
-       * We DO NOT redirect automatically.
-       *
-       * The customer now sees a proper
-       * confirmation screen.
-       */
+      setConfirmationRequired(
+        Boolean(
+          result.emailConfirmationRequired,
+        ),
+      );
+
+      setSuccessMessage(
+        "Your job has been posted successfully.",
+      );
 
       setJobPosted(true);
 
@@ -498,13 +671,13 @@ export default function PostJobPage() {
     } catch (error) {
       console.error(
         "POST JOB ERROR:",
-        error
+        error,
       );
 
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Something went wrong while posting your job. Please try again."
+          : "Something went wrong while posting your job. Please try again.",
       );
 
       window.scrollTo({
@@ -517,21 +690,16 @@ export default function PostJobPage() {
   }
 
   /*
-   * ==============================================
-   * JOB POSTED SCREEN
-   * ==============================================
+   * -------------------------------------------------------
+   * SUCCESS SCREEN
+   * -------------------------------------------------------
    */
 
   if (jobPosted) {
     return (
       <main className="min-h-screen bg-[#07100b] text-white">
-
-        {/* HEADER */}
-
         <header className="border-b border-white/10 bg-[#07100b]">
-
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-
             <Link href="/">
               <Image
                 src="/rcs-logo.jpg"
@@ -541,25 +709,16 @@ export default function PostJobPage() {
                 className="h-12 w-auto object-contain"
               />
             </Link>
-
           </div>
-
         </header>
 
-        {/* SUCCESS CONTENT */}
-
         <div className="mx-auto flex min-h-[calc(100vh-81px)] max-w-3xl items-center px-4 py-12 sm:px-6">
-
           <section className="w-full rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-6 text-center shadow-2xl sm:p-10">
 
-            {/* SUCCESS ICON */}
-
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#529027]/15">
-
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#529027] text-3xl font-black text-white">
                 ✓
               </div>
-
             </div>
 
             <p className="mt-7 text-sm font-black uppercase tracking-[0.2em] text-[#71b33d]">
@@ -576,11 +735,8 @@ export default function PostJobPage() {
               Marketplace.
             </p>
 
-            {/* REFERENCE */}
-
             {jobReference && (
               <div className="mx-auto mt-7 max-w-sm rounded-2xl border border-white/10 bg-[#07100b] p-5">
-
                 <p className="text-xs font-black uppercase tracking-[0.15em] text-[#758177]">
                   Job reference
                 </p>
@@ -588,15 +744,11 @@ export default function PostJobPage() {
                 <p className="mt-2 text-2xl font-black text-white">
                   {jobReference}
                 </p>
-
               </div>
             )}
 
-            {/* EMAIL CONFIRMATION */}
-
             {confirmationRequired ? (
               <div className="mt-7 rounded-2xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/5 p-5 text-left">
-
                 <div className="flex items-start gap-4">
 
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1BBB8C]/15 text-lg">
@@ -604,7 +756,6 @@ export default function PostJobPage() {
                   </div>
 
                   <div>
-
                     <h2 className="font-black text-[#b8f1dc]">
                       Please confirm your email
                     </h2>
@@ -615,42 +766,36 @@ export default function PostJobPage() {
                     </p>
 
                     <p className="mt-2 break-all font-black text-white">
-                      {email.trim().toLowerCase()}
+                      {email
+                        .trim()
+                        .toLowerCase()}
                     </p>
 
                     <p className="mt-3 text-sm leading-6 text-[#aeb9af]">
                       Open the email and click the
                       confirmation link. Once your
                       email has been confirmed, come
-                      back here and log in to your RCS
+                      back and log in to your RCS
                       customer account.
                     </p>
-
                   </div>
-
                 </div>
-
               </div>
             ) : (
               <div className="mt-7 rounded-2xl border border-[#529027]/30 bg-[#529027]/5 p-5 text-left">
-
                 <h2 className="font-black text-[#9bd76c]">
-                  Your account is ready
+                  Your job is now live
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-[#aeb9af]">
-                  Your RCS customer account has
-                  been created and your job is now
-                  available to approved RCS drivers.
+                  Approved RCS drivers can now
+                  review your job and submit
+                  their quotes.
                 </p>
-
               </div>
             )}
 
-            {/* WHAT HAPPENS NEXT */}
-
             <div className="mt-7 rounded-2xl border border-white/10 bg-[#07100b] p-5 text-left">
-
               <h2 className="font-black text-white">
                 What happens next?
               </h2>
@@ -662,25 +807,25 @@ export default function PostJobPage() {
                   title={
                     confirmationRequired
                       ? "Confirm your email"
-                      : "Log in to your account"
+                      : "Your job is now live"
                   }
                   text={
                     confirmationRequired
                       ? "Check your inbox and click the confirmation link we sent you."
-                      : "Use the email address and password you entered when posting your job."
+                      : "Approved RCS drivers can now review your job."
                   }
                 />
 
                 <NextStep
                   number="02"
-                  title="Approved drivers review your job"
-                  text="RCS drivers can see your job details and submit their price."
+                  title="Drivers review your job"
+                  text="RCS drivers can see the job details and submit their price."
                 />
 
                 <NextStep
                   number="03"
                   title="Compare driver quotes"
-                  text="Once drivers have submitted quotes, you can review them from your customer dashboard."
+                  text="Review the quotes from your customer dashboard."
                 />
 
                 <NextStep
@@ -690,16 +835,20 @@ export default function PostJobPage() {
                 />
 
               </div>
-
             </div>
 
-            {/* LOGIN BUTTON */}
-
             <Link
-              href="/customer/login"
+              href={
+                isLoggedIn &&
+                jobId
+                  ? `/customer/jobs/${jobId}`
+                  : "/customer/login"
+              }
               className="mt-8 flex w-full items-center justify-center rounded-2xl bg-[#529027] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:bg-[#6aad3a]"
             >
-              GO TO CUSTOMER LOGIN →
+              {isLoggedIn
+                ? "VIEW YOUR JOB →"
+                : "GO TO CUSTOMER LOGIN →"}
             </Link>
 
             <Link
@@ -710,22 +859,21 @@ export default function PostJobPage() {
             </Link>
 
           </section>
-
         </div>
-
       </main>
     );
   }
 
+  /*
+   * -------------------------------------------------------
+   * MAIN FORM
+   * -------------------------------------------------------
+   */
+
   return (
     <main className="min-h-screen bg-[#07100b] text-white">
 
-      {/* ================================================= */}
-      {/* HEADER                                            */}
-      {/* ================================================= */}
-
       <header className="border-b border-white/10 bg-[#07100b]">
-
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
 
           <Link href="/">
@@ -746,16 +894,9 @@ export default function PostJobPage() {
           </Link>
 
         </div>
-
       </header>
 
-      {/* ================================================= */}
-      {/* CONTENT                                           */}
-      {/* ================================================= */}
-
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-
-        {/* INTRO */}
 
         <div className="max-w-3xl">
 
@@ -764,20 +905,26 @@ export default function PostJobPage() {
           </p>
 
           <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">
-            Get a quote for your waste removal.
+            {isLoggedIn
+              ? "Post a new waste removal job."
+              : "Get a quote for your waste removal."}
           </h1>
 
           <p className="mt-4 text-base leading-7 text-[#aeb9af] sm:text-lg">
-            Tell us what needs removing and
-            approved RCS drivers can review
-            your job and submit their price.
+            {isLoggedIn
+              ? "Tell us what needs removing and approved RCS drivers can review your job and submit their price."
+              : "Tell us what needs removing and approved RCS drivers can review your job and submit their price."}
           </p>
 
         </div>
 
-        {/* ================================================= */}
-        {/* ERROR                                             */}
-        {/* ================================================= */}
+        {checkingSession && (
+          <div className="mt-6 rounded-2xl border border-white/10 bg-[#0d1810] p-4">
+            <p className="text-sm font-bold text-[#aeb9af]">
+              Checking your RCS customer account...
+            </p>
+          </div>
+        )}
 
         {errorMessage && (
           <div className="mt-8 rounded-2xl border border-red-400/30 bg-red-500/10 p-5">
@@ -787,7 +934,7 @@ export default function PostJobPage() {
             </p>
 
             {errorMessage.includes(
-              "already exists"
+              "already exists",
             ) && (
               <Link
                 href="/customer/login"
@@ -800,18 +947,12 @@ export default function PostJobPage() {
           </div>
         )}
 
-        {/* ================================================= */}
-        {/* FORM                                              */}
-        {/* ================================================= */}
-
         <form
           onSubmit={submitJob}
           className="mt-8 space-y-6"
         >
 
-          {/* ================================================= */}
-          {/* STEP 01                                           */}
-          {/* ================================================= */}
+          {/* STEP 01 */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -820,7 +961,6 @@ export default function PostJobPage() {
               <StepNumber number="01" />
 
               <div>
-
                 <h2 className="text-xl font-black sm:text-2xl">
                   What needs removing?
                 </h2>
@@ -829,7 +969,6 @@ export default function PostJobPage() {
                   Choose the option that best
                   describes your job.
                 </p>
-
               </div>
 
             </div>
@@ -843,7 +982,7 @@ export default function PostJobPage() {
                     type="button"
                     onClick={() =>
                       setWasteType(
-                        type
+                        type,
                       )
                     }
                     className={`min-h-[58px] rounded-2xl border px-3 py-3 text-sm font-bold transition ${
@@ -855,16 +994,13 @@ export default function PostJobPage() {
                   >
                     {type}
                   </button>
-                )
+                ),
               )}
 
             </div>
-
           </section>
 
-          {/* ================================================= */}
-          {/* STEP 02                                           */}
-          {/* ================================================= */}
+          {/* STEP 02 */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -873,7 +1009,6 @@ export default function PostJobPage() {
               <StepNumber number="02" />
 
               <div>
-
                 <h2 className="text-xl font-black sm:text-2xl">
                   Where are we collecting from?
                 </h2>
@@ -882,7 +1017,6 @@ export default function PostJobPage() {
                   Give the driver everything
                   they need to find you.
                 </p>
-
               </div>
 
             </div>
@@ -897,7 +1031,7 @@ export default function PostJobPage() {
                   value={postcode}
                   onChange={(e) =>
                     setPostcode(
-                      e.target.value
+                      e.target.value,
                     )
                   }
                   placeholder="e.g. B1 1AA"
@@ -914,7 +1048,7 @@ export default function PostJobPage() {
                   value={address}
                   onChange={(e) =>
                     setAddress(
-                      e.target.value
+                      e.target.value,
                     )
                   }
                   placeholder="House number and street"
@@ -924,12 +1058,9 @@ export default function PostJobPage() {
               </Field>
 
             </div>
-
           </section>
 
-          {/* ================================================= */}
-          {/* STEP 03                                           */}
-          {/* ================================================= */}
+          {/* STEP 03 */}
 
           <section className="rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -938,7 +1069,6 @@ export default function PostJobPage() {
               <StepNumber number="03" />
 
               <div>
-
                 <h2 className="text-xl font-black sm:text-2xl">
                   When should we collect it?
                 </h2>
@@ -947,7 +1077,6 @@ export default function PostJobPage() {
                   Choose the day you want the
                   driver to attend.
                 </p>
-
               </div>
 
             </div>
@@ -966,7 +1095,7 @@ export default function PostJobPage() {
                   }
                   onChange={(e) =>
                     setCollectionDate(
-                      e.target.value
+                      e.target.value,
                     )
                   }
                   className={`${inputClass} [color-scheme:dark]`}
@@ -975,19 +1104,17 @@ export default function PostJobPage() {
               </Field>
 
               <Field label="Preferred time">
-
                 <select
                   value={
                     preferredTime
                   }
                   onChange={(e) =>
                     setPreferredTime(
-                      e.target.value
+                      e.target.value,
                     )
                   }
                   className={inputClass}
                 >
-
                   <option value="">
                     Any time
                   </option>
@@ -1003,9 +1130,7 @@ export default function PostJobPage() {
                   <option value="Evening">
                     Evening
                   </option>
-
                 </select>
-
               </Field>
 
             </div>
@@ -1025,9 +1150,7 @@ export default function PostJobPage() {
 
           </section>
 
-          {/* ================================================= */}
-          {/* STEP 04                                           */}
-          {/* ================================================= */}
+          {/* STEP 04 */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1036,7 +1159,6 @@ export default function PostJobPage() {
               <StepNumber number="04" />
 
               <div>
-
                 <h2 className="text-xl font-black sm:text-2xl">
                   Help the driver understand
                   the job
@@ -1045,7 +1167,6 @@ export default function PostJobPage() {
                 <p className="mt-1 text-sm text-[#8f9d91]">
                   Give us your best estimate.
                 </p>
-
               </div>
 
             </div>
@@ -1066,7 +1187,7 @@ export default function PostJobPage() {
                         type="button"
                         onClick={() =>
                           setLoadSize(
-                            size
+                            size,
                           )
                         }
                         className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
@@ -1078,7 +1199,7 @@ export default function PostJobPage() {
                       >
                         {size}
                       </button>
-                    )
+                    ),
                   )}
 
                 </div>
@@ -1101,7 +1222,7 @@ export default function PostJobPage() {
                           type="button"
                           onClick={() =>
                             setLocation(
-                              item
+                              item,
                             )
                           }
                           className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
@@ -1113,7 +1234,7 @@ export default function PostJobPage() {
                         >
                           {item}
                         </button>
-                      )
+                      ),
                     )}
 
                   </div>
@@ -1121,14 +1242,11 @@ export default function PostJobPage() {
                 </Field>
 
               </div>
-
             </div>
 
           </section>
 
-          {/* ================================================= */}
-          {/* STEP 05                                           */}
-          {/* ================================================= */}
+          {/* STEP 05 */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1137,7 +1255,6 @@ export default function PostJobPage() {
               <StepNumber number="05" />
 
               <div>
-
                 <h2 className="text-xl font-black sm:text-2xl">
                   Show us what needs taking
                 </h2>
@@ -1146,7 +1263,6 @@ export default function PostJobPage() {
                   Photos help drivers price
                   your job accurately.
                 </p>
-
               </div>
 
             </div>
@@ -1170,7 +1286,9 @@ export default function PostJobPage() {
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={handlePhotos}
+                onChange={
+                  handlePhotos
+                }
                 className="hidden"
               />
 
@@ -1185,7 +1303,10 @@ export default function PostJobPage() {
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
 
                 {photos.map(
-                  (photo, index) => (
+                  (
+                    photo,
+                    index,
+                  ) => (
                     <div
                       key={`${photo.name}-${index}`}
                       className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#07100b] p-2"
@@ -1199,7 +1320,7 @@ export default function PostJobPage() {
                         type="button"
                         onClick={() =>
                           removePhoto(
-                            index
+                            index,
                           )
                         }
                         className="absolute right-2 top-2 rounded-lg bg-black/80 px-2 py-1 text-xs font-bold text-white"
@@ -1208,7 +1329,7 @@ export default function PostJobPage() {
                       </button>
 
                     </div>
-                  )
+                  ),
                 )}
 
               </div>
@@ -1216,9 +1337,7 @@ export default function PostJobPage() {
 
           </section>
 
-          {/* ================================================= */}
-          {/* STEP 06                                           */}
-          {/* ================================================= */}
+          {/* STEP 06 */}
 
           <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1227,7 +1346,6 @@ export default function PostJobPage() {
               <StepNumber number="06" />
 
               <div>
-
                 <h2 className="text-xl font-black sm:text-2xl">
                   Tell us more about the job
                 </h2>
@@ -1236,7 +1354,6 @@ export default function PostJobPage() {
                   Anything else the driver
                   should know?
                 </p>
-
               </div>
 
             </div>
@@ -1247,221 +1364,244 @@ export default function PostJobPage() {
                 label="Describe what needs removing"
                 required
               >
-
                 <textarea
                   value={
                     description
                   }
                   onChange={(e) =>
                     setDescription(
-                      e.target.value
+                      e.target.value,
                     )
                   }
                   rows={5}
                   placeholder="For example: old sofa, wardrobe and several bags of household rubbish..."
                   className={`${inputClass} resize-none`}
                 />
-
               </Field>
 
               <Field label="Access notes">
-
                 <textarea
                   value={
                     accessNotes
                   }
                   onChange={(e) =>
                     setAccessNotes(
-                      e.target.value
+                      e.target.value,
                     )
                   }
                   rows={4}
                   placeholder="Parking information, narrow access, gates, stairs, keys, or anything else the driver should know."
                   className={`${inputClass} resize-none`}
                 />
-
               </Field>
 
             </div>
 
           </section>
 
-          {/* ================================================= */}
-          {/* STEP 07 - ACCOUNT                                 */}
-          {/* ================================================= */}
+          {/* STEP 07 - ONLY NEW CUSTOMERS */}
 
-          <section className="rounded-3xl border border-[#1BBB8C]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+          {!isLoggedIn && (
+            <section className="rounded-3xl border border-[#1BBB8C]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
-            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4">
 
-              <StepNumber number="07" />
+                <StepNumber number="07" />
 
-              <div>
+                <div>
+                  <h2 className="text-xl font-black sm:text-2xl">
+                    Create your RCS customer account
+                  </h2>
 
-                <h2 className="text-xl font-black sm:text-2xl">
-                  Create your RCS customer account
-                </h2>
+                  <p className="mt-1 text-sm text-[#8f9d91]">
+                    Your account lets you track your
+                    job, view driver quotes and manage
+                    your collection.
+                  </p>
+                </div>
 
-                <p className="mt-1 text-sm text-[#8f9d91]">
-                  Your account lets you track your
-                  job, view driver quotes and manage
-                  your collection.
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-[#1BBB8C]/20 bg-[#1BBB8C]/5 p-4">
+
+                <p className="text-sm font-bold text-[#b8f1dc]">
+                  No account needed to start your quote
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-[#8f9d91]">
+                  We only ask for these details at the
+                  end so we can create your account and
+                  keep your job and driver quotes
+                  together.
                 </p>
 
               </div>
 
-            </div>
+              <div className="mt-6 grid gap-5 sm:grid-cols-2">
 
-            <div className="mt-6 rounded-2xl border border-[#1BBB8C]/20 bg-[#1BBB8C]/5 p-4">
+                <Field
+                  label="Full name"
+                  required
+                >
+                  <input
+                    type="text"
+                    value={
+                      fullName
+                    }
+                    onChange={(e) =>
+                      setFullName(
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Your full name"
+                    autoComplete="name"
+                    className={inputClass}
+                  />
+                </Field>
 
-              <p className="text-sm font-bold text-[#b8f1dc]">
-                No account needed to start your quote
+                <Field
+                  label="Phone number"
+                  required
+                >
+                  <input
+                    type="tel"
+                    value={
+                      phone
+                    }
+                    onChange={(e) =>
+                      setPhone(
+                        e.target.value,
+                      )
+                    }
+                    placeholder="e.g. 07123 456789"
+                    autoComplete="tel"
+                    className={inputClass}
+                  />
+                </Field>
+
+              </div>
+
+              <div className="mt-5">
+
+                <Field
+                  label="Email address"
+                  required
+                >
+                  <input
+                    type="email"
+                    value={
+                      email
+                    }
+                    onChange={(e) =>
+                      setEmail(
+                        e.target.value,
+                      )
+                    }
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    className={inputClass}
+                  />
+                </Field>
+
+              </div>
+
+              <div className="mt-5 grid gap-5 sm:grid-cols-2">
+
+                <Field
+                  label="Create a password"
+                  required
+                >
+                  <input
+                    type="password"
+                    value={
+                      password
+                    }
+                    onChange={(e) =>
+                      setPassword(
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Minimum 6 characters"
+                    autoComplete="new-password"
+                    className={inputClass}
+                  />
+                </Field>
+
+                <Field
+                  label="Confirm password"
+                  required
+                >
+                  <input
+                    type="password"
+                    value={
+                      confirmPassword
+                    }
+                    onChange={(e) =>
+                      setConfirmPassword(
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Enter your password again"
+                    autoComplete="new-password"
+                    className={inputClass}
+                  />
+                </Field>
+
+              </div>
+
+              <p className="mt-4 text-xs leading-5 text-[#758177]">
+                After your job is posted, we'll send
+                a confirmation email to your email
+                address.
               </p>
 
-              <p className="mt-1 text-sm leading-6 text-[#8f9d91]">
-                We only ask for these details at the
-                end so we can create your account and
-                keep your job and driver quotes
-                together.
-              </p>
+            </section>
+          )}
 
-            </div>
+          {/* EXISTING CUSTOMER ACCOUNT */}
 
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          {isLoggedIn && (
+            <section className="rounded-3xl border border-[#1BBB8C]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
-              <Field
-                label="Full name"
-                required
-              >
+              <div className="flex items-center gap-4">
 
-                <input
-                  type="text"
-                  value={
-                    fullName
-                  }
-                  onChange={(e) =>
-                    setFullName(
-                      e.target.value
-                    )
-                  }
-                  placeholder="Your full name"
-                  autoComplete="name"
-                  className={inputClass}
-                />
+                <StepNumber number="07" />
 
-              </Field>
+                <div>
+                  <h2 className="text-xl font-black sm:text-2xl">
+                    Your RCS customer account
+                  </h2>
 
-              <Field
-                label="Phone number"
-                required
-              >
+                  <p className="mt-1 text-sm text-[#8f9d91]">
+                    This new job will be added to your
+                    existing customer account.
+                  </p>
+                </div>
 
-                <input
-                  type="tel"
-                  value={
-                    phone
-                  }
-                  onChange={(e) =>
-                    setPhone(
-                      e.target.value
-                    )
-                  }
-                  placeholder="e.g. 07123 456789"
-                  autoComplete="tel"
-                  className={inputClass}
-                />
+              </div>
 
-              </Field>
+              <div className="mt-6 rounded-2xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/5 p-5">
 
-            </div>
+                <p className="text-sm font-bold uppercase tracking-wide text-[#71b33d]">
+                  Signed in
+                </p>
 
-            <div className="mt-5">
+                <p className="mt-2 break-all text-lg font-black text-white">
+                  {customerEmail}
+                </p>
 
-              <Field
-                label="Email address"
-                required
-              >
+                <p className="mt-2 text-sm leading-6 text-[#8f9d91]">
+                  You don't need to enter your account
+                  details again. We'll automatically
+                  attach this new job to your RCS account.
+                </p>
 
-                <input
-                  type="email"
-                  value={
-                    email
-                  }
-                  onChange={(e) =>
-                    setEmail(
-                      e.target.value
-                    )
-                  }
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className={inputClass}
-                />
+              </div>
 
-              </Field>
+            </section>
+          )}
 
-            </div>
-
-            <div className="mt-5 grid gap-5 sm:grid-cols-2">
-
-              <Field
-                label="Create a password"
-                required
-              >
-
-                <input
-                  type="password"
-                  value={
-                    password
-                  }
-                  onChange={(e) =>
-                    setPassword(
-                      e.target.value
-                    )
-                  }
-                  placeholder="Minimum 6 characters"
-                  autoComplete="new-password"
-                  className={inputClass}
-                />
-
-              </Field>
-
-              <Field
-                label="Confirm password"
-                required
-              >
-
-                <input
-                  type="password"
-                  value={
-                    confirmPassword
-                  }
-                  onChange={(e) =>
-                    setConfirmPassword(
-                      e.target.value
-                    )
-                  }
-                  placeholder="Enter your password again"
-                  autoComplete="new-password"
-                  className={inputClass}
-                />
-
-              </Field>
-
-            </div>
-
-            <p className="mt-4 text-xs leading-5 text-[#758177]">
-              After your job is posted, we'll
-              send a confirmation email to your
-              email address. You'll then be able to
-              log in and view your job and driver
-              quotes.
-            </p>
-
-          </section>
-
-          {/* ================================================= */}
-          {/* SUBMIT                                            */}
-          {/* ================================================= */}
+          {/* SUBMIT */}
 
           <section className="rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
 
@@ -1482,9 +1622,9 @@ export default function PostJobPage() {
                 value={
                   collectionDate
                     ? new Date(
-                        `${collectionDate}T12:00:00`
+                        `${collectionDate}T12:00:00`,
                       ).toLocaleDateString(
-                        "en-GB"
+                        "en-GB",
                       )
                     : "Not selected"
                 }
@@ -1510,7 +1650,10 @@ export default function PostJobPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={
+                loading ||
+                checkingSession
+              }
               className="mt-7 w-full rounded-2xl bg-[#529027] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:bg-[#6aad3a] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading
@@ -1528,9 +1671,7 @@ export default function PostJobPage() {
           </section>
 
         </form>
-
       </div>
-
     </main>
   );
 }
@@ -1556,7 +1697,6 @@ function NextStep({
       </div>
 
       <div>
-
         <p className="font-black text-white">
           {title}
         </p>
@@ -1564,7 +1704,6 @@ function NextStep({
         <p className="mt-1 text-sm leading-5 text-[#89968b]">
           {text}
         </p>
-
       </div>
 
     </div>
@@ -1602,9 +1741,7 @@ function Field({
 }) {
   return (
     <div>
-
       <label className="mb-2 block text-sm font-black text-[#dfe7e0]">
-
         {label}
 
         {required && (
@@ -1612,11 +1749,9 @@ function Field({
             *
           </span>
         )}
-
       </label>
 
       {children}
-
     </div>
   );
 }

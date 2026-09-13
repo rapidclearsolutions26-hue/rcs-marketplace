@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "nodejs";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
 const supabasePublishableKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -13,7 +14,7 @@ const supabaseServiceRoleKey =
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
-  "https://rcs-marketplace.vercel.app";
+  "https://rapidclearsolutions.co.uk";
 
 const MAX_PHOTOS = 10;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -56,7 +57,9 @@ function getAdminClient() {
   );
 }
 
-function cleanText(value: FormDataEntryValue | null) {
+function cleanText(
+  value: FormDataEntryValue | null,
+) {
   if (typeof value !== "string") {
     return "";
   }
@@ -91,11 +94,12 @@ async function findExistingUser(
       );
     }
 
-    const existingUser = data.users.find(
-      (user) =>
-        user.email?.toLowerCase() ===
-        email.toLowerCase(),
-    );
+    const existingUser =
+      data.users.find(
+        (user) =>
+          user.email?.toLowerCase() ===
+          email.toLowerCase(),
+      );
 
     if (existingUser) {
       return existingUser;
@@ -112,13 +116,24 @@ async function findExistingUser(
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+) {
   let admin:
     | ReturnType<typeof getAdminClient>
     | null = null;
 
   let createdUserId: string | null = null;
   let createdJobId: number | null = null;
+
+  /*
+   * -------------------------------------------------------
+   * TRACK WHETHER THIS IS AN EXISTING CUSTOMER
+   * -------------------------------------------------------
+   */
+
+  let authenticatedUserId: string | null = null;
+  let authenticatedUserEmail: string | null = null;
 
   try {
     if (
@@ -139,7 +154,61 @@ export async function POST(request: Request) {
       );
     }
 
-    const formData = await request.formData();
+    /*
+     * -------------------------------------------------------
+     * CHECK AUTHENTICATED CUSTOMER
+     * -------------------------------------------------------
+     *
+     * Existing logged-in customers send their Supabase
+     * access token in the Authorization header.
+     *
+     * We verify the token with Supabase before attaching
+     * the new job to the customer account.
+     */
+
+    const authorization =
+      request.headers.get(
+        "authorization",
+      );
+
+    if (
+      authorization?.startsWith(
+        "Bearer ",
+      )
+    ) {
+      const accessToken =
+        authorization.substring(
+          7,
+        ).trim();
+
+      if (accessToken) {
+        const publicClient =
+          getPublicClient();
+
+        const {
+          data: userData,
+          error: userError,
+        } =
+          await publicClient.auth.getUser(
+            accessToken,
+          );
+
+        if (
+          !userError &&
+          userData.user
+        ) {
+          authenticatedUserId =
+            userData.user.id;
+
+          authenticatedUserEmail =
+            userData.user.email ||
+            null;
+        }
+      }
+    }
+
+    const formData =
+      await request.formData();
 
     /*
      * -------------------------------------------------------
@@ -159,7 +228,8 @@ export async function POST(request: Request) {
       formData.get("phone"),
     );
 
-    const password = formData.get("password");
+    const password =
+      formData.get("password");
 
     /*
      * -------------------------------------------------------
@@ -209,67 +279,9 @@ export async function POST(request: Request) {
 
     /*
      * -------------------------------------------------------
-     * VALIDATION
+     * COMMON JOB VALIDATION
      * -------------------------------------------------------
      */
-
-    if (!fullName) {
-      return NextResponse.json(
-        {
-          error:
-            "Please enter your full name.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (!email) {
-      return NextResponse.json(
-        {
-          error:
-            "Please enter your email address.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const emailIsValid =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        email,
-      );
-
-    if (!emailIsValid) {
-      return NextResponse.json(
-        {
-          error:
-            "Please enter a valid email address.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (
-      typeof password !== "string" ||
-      password.length < 6
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Your password must be at least 6 characters.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (!phone) {
-      return NextResponse.json(
-        {
-          error:
-            "Please enter your phone number.",
-        },
-        { status: 400 },
-      );
-    }
 
     if (!postcode) {
       return NextResponse.json(
@@ -311,6 +323,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!preferredDate) {
+      return NextResponse.json(
+        {
+          error:
+            "Please select a collection date.",
+        },
+        { status: 400 },
+      );
+    }
+
     if (!preferredTime) {
       return NextResponse.json(
         {
@@ -330,13 +352,17 @@ export async function POST(request: Request) {
     const photoEntries =
       formData.getAll("photos");
 
-    const photos = photoEntries.filter(
-      (entry): entry is File =>
-        entry instanceof File &&
-        entry.size > 0,
-    );
+    const photos =
+      photoEntries.filter(
+        (entry): entry is File =>
+          entry instanceof File &&
+          entry.size > 0,
+      );
 
-    if (photos.length > MAX_PHOTOS) {
+    if (
+      photos.length >
+      MAX_PHOTOS
+    ) {
       return NextResponse.json(
         {
           error:
@@ -348,7 +374,9 @@ export async function POST(request: Request) {
 
     for (const photo of photos) {
       if (
-        !photo.type.startsWith("image/")
+        !photo.type.startsWith(
+          "image/",
+        )
       ) {
         return NextResponse.json(
           {
@@ -359,7 +387,10 @@ export async function POST(request: Request) {
         );
       }
 
-      if (photo.size > MAX_FILE_SIZE) {
+      if (
+        photo.size >
+        MAX_FILE_SIZE
+      ) {
         return NextResponse.json(
           {
             error:
@@ -376,132 +407,230 @@ export async function POST(request: Request) {
      * -------------------------------------------------------
      */
 
-    admin = getAdminClient();
+    admin =
+      getAdminClient();
 
     /*
      * -------------------------------------------------------
-     * CHECK FOR EXISTING ACCOUNT
+     * DETERMINE CUSTOMER
      * -------------------------------------------------------
      *
-     * We don't want to create duplicate RCS accounts.
+     * EXISTING CUSTOMER:
+     * Use the authenticated Supabase user.
      *
-     * If this email already exists, the customer is sent
-     * back to login instead of creating another account.
+     * NEW CUSTOMER:
+     * Create a new Supabase account using the details
+     * supplied at the end of the form.
      */
 
-    const existingUser =
-      await findExistingUser(
-        admin,
-        email,
-      );
+    let customerUserId: string;
+    let emailConfirmationRequired =
+      false;
 
-    if (existingUser) {
-      return NextResponse.json(
-        {
-          error:
-            "An RCS customer account already exists with this email address. Please log in to your existing account and post the job from there.",
-          code: "ACCOUNT_EXISTS",
-        },
-        { status: 409 },
-      );
-    }
+    if (authenticatedUserId) {
+      /*
+       * =====================================================
+       * EXISTING LOGGED-IN CUSTOMER
+       * =====================================================
+       */
 
-    /*
-     * -------------------------------------------------------
-     * CREATE CUSTOMER ACCOUNT
-     * -------------------------------------------------------
-     *
-     * We use normal Supabase signUp here so Supabase can
-     * send the customer's email confirmation.
-     *
-     * The admin client is used separately for creating the
-     * job because email confirmation may mean there is no
-     * browser session yet.
-     */
-
-    const publicClient =
-      getPublicClient();
-
-    const emailRedirectTo =
-      `${SITE_URL}/auth/confirm?next=/customer/login`;
-
-    const {
-      data: signupData,
-      error: signupError,
-    } =
-      await publicClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            phone,
-          },
-          emailRedirectTo,
-        },
-      });
-
-    if (signupError) {
-      console.error(
-        "Customer signup error:",
-        signupError,
-      );
-
-      return NextResponse.json(
-        {
-          error:
-            signupError.message ||
-            "We couldn't create your customer account.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const newUser =
-      signupData.user;
-
-    if (!newUser) {
-      return NextResponse.json(
-        {
-          error:
-            "We couldn't create your customer account. Please try again.",
-        },
-        { status: 500 },
-      );
-    }
-
-    createdUserId = newUser.id;
-
-    /*
-     * -------------------------------------------------------
-     * UPDATE PROFILE
-     * -------------------------------------------------------
-     *
-     * Your existing database has a trigger which creates
-     * the profile when auth.users is created.
-     *
-     * We update the profile here where the fields exist.
-     */
-
-    const { error: profileError } =
-      await admin
-        .from("profiles")
-        .update({
-          full_name: fullName,
-        })
-        .eq("id", newUser.id);
-
-    if (profileError) {
-      console.error(
-        "Profile update warning:",
-        profileError,
-      );
+      customerUserId =
+        authenticatedUserId;
 
       /*
-       * Don't fail the whole job if the existing profile
-       * trigger already created the record but a profile
-       * column differs from this deployment.
+       * We deliberately ignore any customer ID supplied
+       * by the browser. The authenticated Supabase user
+       * is the customer who owns this job.
        */
+
+      console.log(
+        "Creating job for existing customer:",
+        customerUserId,
+      );
+    } else {
+      /*
+       * =====================================================
+       * NEW CUSTOMER
+       * =====================================================
+       */
+
+      if (!fullName) {
+        return NextResponse.json(
+          {
+            error:
+              "Please enter your full name.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (!email) {
+        return NextResponse.json(
+          {
+            error:
+              "Please enter your email address.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const emailIsValid =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          email,
+        );
+
+      if (!emailIsValid) {
+        return NextResponse.json(
+          {
+            error:
+              "Please enter a valid email address.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (
+        typeof password !==
+          "string" ||
+        password.length < 6
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Your password must be at least 6 characters.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (!phone) {
+        return NextResponse.json(
+          {
+            error:
+              "Please enter your phone number.",
+          },
+          { status: 400 },
+        );
+      }
+
+      /*
+       * -----------------------------------------------------
+       * PREVENT DUPLICATE ACCOUNTS
+       * -----------------------------------------------------
+       */
+
+      const existingUser =
+        await findExistingUser(
+          admin,
+          email,
+        );
+
+      if (existingUser) {
+        return NextResponse.json(
+          {
+            error:
+              "An RCS customer account already exists with this email address. Please log in to your existing account and post the job from there.",
+            code:
+              "ACCOUNT_EXISTS",
+          },
+          { status: 409 },
+        );
+      }
+
+      /*
+       * -----------------------------------------------------
+       * CREATE CUSTOMER ACCOUNT
+       * -----------------------------------------------------
+       */
+
+      const publicClient =
+        getPublicClient();
+
+      const emailRedirectTo =
+        `${SITE_URL}/auth/confirm?next=/customer/login`;
+
+      const {
+        data: signupData,
+        error: signupError,
+      } =
+        await publicClient.auth.signUp(
+          {
+            email,
+            password,
+            options: {
+              data: {
+                full_name:
+                  fullName,
+                phone,
+              },
+              emailRedirectTo,
+            },
+          },
+        );
+
+      if (signupError) {
+        console.error(
+          "Customer signup error:",
+          signupError,
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              signupError.message ||
+              "We couldn't create your customer account.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const newUser =
+        signupData.user;
+
+      if (!newUser) {
+        return NextResponse.json(
+          {
+            error:
+              "We couldn't create your customer account. Please try again.",
+          },
+          { status: 500 },
+        );
+      }
+
+      createdUserId =
+        newUser.id;
+
+      customerUserId =
+        newUser.id;
+
+      emailConfirmationRequired =
+        !signupData.session;
+
+      /*
+       * -----------------------------------------------------
+       * UPDATE PROFILE
+       * -----------------------------------------------------
+       */
+
+      const {
+        error: profileError,
+      } = await admin
+        .from("profiles")
+        .update({
+          full_name:
+            fullName,
+        })
+        .eq(
+          "id",
+          newUser.id,
+        );
+
+      if (profileError) {
+        console.error(
+          "Profile update warning:",
+          profileError,
+        );
+      }
     }
 
     /*
@@ -523,34 +652,47 @@ export async function POST(request: Request) {
       .from("jobs")
       .insert({
         reference,
-        customer_id: newUser.id,
+        customer_id:
+          customerUserId,
         job_type:
-          jobType || "Waste removal",
+          jobType ||
+          "Waste removal",
         postcode,
         address,
-        load_size: loadSize,
+        load_size:
+          loadSize,
         description,
-        floor: floor || null,
+        floor:
+          floor || null,
         stairs,
         access_notes:
-          accessNotes || null,
+          accessNotes ||
+          null,
         preferred_date:
-          preferredDate || null,
+          preferredDate ||
+          null,
         preferred_time:
-          preferredTime || null,
+          preferredTime ||
+          null,
         status: "open",
       })
-      .select("id, reference")
+      .select(
+        "id, reference",
+      )
       .single();
 
     if (jobError) {
       console.error(
         "Job creation error:",
         {
-          message: jobError.message,
-          details: jobError.details,
-          hint: jobError.hint,
-          code: jobError.code,
+          message:
+            jobError.message,
+          details:
+            jobError.details,
+          hint:
+            jobError.hint,
+          code:
+            jobError.code,
         },
       );
 
@@ -592,15 +734,6 @@ export async function POST(request: Request) {
       const fileName =
         `${crypto.randomUUID()}.${safeExtension}`;
 
-      /*
-       * Keep the same storage structure your existing
-       * customer/driver pages already expect:
-       *
-       * customer-job-photos/
-       *     JOB_ID/
-       *         FILE
-       */
-
       const storagePath =
         `${job.id}/${fileName}`;
 
@@ -608,12 +741,15 @@ export async function POST(request: Request) {
         error: uploadError,
       } =
         await admin.storage
-          .from("customer-job-photos")
+          .from(
+            "customer-job-photos",
+          )
           .upload(
             storagePath,
             photo,
             {
-              cacheControl: "3600",
+              cacheControl:
+                "3600",
               upsert: false,
               contentType:
                 photo.type ||
@@ -638,12 +774,15 @@ export async function POST(request: Request) {
       } = await admin
         .from("job_photos")
         .insert({
-          job_id: job.id,
+          job_id:
+            job.id,
           storage_path:
             storagePath,
         });
 
-      if (photoRecordError) {
+      if (
+        photoRecordError
+      ) {
         console.error(
           "Photo database error:",
           photoRecordError,
@@ -675,9 +814,13 @@ export async function POST(request: Request) {
         jobId: job.id,
         reference:
           job.reference,
-        userId: newUser.id,
-        emailConfirmationRequired:
-          !signupData.session,
+        userId:
+          customerUserId,
+        emailConfirmationRequired,
+        existingCustomer:
+          Boolean(
+            authenticatedUserId,
+          ),
       },
       { status: 201 },
     );
@@ -689,11 +832,8 @@ export async function POST(request: Request) {
 
     /*
      * -------------------------------------------------------
-     * CLEANUP
+     * CLEANUP JOB
      * -------------------------------------------------------
-     *
-     * If something fails after creating the account,
-     * remove the unfinished job and customer photos.
      */
 
     if (
@@ -704,7 +844,9 @@ export async function POST(request: Request) {
         const {
           data: photoRows,
         } = await admin
-          .from("job_photos")
+          .from(
+            "job_photos",
+          )
           .select(
             "storage_path",
           )
@@ -714,7 +856,10 @@ export async function POST(request: Request) {
           );
 
         const storagePaths =
-          (photoRows || [])
+          (
+            photoRows ||
+            []
+          )
             .map(
               (row) =>
                 row.storage_path,
@@ -737,7 +882,9 @@ export async function POST(request: Request) {
         }
 
         await admin
-          .from("job_photos")
+          .from(
+            "job_photos",
+          )
           .delete()
           .eq(
             "job_id",
@@ -751,7 +898,9 @@ export async function POST(request: Request) {
             "id",
             createdJobId,
           );
-      } catch (cleanupError) {
+      } catch (
+        cleanupError
+      ) {
         console.error(
           "Job cleanup error:",
           cleanupError,
@@ -760,8 +909,12 @@ export async function POST(request: Request) {
     }
 
     /*
-     * Only delete the newly-created user if we created one
-     * and the job process failed.
+     * -------------------------------------------------------
+     * ONLY DELETE A NEWLY CREATED ACCOUNT
+     * -------------------------------------------------------
+     *
+     * Never delete an existing customer's account if their
+     * new job fails.
      */
 
     if (
@@ -773,7 +926,9 @@ export async function POST(request: Request) {
         await admin.auth.admin.deleteUser(
           createdUserId,
         );
-      } catch (cleanupError) {
+      } catch (
+        cleanupError
+      ) {
         console.error(
           "Customer cleanup error:",
           cleanupError,
