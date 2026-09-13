@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -56,6 +57,8 @@ const JOB_SELECT = `
   created_at
 `;
 
+const WHATSAPP_NUMBER = "447555980651";
+
 export default function CustomerDashboard() {
   const router = useRouter();
   const supabase = createClient();
@@ -68,11 +71,8 @@ export default function CustomerDashboard() {
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
 
-  const [showInstallModal, setShowInstallModal] =
-    useState(false);
-
-  const [isInstalled, setIsInstalled] =
-    useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   /*
    * =========================================================
@@ -83,17 +83,13 @@ export default function CustomerDashboard() {
   useEffect(() => {
     function handleBeforeInstallPrompt(event: Event) {
       event.preventDefault();
-
-      setInstallPrompt(
-        event as BeforeInstallPromptEvent
-      );
+      setInstallPrompt(event as BeforeInstallPromptEvent);
     }
 
     function checkInstalled() {
-      const standalone =
-        window.matchMedia(
-          "(display-mode: standalone)"
-        ).matches;
+      const standalone = window.matchMedia(
+        "(display-mode: standalone)"
+      ).matches;
 
       const iosStandalone =
         "standalone" in window.navigator &&
@@ -105,9 +101,7 @@ export default function CustomerDashboard() {
           ).standalone
         );
 
-      setIsInstalled(
-        standalone || iosStandalone
-      );
+      setIsInstalled(standalone || iosStandalone);
     }
 
     checkInstalled();
@@ -117,10 +111,7 @@ export default function CustomerDashboard() {
       handleBeforeInstallPrompt
     );
 
-    window.addEventListener(
-      "appinstalled",
-      checkInstalled
-    );
+    window.addEventListener("appinstalled", checkInstalled);
 
     return () => {
       window.removeEventListener(
@@ -140,18 +131,14 @@ export default function CustomerDashboard() {
       try {
         await installPrompt.prompt();
 
-        const choice =
-          await installPrompt.userChoice;
+        const choice = await installPrompt.userChoice;
 
         if (choice.outcome === "accepted") {
           setInstallPrompt(null);
           setShowInstallModal(false);
         }
       } catch (error) {
-        console.error(
-          "PWA install error:",
-          error
-        );
+        console.error("PWA install error:", error);
       }
 
       return;
@@ -183,10 +170,7 @@ export default function CustomerDashboard() {
         } = await supabase.auth.getUser();
 
         if (authError) {
-          console.error(
-            "Customer auth error:",
-            authError
-          );
+          console.error("Customer auth error:", authError);
 
           setErrorMessage(
             "We couldn't verify your customer account."
@@ -209,10 +193,7 @@ export default function CustomerDashboard() {
           });
 
         if (error) {
-          console.error(
-            "Customer jobs error:",
-            error
-          );
+          console.error("Customer jobs error:", error);
 
           setErrorMessage(
             error.message ||
@@ -309,10 +290,7 @@ export default function CustomerDashboard() {
 
   const biddingJobs = useMemo(() => {
     return jobs.filter((job) => {
-      return (
-        normaliseStatus(job.status) ===
-        "bidding"
-      );
+      return normaliseStatus(job.status) === "bidding";
     });
   }, [jobs]);
 
@@ -341,8 +319,7 @@ export default function CustomerDashboard() {
     });
   }, [jobs]);
 
-  const actionRequiredCount =
-    biddingJobs.length;
+  const actionRequiredCount = biddingJobs.length;
 
   /*
    * =========================================================
@@ -352,16 +329,16 @@ export default function CustomerDashboard() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#06100c] text-white">
+      <main className="min-h-screen bg-[#050705] text-white">
         <div className="flex min-h-screen items-center justify-center px-6">
           <div className="text-center">
-            <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-[#17382b] border-t-[#1BBB8C]" />
+            <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-[#162015] border-t-[#79c51c]" />
 
             <p className="mt-5 text-lg font-black">
               Loading your account...
             </p>
 
-            <p className="mt-2 text-sm text-[#71867c]">
+            <p className="mt-2 text-sm text-[#718067]">
               Getting your latest jobs
             </p>
           </div>
@@ -377,195 +354,186 @@ export default function CustomerDashboard() {
    */
 
   return (
-    <main className="min-h-screen bg-[#06100c] pb-28 pt-[env(safe-area-inset-top)] text-white">
-
-      {/* ================================================= */}
+    <main className="min-h-screen overflow-x-hidden bg-[#050705] pb-28 pt-[env(safe-area-inset-top)] text-white">
       {/* HEADER */}
-      {/* ================================================= */}
 
-      <header className="sticky top-0 z-40 -mt-[env(safe-area-inset-top)] border-b border-[#17382b] bg-[#081710]/95 pt-[env(safe-area-inset-top)] backdrop-blur">
-
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-
+      <header className="pwa-header sticky top-0 z-40 -mt-[env(safe-area-inset-top)] border-b border-white/[0.07] bg-[#050705]/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <Link
             href="/"
-            className="flex items-center gap-2"
+            className="flex items-center"
           >
-            <span className="text-base font-black tracking-tight sm:text-lg">
-              RAPID CLEAR{" "}
-              <span className="text-[#1BBB8C]">
-                SOLUTIONS
-              </span>
-            </span>
+            <Image
+              src="/rapid-clear-logo.png"
+              alt="Rapid Clear Solutions"
+              width={180}
+              height={55}
+              priority
+              className="h-10 w-auto object-contain sm:h-12"
+            />
           </Link>
 
           <div className="flex items-center gap-2">
-
             {!isInstalled && (
               <button
                 type="button"
                 onClick={handleInstallApp}
-                className="rounded-xl border border-[#29483a] px-3 py-2 text-xs font-bold text-[#b8c6c0] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+                className="hidden rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-black text-[#c6d0c2] transition hover:border-[#79c51c]/50 hover:text-[#79c51c] sm:block"
               >
-                Install App
+                INSTALL APP
               </button>
             )}
 
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-xl border border-[#29483a] px-3.5 py-2 text-xs font-bold text-[#b8c6c0] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+              className="rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs font-black text-[#c6d0c2] transition hover:border-[#79c51c]/50 hover:text-[#79c51c]"
             >
-              Log out
+              LOG OUT
             </button>
-
           </div>
-
         </div>
-
       </header>
 
-
-      {/* ================================================= */}
       {/* CONTENT */}
-      {/* ================================================= */}
 
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
-
-        {/* ================================================= */}
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
         {/* WELCOME */}
-        {/* ================================================= */}
 
-        <section>
+        <section className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#080b08] p-6 sm:p-8">
+          <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#79c51c]/[0.07] blur-3xl" />
 
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#1BBB8C]">
-            Customer Portal
-          </p>
+          <div className="relative">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-[#79c51c] shadow-[0_0_15px_rgba(121,197,28,0.7)]" />
 
-          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-            Your dashboard
-          </h1>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
+                    Customer Portal
+                  </p>
+                </div>
 
-          <p className="mt-2 max-w-xl text-sm leading-6 text-[#82958c] sm:text-base">
-            Manage your collections, review driver quotes
-            and keep track of your jobs.
-          </p>
+                <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">
+                  Your dashboard.
+                </h1>
 
+                <p className="mt-3 max-w-xl text-sm leading-6 text-[#87917f] sm:text-base">
+                  Manage your collections, compare driver
+                  quotes and keep track of your RCS jobs.
+                </p>
+              </div>
+
+              <Link
+                href="/customer/post-job"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-xl bg-[#79c51c] px-6 text-sm font-black text-[#050705] transition hover:bg-[#91db32] active:scale-[0.98]"
+              >
+                GET A QUOTE
+                <span className="ml-3 text-lg">
+                  →
+                </span>
+              </Link>
+            </div>
+          </div>
         </section>
 
-
-        {/* ================================================= */}
         {/* POST JOB */}
-        {/* ================================================= */}
 
         <Link
           href="/customer/post-job"
-          className="mt-6 flex min-h-[68px] w-full items-center justify-center rounded-2xl bg-[#1BBB8C] px-5 text-base font-black text-[#06100c] shadow-lg shadow-[#1BBB8C]/10 transition active:scale-[0.98] hover:bg-[#16a77c]"
+          className="group mt-5 flex min-h-[76px] w-full items-center justify-between overflow-hidden rounded-2xl border border-[#79c51c]/30 bg-[#79c51c] px-5 text-[#050705] shadow-[0_12px_40px_rgba(121,197,28,0.08)] transition hover:bg-[#91db32] active:scale-[0.99] sm:px-7"
         >
+          <div className="flex items-center gap-4">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#050705]/10 text-2xl font-black">
+              +
+            </span>
 
-          <span className="mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-[#06100c]/10 text-xl">
-            +
+            <div>
+              <p className="text-base font-black sm:text-lg">
+                POST A NEW JOB
+              </p>
+
+              <p className="mt-0.5 text-xs font-bold text-[#17220f]/70">
+                Tell us what needs clearing
+              </p>
+            </div>
+          </div>
+
+          <span className="text-2xl font-black transition group-hover:translate-x-1">
+            →
           </span>
-
-          POST A NEW JOB
-
         </Link>
 
-
-        {/* ================================================= */}
         {/* ACTION REQUIRED */}
-        {/* ================================================= */}
 
         {actionRequiredCount > 0 && (
-          <section className="mt-6">
-
+          <section className="mt-5">
             <Link
               href="/customer/quotes"
-              className="block overflow-hidden rounded-2xl border border-[#3f8d24] bg-[#10230f] transition active:scale-[0.99] hover:border-[#79c51c]"
+              className="group block overflow-hidden rounded-2xl border border-[#79c51c]/40 bg-[#0c1209] transition hover:border-[#79c51c] active:scale-[0.995]"
             >
-
-              <div className="flex items-center gap-4 p-5">
-
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1BBB8C] text-lg font-black text-[#06100c]">
+              <div className="flex items-center gap-4 p-5 sm:p-6">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#79c51c] text-xl font-black text-[#050705]">
                   £
                 </div>
 
                 <div className="min-w-0 flex-1">
-
-                  <p className="text-xs font-black uppercase tracking-wide text-[#1BBB8C]">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
                     Action required
                   </p>
 
-                  <h2 className="mt-1 text-base font-black">
-                    Driver quotes available
+                  <h2 className="mt-1 text-base font-black sm:text-lg">
+                    Driver quotes are waiting
                   </h2>
 
-                  <p className="mt-1 text-sm text-[#82958c]">
+                  <p className="mt-1 text-sm text-[#7f8b78]">
                     Review and compare your available quotes.
                   </p>
-
                 </div>
 
-                <span className="text-2xl font-black text-[#1BBB8C]">
+                <span className="text-2xl font-black text-[#79c51c] transition group-hover:translate-x-1">
                   →
                 </span>
-
               </div>
 
               {actionRequiredCount > 1 && (
-                <div className="border-t border-[#214333] px-5 py-3 text-xs font-bold text-[#91a99e]">
+                <div className="border-t border-white/[0.06] px-5 py-3 text-xs font-bold text-[#82907d] sm:px-6">
                   {actionRequiredCount} jobs have quotes available
                 </div>
               )}
-
             </Link>
-
           </section>
         )}
 
-
-        {/* ================================================= */}
         {/* ACTIVE COLLECTION */}
-        {/* ================================================= */}
 
         {activeJobs.length > 0 && (
-          <section className="mt-8">
-
+          <section className="mt-9">
             <SectionTitle
               eyebrow="Next up"
               title="Your collection"
             />
 
             <div className="space-y-3">
-
-              {activeJobs
-                .slice(0, 1)
-                .map((job) => (
-                  <ActiveJobCard
-                    key={job.id}
-                    job={job}
-                  />
-                ))}
-
+              {activeJobs.slice(0, 1).map((job) => (
+                <ActiveJobCard
+                  key={job.id}
+                  job={job}
+                />
+              ))}
             </div>
-
           </section>
         )}
 
-
-        {/* ================================================= */}
         {/* QUICK ACCESS */}
-        {/* ================================================= */}
 
-        <section className="mt-8">
-
+        <section className="mt-9">
           <SectionTitle
             eyebrow="Quick access"
             title="What do you need?"
           />
 
-          <div className="grid grid-cols-2 gap-3">
-
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <QuickAction
               href="/customer/quotes"
               icon="£"
@@ -575,6 +543,7 @@ export default function CustomerDashboard() {
                   ? `${actionRequiredCount} waiting`
                   : "View quotes"
               }
+              primary={actionRequiredCount > 0}
             />
 
             <QuickAction
@@ -596,42 +565,31 @@ export default function CustomerDashboard() {
               type="button"
               onClick={() => loadDashboard()}
               disabled={refreshing}
-              className="flex min-h-[108px] flex-col justify-between rounded-2xl border border-[#17382b] bg-[#0b1b14] p-4 text-left transition active:scale-[0.98] disabled:opacity-60"
+              className="flex min-h-[118px] flex-col justify-between rounded-2xl border border-white/[0.07] bg-[#080b08] p-4 text-left transition hover:border-white/[0.14] active:scale-[0.98] disabled:opacity-60"
             >
-
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#123529] text-lg font-black text-[#1BBB8C]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.05] text-xl font-black text-[#79c51c]">
                 ↻
               </span>
 
               <span>
-
                 <span className="block text-sm font-black">
                   {refreshing
                     ? "Refreshing..."
                     : "Refresh"}
                 </span>
 
-                <span className="mt-0.5 block text-xs text-[#71867c]">
+                <span className="mt-1 block text-xs text-[#718067]">
                   Check for updates
                 </span>
-
               </span>
-
             </button>
-
           </div>
-
         </section>
 
-
-        {/* ================================================= */}
         {/* SUMMARY */}
-        {/* ================================================= */}
 
         <section className="mt-8">
-
-          <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-[#17382b] bg-[#0b1b14]">
-
+          <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#080b08]">
             <SummaryItem
               value={pendingJobs.length}
               label="Waiting"
@@ -648,19 +606,56 @@ export default function CustomerDashboard() {
               label="Completed"
               border
             />
-
           </div>
-
         </section>
 
+        {/* WHATSAPP SUPPORT */}
 
-        {/* ================================================= */}
+        <section className="mt-8">
+          <a
+            href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+              "Hi RCS, I need some help with my customer account."
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-4 rounded-2xl border border-[#79c51c]/20 bg-[#080b08] p-5 transition hover:border-[#79c51c]/50 hover:bg-[#0a0f09] active:scale-[0.995] sm:p-6"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#79c51c] text-[#050705]">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-6 w-6"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M20.52 3.48A11.78 11.78 0 0 0 12.08 0C5.57 0 .27 5.3.27 11.81c0 2.08.54 4.11 1.57 5.9L.17 24l6.44-1.69a11.8 11.8 0 0 0 5.47 1.39h.01c6.51 0 11.81-5.3 11.81-11.81 0-3.15-1.23-6.11-3.38-8.41ZM12.09 21.68h-.01a9.82 9.82 0 0 1-5.01-1.37l-.36-.21-3.82 1 1.02-3.72-.23-.38a9.82 9.82 0 0 1-1.51-5.2C2.17 6.37 6.61 1.93 12.08 1.93a9.82 9.82 0 0 1 7 2.9 9.82 9.82 0 0 1 2.9 7c0 5.47-4.44 9.85-9.89 9.85Zm5.39-7.37c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.27-.47-2.42-1.5-.89-.79-1.49-1.76-1.66-2.06-.17-.3-.02-.46.13-.61.14-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.2 5.09 4.49.71.31 1.27.49 1.7.63.72.23 1.38.2 1.9.12.58-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35Z" />
+              </svg>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
+                Need help?
+              </p>
+
+              <h2 className="mt-1 text-base font-black">
+                Message RCS on WhatsApp
+              </h2>
+
+              <p className="mt-1 text-sm leading-5 text-[#718067]">
+                Speak to the Rapid Clear Solutions team
+                about your account or collection.
+              </p>
+            </div>
+
+            <span className="shrink-0 text-xl font-black text-[#79c51c] transition group-hover:translate-x-1">
+              →
+            </span>
+          </a>
+        </section>
+
         {/* ERROR */}
-        {/* ================================================= */}
 
         {errorMessage && (
-          <div className="mt-6 rounded-2xl border border-red-900/60 bg-[#230e0e] p-5">
-
+          <div className="mt-6 rounded-2xl border border-red-900/60 bg-[#180909] p-5">
             <p className="text-sm font-semibold leading-6 text-red-300">
               {errorMessage}
             </p>
@@ -672,19 +667,13 @@ export default function CustomerDashboard() {
             >
               Try again
             </button>
-
           </div>
         )}
 
-
-        {/* ================================================= */}
         {/* RECENT JOBS */}
-        {/* ================================================= */}
 
         <section className="mt-10">
-
           <div className="flex items-end justify-between gap-4">
-
             <SectionTitle
               eyebrow="Activity"
               title="Recent jobs"
@@ -693,44 +682,44 @@ export default function CustomerDashboard() {
             {jobs.length > 0 && (
               <Link
                 href="/customer/jobs"
-                className="mb-5 text-xs font-black text-[#1BBB8C]"
+                className="mb-5 text-xs font-black text-[#79c51c] transition hover:text-[#91db32]"
               >
                 View all →
               </Link>
             )}
-
           </div>
 
           {jobs.length === 0 ? (
             <EmptyJobs />
           ) : (
             <div className="space-y-3">
-
-              {jobs
-                .slice(0, 5)
-                .map((job) => (
-                  <CustomerJobCard
-                    key={job.id}
-                    job={job}
-                  />
-                ))}
-
+              {jobs.slice(0, 5).map((job) => (
+                <CustomerJobCard
+                  key={job.id}
+                  job={job}
+                />
+              ))}
             </div>
           )}
-
         </section>
 
+        {/* FOOTER SUPPORT */}
+
+        <div className="mt-12 border-t border-white/[0.06] pt-7 text-center">
+          <p className="text-xs text-[#596358]">
+            Rapid Clear Solutions
+          </p>
+
+          <p className="mt-1 text-[11px] text-[#414a40]">
+            Waste removal made simple.
+          </p>
+        </div>
       </div>
 
-
-      {/* ================================================= */}
       {/* CUSTOMER APP NAV */}
-      {/* ================================================= */}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#17382b] bg-[#081710]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-
-        <div className="mx-auto grid max-w-5xl grid-cols-4">
-
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.08] bg-[#050705]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+        <div className="mx-auto grid max-w-6xl grid-cols-4">
           <BottomNavItem
             href="/customer/dashboard"
             icon="⌂"
@@ -760,62 +749,44 @@ export default function CustomerDashboard() {
             icon="+"
             label="New Job"
           />
-
         </div>
-
       </nav>
 
-
-      {/* ================================================= */}
       {/* INSTALL APP MODAL */}
-      {/* ================================================= */}
 
       {showInstallModal && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] backdrop-blur-sm"
-          onClick={() =>
-            setShowInstallModal(false)
-          }
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] backdrop-blur-sm"
+          onClick={() => setShowInstallModal(false)}
         >
-
           <div
-            className="w-full max-w-md rounded-3xl border border-[#29483a] bg-[#0b1b14] p-6 shadow-2xl"
-            onClick={(event) =>
-              event.stopPropagation()
-            }
+            className="w-full max-w-md rounded-[28px] border border-white/[0.1] bg-[#080b08] p-6 shadow-2xl sm:p-7"
+            onClick={(event) => event.stopPropagation()}
           >
-
             <div className="flex items-start justify-between gap-4">
-
               <div>
-
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
                   Rapid Clear Solutions
                 </p>
 
                 <h2 className="mt-2 text-2xl font-black">
                   Install the app
                 </h2>
-
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowInstallModal(false)
-                }
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#29483a] text-lg font-black text-[#71867c] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+                onClick={() => setShowInstallModal(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-lg font-black text-[#718067] transition hover:border-[#79c51c]/50 hover:text-[#79c51c]"
                 aria-label="Close"
               >
                 ×
               </button>
-
             </div>
-
 
             {installPrompt ? (
               <>
-                <p className="mt-5 text-sm leading-6 text-[#82958c]">
+                <p className="mt-5 text-sm leading-6 text-[#87917f]">
                   Add Rapid Clear Solutions to your
                   home screen for quick access to your
                   customer portal.
@@ -824,123 +795,104 @@ export default function CustomerDashboard() {
                 <button
                   type="button"
                   onClick={handleInstallApp}
-                  className="mt-6 flex min-h-[52px] w-full items-center justify-center rounded-xl bg-[#1BBB8C] px-5 text-sm font-black text-[#06100c] transition hover:bg-[#16a77c]"
+                  className="mt-6 flex min-h-[52px] w-full items-center justify-center rounded-xl bg-[#79c51c] px-5 text-sm font-black text-[#050705] transition hover:bg-[#91db32]"
                 >
                   INSTALL APP
                 </button>
               </>
             ) : (
               <>
-                <p className="mt-5 text-sm leading-6 text-[#82958c]">
+                <p className="mt-5 text-sm leading-6 text-[#87917f]">
                   You can add Rapid Clear Solutions
                   to your phone's home screen for
                   faster access.
                 </p>
 
-                <div className="mt-5 rounded-2xl border border-[#17382b] bg-[#081710] p-4">
-
+                <div className="mt-5 rounded-2xl border border-white/[0.07] bg-[#050705] p-4">
                   <p className="text-sm font-black">
                     On iPhone
                   </p>
 
-                  <p className="mt-2 text-sm leading-6 text-[#71867c]">
-                    Open this website in Safari,
-                    tap the Share button, then choose
-                    <span className="font-bold text-[#d5dfda]">
-                      {" Add to Home Screen"}
-                    </span>.
+                  <p className="mt-2 text-sm leading-6 text-[#718067]">
+                    Open this website in Safari, tap
+                    the Share button, then choose{" "}
+                    <span className="font-bold text-[#c6d0c2]">
+                      Add to Home Screen
+                    </span>
+                    .
                   </p>
-
                 </div>
 
-                <div className="mt-3 rounded-2xl border border-[#17382b] bg-[#081710] p-4">
-
+                <div className="mt-3 rounded-2xl border border-white/[0.07] bg-[#050705] p-4">
                   <p className="text-sm font-black">
                     On Android
                   </p>
 
-                  <p className="mt-2 text-sm leading-6 text-[#71867c]">
-                    Open the browser menu and choose
-                    <span className="font-bold text-[#d5dfda]">
-                      {" Install app"}
+                  <p className="mt-2 text-sm leading-6 text-[#718067]">
+                    Open the browser menu and choose{" "}
+                    <span className="font-bold text-[#c6d0c2]">
+                      Install app
+                    </span>{" "}
+                    or{" "}
+                    <span className="font-bold text-[#c6d0c2]">
+                      Add to Home screen
                     </span>
-                    {" or "}
-                    <span className="font-bold text-[#d5dfda]">
-                      {"Add to Home screen"}
-                    </span>.
+                    .
                   </p>
-
                 </div>
               </>
             )}
 
             <button
               type="button"
-              onClick={() =>
-                setShowInstallModal(false)
-              }
-              className="mt-4 w-full rounded-xl border border-[#29483a] px-5 py-3 text-sm font-bold text-[#b8c6c0] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+              onClick={() => setShowInstallModal(false)}
+              className="mt-4 w-full rounded-xl border border-white/[0.08] px-5 py-3 text-sm font-bold text-[#b4beb0] transition hover:border-[#79c51c]/50 hover:text-[#79c51c]"
             >
               Maybe later
             </button>
-
           </div>
-
         </div>
       )}
-
     </main>
   );
 }
 
+/*
+ * =========================================================
+ * ACTIVE JOB CARD
+ * =========================================================
+ */
 
-/* ========================================================= */
-/* ACTIVE JOB CARD                                           */
-/* ========================================================= */
-
-function ActiveJobCard({
-  job,
-}: {
-  job: Job;
-}) {
+function ActiveJobCard({ job }: { job: Job }) {
   return (
     <Link
       href={`/customer/jobs/${job.id}`}
-      className="block rounded-2xl border border-[#3f8d24] bg-[#0b1b14] p-5 transition active:scale-[0.99] hover:border-[#79c51c]"
+      className="group block rounded-2xl border border-[#79c51c]/30 bg-[#080b08] p-5 transition hover:border-[#79c51c]/70 active:scale-[0.99]"
     >
-
       <div className="flex items-start gap-4">
-
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#123529] text-lg text-[#1BBB8C]">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#79c51c]/10 text-xs font-black text-[#79c51c]">
           RCS
         </div>
 
         <div className="min-w-0 flex-1">
-
           <div className="flex items-start justify-between gap-3">
-
             <div className="min-w-0">
-
-              <p className="truncate text-xs font-black uppercase tracking-wide text-[#1BBB8C]">
+              <p className="truncate text-xs font-black uppercase tracking-wide text-[#79c51c]">
                 {job.reference ||
                   `RC-${String(job.id).padStart(6, "0")}`}
               </p>
 
               <h3 className="mt-1 truncate font-black">
-                {job.job_type ||
-                  "Waste Collection"}
+                {job.job_type || "Waste Collection"}
               </h3>
-
             </div>
 
             <StatusBadge
               status={job.status || "assigned"}
             />
-
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-
             <MiniDetail
               label="Date"
               value={
@@ -952,45 +904,32 @@ function ActiveJobCard({
 
             <MiniDetail
               label="Time"
-              value={
-                job.preferred_time ||
-                "Not set"
-              }
+              value={job.preferred_time || "Not set"}
             />
-
           </div>
 
-          <div className="mt-4 flex items-center justify-between border-t border-[#214333] pt-4">
-
-            <span className="text-xs font-bold text-[#71867c]">
-              {job.postcode ||
-                "Location not provided"}
+          <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-4">
+            <span className="text-xs font-bold text-[#667160]">
+              {job.postcode || "Location not provided"}
             </span>
 
-            <span className="text-sm font-black text-[#1BBB8C]">
+            <span className="text-sm font-black text-[#79c51c] transition group-hover:translate-x-1">
               View →
             </span>
-
           </div>
-
         </div>
-
       </div>
-
     </Link>
   );
 }
 
+/*
+ * =========================================================
+ * CUSTOMER JOB CARD
+ * =========================================================
+ */
 
-/* ========================================================= */
-/* CUSTOMER JOB CARD                                         */
-/* ========================================================= */
-
-function CustomerJobCard({
-  job,
-}: {
-  job: Job;
-}) {
+function CustomerJobCard({ job }: { job: Job }) {
   const status = normaliseStatus(job.status);
 
   const isCompleted =
@@ -1000,63 +939,54 @@ function CustomerJobCard({
   return (
     <Link
       href={`/customer/jobs/${job.id}`}
-      className="block rounded-2xl border border-[#17382b] bg-[#0b1b14] p-4 transition active:scale-[0.99] hover:border-[#29483a]"
+      className="group block rounded-2xl border border-white/[0.07] bg-[#080b08] p-4 transition hover:border-white/[0.14] active:scale-[0.99]"
     >
-
       <div className="flex items-center gap-4">
-
         <div
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${
             isCompleted
-              ? "bg-[#102019] text-[#657a70]"
-              : "bg-[#123529] text-[#1BBB8C]"
+              ? "bg-white/[0.03] text-[#536050]"
+              : "bg-[#79c51c]/10 text-[#79c51c]"
           }`}
         >
           RCS
         </div>
 
         <div className="min-w-0 flex-1">
-
           <p className="truncate text-sm font-black">
-            {job.job_type ||
-              "Waste Collection"}
+            {job.job_type || "Waste Collection"}
           </p>
 
-          <p className="mt-1 truncate text-xs text-[#71867c]">
-            {job.postcode ||
-              "Postcode not provided"}
+          <p className="mt-1 truncate text-xs text-[#667160]">
+            {job.postcode || "Postcode not provided"}
           </p>
 
           <div className="mt-2 flex items-center gap-2">
-
             <StatusBadge
               status={job.status || "pending"}
             />
 
             {job.preferred_date && (
-              <span className="truncate text-xs text-[#657a70]">
+              <span className="truncate text-xs text-[#536050]">
                 {formatDate(job.preferred_date)}
               </span>
             )}
-
           </div>
-
         </div>
 
-        <div className="shrink-0 text-xl font-black text-[#52665d]">
+        <div className="shrink-0 text-xl font-black text-[#4b5548] transition group-hover:text-[#79c51c]">
           →
         </div>
-
       </div>
-
     </Link>
   );
 }
 
-
-/* ========================================================= */
-/* QUICK ACTION                                              */
-/* ========================================================= */
+/*
+ * =========================================================
+ * QUICK ACTION
+ * =========================================================
+ */
 
 function QuickAction({
   href,
@@ -1074,43 +1004,40 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className={`flex min-h-[108px] flex-col justify-between rounded-2xl border p-4 transition active:scale-[0.98] ${
+      className={`group flex min-h-[118px] flex-col justify-between rounded-2xl border p-4 transition active:scale-[0.98] ${
         primary
-          ? "border-[#3f8d24] bg-[#10230f]"
-          : "border-[#17382b] bg-[#0b1b14]"
+          ? "border-[#79c51c]/30 bg-[#0c1209] hover:border-[#79c51c]/60"
+          : "border-white/[0.07] bg-[#080b08] hover:border-white/[0.14]"
       }`}
     >
-
       <span
         className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg font-black ${
           primary
-            ? "bg-[#1BBB8C] text-[#06100c]"
-            : "bg-[#123529] text-[#1BBB8C]"
+            ? "bg-[#79c51c] text-[#050705]"
+            : "bg-[#79c51c]/10 text-[#79c51c]"
         }`}
       >
         {icon}
       </span>
 
       <span>
-
         <span className="block text-sm font-black">
           {title}
         </span>
 
-        <span className="mt-0.5 block text-xs text-[#71867c]">
+        <span className="mt-1 block text-xs text-[#718067]">
           {subtitle}
         </span>
-
       </span>
-
     </Link>
   );
 }
 
-
-/* ========================================================= */
-/* BOTTOM NAV                                                */
-/* ========================================================= */
+/*
+ * =========================================================
+ * BOTTOM NAV
+ * =========================================================
+ */
 
 function BottomNavItem({
   href,
@@ -1128,37 +1055,32 @@ function BottomNavItem({
   return (
     <Link
       href={href}
-      className={`relative flex min-h-[64px] flex-col items-center justify-center gap-1 text-[11px] font-bold transition ${
+      className={`relative flex min-h-[66px] flex-col items-center justify-center gap-1 text-[11px] font-bold transition ${
         active
-          ? "text-[#1BBB8C]"
-          : "text-[#687d73] hover:text-[#b8c6c0]"
+          ? "text-[#79c51c]"
+          : "text-[#65705f] hover:text-[#b8c3b3]"
       }`}
     >
-
       <span className="relative text-xl leading-none">
-
         {icon}
 
         {badge !== undefined && (
-          <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1BBB8C] px-1 text-[9px] font-black text-[#06100c]">
+          <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#79c51c] px-1 text-[9px] font-black text-[#050705]">
             {badge > 9 ? "9+" : badge}
           </span>
         )}
-
       </span>
 
-      <span>
-        {label}
-      </span>
-
+      <span>{label}</span>
     </Link>
   );
 }
 
-
-/* ========================================================= */
-/* SUMMARY ITEM                                              */
-/* ========================================================= */
+/*
+ * =========================================================
+ * SUMMARY ITEM
+ * =========================================================
+ */
 
 function SummaryItem({
   value,
@@ -1171,29 +1093,28 @@ function SummaryItem({
 }) {
   return (
     <div
-      className={`px-3 py-4 text-center ${
+      className={`px-3 py-5 text-center ${
         border
-          ? "border-l border-[#17382b]"
+          ? "border-l border-white/[0.07]"
           : ""
       }`}
     >
-
-      <p className="text-xl font-black">
+      <p className="text-2xl font-black">
         {value}
       </p>
 
-      <p className="mt-1 text-[11px] font-bold text-[#657a70]">
+      <p className="mt-1 text-[11px] font-bold text-[#667160]">
         {label}
       </p>
-
     </div>
   );
 }
 
-
-/* ========================================================= */
-/* MINI DETAIL                                               */
-/* ========================================================= */
+/*
+ * =========================================================
+ * MINI DETAIL
+ * =========================================================
+ */
 
 function MiniDetail({
   label,
@@ -1204,33 +1125,28 @@ function MiniDetail({
 }) {
   return (
     <div>
-
-      <p className="text-[10px] font-black uppercase tracking-wide text-[#657a70]">
+      <p className="text-[10px] font-black uppercase tracking-wide text-[#536050]">
         {label}
       </p>
 
-      <p className="mt-1 truncate text-xs font-bold text-[#d5dfda]">
+      <p className="mt-1 truncate text-xs font-bold text-[#c7d0c3]">
         {value}
       </p>
-
     </div>
   );
 }
 
+/*
+ * =========================================================
+ * STATUS BADGE
+ * =========================================================
+ */
 
-/* ========================================================= */
-/* STATUS BADGE                                              */
-/* ========================================================= */
-
-function StatusBadge({
-  status,
-}: {
-  status: string;
-}) {
+function StatusBadge({ status }: { status: string }) {
   const normalised = normaliseStatus(status);
 
   let className =
-    "border-[#29483a] bg-[#18271f] text-[#b8c6c0]";
+    "border-white/10 bg-white/[0.04] text-[#b8c3b3]";
 
   let text = formatStatus(status);
 
@@ -1240,7 +1156,7 @@ function StatusBadge({
     normalised === "open"
   ) {
     className =
-      "border-amber-900/60 bg-amber-950/40 text-amber-300";
+      "border-amber-900/60 bg-amber-950/30 text-amber-300";
 
     text =
       normalised === "new"
@@ -1250,7 +1166,7 @@ function StatusBadge({
 
   if (normalised === "bidding") {
     className =
-      "border-blue-900/60 bg-blue-950/40 text-blue-300";
+      "border-blue-900/60 bg-blue-950/30 text-blue-300";
 
     text = "Quotes";
   }
@@ -1261,7 +1177,7 @@ function StatusBadge({
     normalised === "booked"
   ) {
     className =
-      "border-[#3f8d24] bg-[#183017] text-[#1BBB8C]";
+      "border-[#79c51c]/30 bg-[#79c51c]/10 text-[#79c51c]";
 
     text = "Booked";
   }
@@ -1271,7 +1187,7 @@ function StatusBadge({
     normalised === "in progress"
   ) {
     className =
-      "border-blue-900/60 bg-blue-950/40 text-blue-300";
+      "border-blue-900/60 bg-blue-950/30 text-blue-300";
 
     text = "In Progress";
   }
@@ -1281,7 +1197,7 @@ function StatusBadge({
     normalised === "complete"
   ) {
     className =
-      "border-green-900/60 bg-green-950/40 text-green-300";
+      "border-green-900/60 bg-green-950/30 text-green-300";
 
     text = "Completed";
   }
@@ -1292,7 +1208,7 @@ function StatusBadge({
     normalised === "rejected"
   ) {
     className =
-      "border-red-900/60 bg-red-950/40 text-red-300";
+      "border-red-900/60 bg-red-950/30 text-red-300";
   }
 
   return (
@@ -1304,10 +1220,11 @@ function StatusBadge({
   );
 }
 
-
-/* ========================================================= */
-/* SECTION TITLE                                             */
-/* ========================================================= */
+/*
+ * =========================================================
+ * SECTION TITLE
+ * =========================================================
+ */
 
 function SectionTitle({
   eyebrow,
@@ -1318,29 +1235,27 @@ function SectionTitle({
 }) {
   return (
     <div className="mb-4">
-
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
         {eyebrow}
       </p>
 
-      <h2 className="mt-1 text-xl font-black">
+      <h2 className="mt-1 text-xl font-black sm:text-2xl">
         {title}
       </h2>
-
     </div>
   );
 }
 
-
-/* ========================================================= */
-/* EMPTY STATE                                               */
-/* ========================================================= */
+/*
+ * =========================================================
+ * EMPTY STATE
+ * =========================================================
+ */
 
 function EmptyJobs() {
   return (
-    <div className="rounded-2xl border border-dashed border-[#29483a] bg-[#081710] px-5 py-10 text-center">
-
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#123529] text-sm font-black text-[#1BBB8C]">
+    <div className="rounded-2xl border border-dashed border-white/[0.12] bg-[#080b08] px-5 py-12 text-center">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#79c51c]/10 text-sm font-black text-[#79c51c]">
         RCS
       </div>
 
@@ -1348,33 +1263,29 @@ function EmptyJobs() {
         No jobs yet
       </h3>
 
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#71867c]">
-        Post a job and approved RCS drivers
-        can send you quotes.
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#718067]">
+        Post a job and approved RCS drivers can
+        send you quotes.
       </p>
 
       <Link
         href="/customer/post-job"
-        className="mt-6 inline-flex min-h-[50px] items-center justify-center rounded-xl bg-[#1BBB8C] px-6 font-black text-[#06100c]"
+        className="mt-6 inline-flex min-h-[50px] items-center justify-center rounded-xl bg-[#79c51c] px-6 font-black text-[#050705] transition hover:bg-[#91db32]"
       >
         POST YOUR FIRST JOB
       </Link>
-
     </div>
   );
 }
 
+/*
+ * =========================================================
+ * HELPERS
+ * =========================================================
+ */
 
-/* ========================================================= */
-/* HELPERS                                                   */
-/* ========================================================= */
-
-function normaliseStatus(
-  status: string | null
-) {
-  return (status || "")
-    .trim()
-    .toLowerCase();
+function normaliseStatus(status: string | null) {
+  return (status || "").trim().toLowerCase();
 }
 
 function formatStatus(status: string) {
@@ -1386,9 +1297,7 @@ function formatStatus(status: string) {
 }
 
 function formatDate(date: string) {
-  const parsed = new Date(
-    `${date}T00:00:00`
-  );
+  const parsed = new Date(`${date}T00:00:00`);
 
   if (Number.isNaN(parsed.getTime())) {
     return date;
