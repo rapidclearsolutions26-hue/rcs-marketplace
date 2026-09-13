@@ -56,9 +56,7 @@ type RealtimeState =
   | "offline";
 
 const GREEN = "#79c51c";
-const GREEN_HOVER = "#91db32";
 const BG = "#050705";
-const SECTION = "#080b08";
 const CARD = "#0a0e0a";
 const BORDER = "rgba(121,197,28,0.16)";
 const SOFT_BORDER = "rgba(255,255,255,0.07)";
@@ -67,7 +65,12 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [bids, setBids] = useState<Bid[]>([]);
-  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
+  const [payoutRequests, setPayoutRequests] = useState<
+    PayoutRequest[]
+  >([]);
+
+  // This is now the real customer account count from profiles.
+  const [customersCount, setCustomersCount] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,7 +79,8 @@ export default function AdminDashboard() {
   const [realtimeState, setRealtimeState] =
     useState<RealtimeState>("connecting");
 
-  const [lastLiveUpdate, setLastLiveUpdate] = useState<Date | null>(null);
+  const [lastLiveUpdate, setLastLiveUpdate] =
+    useState<Date | null>(null);
 
   const refreshTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,18 +145,42 @@ export default function AdminDashboard() {
         return;
       }
 
-      setJobs(Array.isArray(data.jobs) ? data.jobs : []);
-      setDrivers(Array.isArray(data.drivers) ? data.drivers : []);
-      setBids(Array.isArray(data.bids) ? data.bids : []);
+      setJobs(
+        Array.isArray(data.jobs)
+          ? data.jobs
+          : []
+      );
+
+      setDrivers(
+        Array.isArray(data.drivers)
+          ? data.drivers
+          : []
+      );
+
+      setBids(
+        Array.isArray(data.bids)
+          ? data.bids
+          : []
+      );
+
       setPayoutRequests(
         Array.isArray(data.payoutRequests)
           ? data.payoutRequests
           : []
       );
 
+      // IMPORTANT:
+      // Use the real customer count returned by the API.
+      setCustomersCount(
+        Number(data.customersCount || 0)
+      );
+
       setLastLiveUpdate(new Date());
     } catch (error) {
-      console.error("Admin dashboard error:", error);
+      console.error(
+        "Admin dashboard error:",
+        error
+      );
 
       if (mountedRef.current) {
         setErrorMessage(
@@ -187,32 +215,41 @@ export default function AdminDashboard() {
   /*
    * SUPABASE REALTIME
    *
-   * Any INSERT / UPDATE / DELETE on:
+   * Live updates are listened for on:
    *
    * jobs
    * drivers
    * bids
    * driver_payout_requests
+   * profiles
    *
-   * causes the dashboard API to reload automatically.
+   * profiles is important because customer accounts
+   * are stored there.
    */
   useEffect(() => {
     const supabase = createClient();
 
-    let channel: ReturnType<typeof supabase.channel> | null =
-      null;
+    let channel:
+      | ReturnType<typeof supabase.channel>
+      | null = null;
 
     let reconnectAttempts = 0;
     let destroyed = false;
 
     const clearTimers = () => {
       if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
+        clearTimeout(
+          refreshTimeoutRef.current
+        );
+
         refreshTimeoutRef.current = null;
       }
 
       if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
+        clearTimeout(
+          reconnectTimeoutRef.current
+        );
+
         reconnectTimeoutRef.current = null;
       }
     };
@@ -223,22 +260,25 @@ export default function AdminDashboard() {
       }
 
       /*
-       * Several database changes can happen almost simultaneously.
-       * Instead of making 5 API requests, wait 300ms and make one.
+       * Prevent multiple database events from causing
+       * multiple API requests at the same time.
        */
       if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
+        clearTimeout(
+          refreshTimeoutRef.current
+        );
       }
 
-      refreshTimeoutRef.current = setTimeout(() => {
-        refreshTimeoutRef.current = null;
+      refreshTimeoutRef.current =
+        setTimeout(() => {
+          refreshTimeoutRef.current = null;
 
-        if (destroyed) {
-          return;
-        }
+          if (destroyed) {
+            return;
+          }
 
-        void loadDashboard(true);
-      }, 300);
+          void loadDashboard(true);
+        }, 300);
     };
 
     const subscribe = () => {
@@ -247,7 +287,9 @@ export default function AdminDashboard() {
       }
 
       setRealtimeState(
-        reconnectAttempts === 0 ? "connecting" : "reconnecting"
+        reconnectAttempts === 0
+          ? "connecting"
+          : "reconnecting"
       );
 
       if (channel) {
@@ -256,7 +298,13 @@ export default function AdminDashboard() {
       }
 
       channel = supabase
-        .channel(`admin-dashboard-live-${Date.now()}`)
+        .channel(
+          `admin-dashboard-live-${Date.now()}`
+        )
+
+        /*
+         * JOBS
+         */
         .on(
           "postgres_changes",
           {
@@ -265,11 +313,19 @@ export default function AdminDashboard() {
             table: "jobs",
           },
           () => {
-            console.log("RCS Realtime: jobs changed");
+            console.log(
+              "RCS Realtime: jobs changed"
+            );
+
             setLastLiveUpdate(new Date());
+
             scheduleRefresh();
           }
         )
+
+        /*
+         * DRIVERS
+         */
         .on(
           "postgres_changes",
           {
@@ -278,11 +334,19 @@ export default function AdminDashboard() {
             table: "drivers",
           },
           () => {
-            console.log("RCS Realtime: drivers changed");
+            console.log(
+              "RCS Realtime: drivers changed"
+            );
+
             setLastLiveUpdate(new Date());
+
             scheduleRefresh();
           }
         )
+
+        /*
+         * BIDS
+         */
         .on(
           "postgres_changes",
           {
@@ -291,11 +355,19 @@ export default function AdminDashboard() {
             table: "bids",
           },
           () => {
-            console.log("RCS Realtime: bids changed");
+            console.log(
+              "RCS Realtime: bids changed"
+            );
+
             setLastLiveUpdate(new Date());
+
             scheduleRefresh();
           }
         )
+
+        /*
+         * DRIVER PAYOUT REQUESTS
+         */
         .on(
           "postgres_changes",
           {
@@ -307,10 +379,38 @@ export default function AdminDashboard() {
             console.log(
               "RCS Realtime: payout request changed"
             );
+
             setLastLiveUpdate(new Date());
+
             scheduleRefresh();
           }
         )
+
+        /*
+         * CUSTOMER PROFILES
+         *
+         * This is what makes the customer count
+         * update when a new customer registers.
+         */
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "profiles",
+            filter: "role=eq.customer",
+          },
+          () => {
+            console.log(
+              "RCS Realtime: customer profile changed"
+            );
+
+            setLastLiveUpdate(new Date());
+
+            scheduleRefresh();
+          }
+        )
+
         .subscribe((status) => {
           console.log(
             "RCS Admin Realtime status:",
@@ -323,6 +423,7 @@ export default function AdminDashboard() {
 
           if (status === "SUBSCRIBED") {
             reconnectAttempts = 0;
+
             setRealtimeState("live");
 
             console.log(
@@ -336,7 +437,9 @@ export default function AdminDashboard() {
             status === "CHANNEL_ERROR" ||
             status === "TIMED_OUT"
           ) {
-            setRealtimeState("reconnecting");
+            setRealtimeState(
+              "reconnecting"
+            );
 
             reconnectAttempts += 1;
 
@@ -348,7 +451,9 @@ export default function AdminDashboard() {
               )
             );
 
-            if (reconnectTimeoutRef.current) {
+            if (
+              reconnectTimeoutRef.current
+            ) {
               clearTimeout(
                 reconnectTimeoutRef.current
               );
@@ -356,7 +461,8 @@ export default function AdminDashboard() {
 
             reconnectTimeoutRef.current =
               setTimeout(() => {
-                reconnectTimeoutRef.current = null;
+                reconnectTimeoutRef.current =
+                  null;
 
                 if (!destroyed) {
                   subscribe();
@@ -379,7 +485,9 @@ export default function AdminDashboard() {
               )
             );
 
-            if (reconnectTimeoutRef.current) {
+            if (
+              reconnectTimeoutRef.current
+            ) {
               clearTimeout(
                 reconnectTimeoutRef.current
               );
@@ -387,7 +495,8 @@ export default function AdminDashboard() {
 
             reconnectTimeoutRef.current =
               setTimeout(() => {
-                reconnectTimeoutRef.current = null;
+                reconnectTimeoutRef.current =
+                  null;
 
                 if (!destroyed) {
                   subscribe();
@@ -400,8 +509,7 @@ export default function AdminDashboard() {
     subscribe();
 
     /*
-     * If the browser tab loses network and comes back,
-     * reconnect to Supabase automatically.
+     * Browser comes back online.
      */
     const handleOnline = () => {
       console.log(
@@ -417,6 +525,9 @@ export default function AdminDashboard() {
       void loadDashboard(true);
     };
 
+    /*
+     * Browser goes offline.
+     */
     const handleOffline = () => {
       console.log(
         "RCS Admin: browser offline"
@@ -451,104 +562,125 @@ export default function AdminDashboard() {
       );
 
       if (channel) {
-        void supabase.removeChannel(channel);
+        void supabase.removeChannel(
+          channel
+        );
+
         channel = null;
       }
     };
   }, [loadDashboard]);
 
   /*
-   * 15-second fallback.
+   * 15 SECOND SAFETY REFRESH.
    *
-   * Realtime should normally update the dashboard immediately,
-   * but this protects against a temporary websocket issue.
+   * Realtime should normally update immediately.
+   * This is just a backup if a websocket disconnects.
    */
   useEffect(() => {
-    const interval = window.setInterval(() => {
-      void loadDashboard(true);
-    }, 15000);
+    const interval =
+      window.setInterval(() => {
+        void loadDashboard(true);
+      }, 15000);
 
     return () => {
       window.clearInterval(interval);
     };
   }, [loadDashboard]);
 
-  const openJobs = jobs.filter((j) =>
+  const openJobs = jobs.filter((job) =>
     ["open", "bidding"].includes(
-      normalise(j.status)
+      normalise(job.status)
     )
   );
 
   const assignedJobs = jobs.filter(
-    (j) => normalise(j.status) === "assigned"
+    (job) =>
+      normalise(job.status) ===
+      "assigned"
   );
 
   const onTheWayJobs = jobs.filter(
-    (j) =>
-      normalise(j.journey_status) ===
-      "on_the_way"
+    (job) =>
+      normalise(
+        job.journey_status
+      ) === "on_the_way"
   );
 
   const inProgressJobs = jobs.filter(
-    (j) =>
-      normalise(j.journey_status) ===
-      "in_progress"
+    (job) =>
+      normalise(
+        job.journey_status
+      ) === "in_progress"
   );
 
   const completedJobs = jobs.filter(
-    (j) =>
-      normalise(j.status) === "completed" ||
-      normalise(j.journey_status) ===
-        "completed"
+    (job) =>
+      normalise(job.status) ===
+        "completed" ||
+      normalise(
+        job.journey_status
+      ) === "completed"
   );
 
-  const pendingDrivers = drivers.filter(
-    (d) =>
-      normalise(d.application_status) ===
-      "pending"
-  );
+  const pendingDrivers =
+    drivers.filter(
+      (driver) =>
+        normalise(
+          driver.application_status
+        ) === "pending"
+    );
 
-  const approvedDrivers = drivers.filter(
-    (d) =>
-      normalise(d.application_status) ===
-        "approved" ||
-      d.approved === true
-  );
+  const approvedDrivers =
+    drivers.filter(
+      (driver) =>
+        normalise(
+          driver.application_status
+        ) === "approved" ||
+        driver.approved === true
+    );
 
-  const suspendedDrivers = drivers.filter(
-    (d) =>
-      normalise(d.application_status) ===
-      "suspended"
-  );
+  const suspendedDrivers =
+    drivers.filter(
+      (driver) =>
+        normalise(
+          driver.application_status
+        ) === "suspended"
+    );
 
   const acceptedBids = bids.filter(
-    (b) =>
-      normalise(b.status) === "accepted"
+    (bid) =>
+      normalise(bid.status) ===
+      "accepted"
   );
 
   const pendingBids = bids.filter(
-    (b) =>
-      !b.status ||
-      normalise(b.status) === "pending"
+    (bid) =>
+      !bid.status ||
+      normalise(bid.status) ===
+        "pending"
   );
 
   const paidJobs = jobs.filter(
-    (j) =>
-      normalise(j.payment_status) ===
-      "paid"
+    (job) =>
+      normalise(
+        job.payment_status
+      ) === "paid"
   );
 
   const totalAcceptedValue =
     acceptedBids.reduce(
       (total, bid) =>
-        total + Number(bid.amount || 0),
+        total +
+        Number(bid.amount || 0),
       0
     );
 
   const totalRcsFees =
     acceptedBids.reduce(
       (total, bid) =>
-        total + Number(
+        total +
+        Number(
           bid.platform_fee || 0
         ),
       0
@@ -557,7 +689,8 @@ export default function AdminDashboard() {
   const totalDriverPayouts =
     acceptedBids.reduce(
       (total, bid) =>
-        total + Number(
+        total +
+        Number(
           bid.driver_payout || 0
         ),
       0
@@ -566,14 +699,16 @@ export default function AdminDashboard() {
   const pendingPayoutRequests =
     payoutRequests.filter(
       (request) =>
-        normalise(request.status) ===
-        "pending"
+        normalise(
+          request.status
+        ) === "pending"
     );
 
   const totalPendingPayouts =
     pendingPayoutRequests.reduce(
       (total, request) =>
-        total + Number(
+        total +
+        Number(
           request.amount || 0
         ),
       0
@@ -681,7 +816,10 @@ export default function AdminDashboard() {
             <button
               type="button"
               onClick={async () => {
-                await createClient().auth.signOut();
+                await createClient()
+                  .auth
+                  .signOut();
+
                 window.location.href =
                   "/admin/login";
               }}
@@ -823,7 +961,9 @@ export default function AdminDashboard() {
 
           <StatCard
             title="Approved Drivers"
-            number={approvedDrivers.length}
+            number={
+              approvedDrivers.length
+            }
             description="Active drivers"
             icon="DRV"
             href="/admin/drivers"
@@ -831,8 +971,8 @@ export default function AdminDashboard() {
 
           <StatCard
             title="Customers"
-            number={uniqueCustomers(jobs)}
-            description="Customers with jobs"
+            number={customersCount}
+            description="Registered customer accounts"
             icon="CUS"
             href="/admin/customers"
           />
@@ -858,7 +998,9 @@ export default function AdminDashboard() {
             <ActionCard
               href="/admin/drivers"
               label="Driver Applications"
-              value={pendingDrivers.length}
+              value={
+                pendingDrivers.length
+              }
               description="Applications waiting for review"
               highlighted={
                 pendingDrivers.length > 0
@@ -959,21 +1101,27 @@ export default function AdminDashboard() {
           <section className="grid gap-3 sm:grid-cols-3">
             <OverviewCard
               title="Pending Applications"
-              number={pendingDrivers.length}
+              number={
+                pendingDrivers.length
+              }
               description="Need reviewing"
               link="/admin/drivers"
             />
 
             <OverviewCard
               title="Approved Drivers"
-              number={approvedDrivers.length}
+              number={
+                approvedDrivers.length
+              }
               description="Currently active"
               link="/admin/drivers"
             />
 
             <OverviewCard
               title="Suspended"
-              number={suspendedDrivers.length}
+              number={
+                suspendedDrivers.length
+              }
               description="Currently suspended"
               link="/admin/drivers"
             />
@@ -1047,7 +1195,7 @@ export default function AdminDashboard() {
               href="/admin/customers"
               title="Customers"
               description="View customers and their jobs."
-              number={uniqueCustomers(jobs)}
+              number={customersCount}
             />
 
             <ManagementCard
@@ -1189,7 +1337,9 @@ function AdminNavLink({
         background: active
           ? GREEN
           : "rgba(255,255,255,0.025)",
-        color: active ? BG : "#a1a1aa",
+        color: active
+          ? BG
+          : "#a1a1aa",
         borderColor: active
           ? GREEN
           : SOFT_BORDER,
@@ -1215,9 +1365,13 @@ function RealtimeIndicator({
     label = "Live";
     dot = GREEN;
     text = "#b8ef7a";
-  } else if (state === "reconnecting") {
+  } else if (
+    state === "reconnecting"
+  ) {
     label = "Reconnecting";
-  } else if (state === "offline") {
+  } else if (
+    state === "offline"
+  ) {
     label = "Offline";
     dot = "#f87171";
     text = "#fca5a5";
@@ -1249,7 +1403,9 @@ function RealtimeIndicator({
 
       <span
         className="text-[9px] font-black uppercase tracking-wider"
-        style={{ color: text }}
+        style={{
+          color: text,
+        }}
       >
         {label}
       </span>
@@ -1623,7 +1779,8 @@ function StatusBadge({
     | undefined;
 }) {
   const safe =
-    normalise(status) || "unknown";
+    normalise(status) ||
+    "unknown";
 
   let background =
     "rgba(255,255,255,0.025)";
@@ -1632,14 +1789,18 @@ function StatusBadge({
   let text = "#a1a1aa";
 
   if (
-    ["open", "bidding", "pending"].includes(
-      safe
-    )
+    [
+      "open",
+      "bidding",
+      "pending",
+    ].includes(safe)
   ) {
     background =
       "rgba(240,180,41,0.10)";
+
     border =
       "rgba(240,180,41,0.28)";
+
     text = "#f6d68a";
   } else if (
     [
@@ -1651,18 +1812,23 @@ function StatusBadge({
   ) {
     background =
       "rgba(121,197,28,0.10)";
+
     border =
       "rgba(121,197,28,0.28)";
+
     text = "#b8ef7a";
   } else if (
-    ["rejected", "cancelled"].includes(
-      safe
-    )
+    [
+      "rejected",
+      "cancelled",
+    ].includes(safe)
   ) {
     background =
       "rgba(127,29,29,0.14)";
+
     border =
       "rgba(248,113,113,0.24)";
+
     text = "#fca5a5";
   }
 
@@ -1706,7 +1872,8 @@ function normalise(
     | undefined
 ) {
   return (
-    value?.trim().toLowerCase() || ""
+    value?.trim().toLowerCase() ||
+    ""
   );
 }
 
@@ -1717,7 +1884,8 @@ function formatStatus(
     | undefined
 ) {
   return (
-    normalise(value) || "unknown"
+    normalise(value) ||
+    "unknown"
   )
     .replaceAll("_", " ")
     .replace(
@@ -1733,17 +1901,4 @@ function formatMoney(
   return Number(
     value || 0
   ).toFixed(2);
-}
-
-function uniqueCustomers(
-  jobs: Job[]
-) {
-  return new Set(
-    jobs
-      .map(
-        (job) =>
-          job.customer_id
-      )
-      .filter(Boolean)
-  ).size;
 }
