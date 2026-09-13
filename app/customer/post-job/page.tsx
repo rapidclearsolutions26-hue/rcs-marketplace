@@ -7,7 +7,6 @@ import {
 } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 
 const wasteTypes = [
   "House clearance",
@@ -39,8 +38,6 @@ const locations = [
 ];
 
 export default function PostJobPage() {
-  const router = useRouter();
-
   const [loading, setLoading] = useState(false);
 
   const [errorMessage, setErrorMessage] =
@@ -48,6 +45,15 @@ export default function PostJobPage() {
 
   const [successMessage, setSuccessMessage] =
     useState("");
+
+  const [jobPosted, setJobPosted] =
+    useState(false);
+
+  const [jobReference, setJobReference] =
+    useState("");
+
+  const [confirmationRequired, setConfirmationRequired] =
+    useState(false);
 
   /*
    * JOB DETAILS
@@ -338,8 +344,7 @@ export default function PostJobPage() {
       );
 
       /*
-       * Location is included inside the
-       * access notes so the driver can see it.
+       * LOCATION
        */
 
       formData.append(
@@ -452,57 +457,44 @@ export default function PostJobPage() {
        */
 
       const reference =
-        result.reference ||
-        "";
+        result.reference || "";
 
       const emailConfirmationRequired =
-        result.emailConfirmationRequired;
+        Boolean(
+          result.emailConfirmationRequired
+        );
 
-      if (
+      setJobReference(reference);
+
+      setConfirmationRequired(
         emailConfirmationRequired
-      ) {
+      );
+
+      if (emailConfirmationRequired) {
         setSuccessMessage(
-          reference
-            ? `Your job ${reference} has been posted successfully. We've sent a confirmation email to ${email.trim()}. Please confirm your email address, then log in to view your job and driver quotes.`
-            : `Your job has been posted successfully. We've sent a confirmation email to ${email.trim()}. Please confirm your email address, then log in to view your job and driver quotes.`
+          "Your job has been posted successfully."
         );
       } else {
         setSuccessMessage(
-          reference
-            ? `Your job ${reference} has been posted successfully.`
-            : "Your job has been posted successfully."
+          "Your job has been posted successfully."
         );
       }
 
       /*
-       * ==============================================
-       * SEND CUSTOMER TO LOGIN
+       * IMPORTANT:
        *
-       * We do NOT send the password or session
-       * through the browser.
-       * ==============================================
+       * We DO NOT redirect automatically.
+       *
+       * The customer now sees a proper
+       * confirmation screen.
        */
 
-      setTimeout(() => {
-        const params =
-          new URLSearchParams();
+      setJobPosted(true);
 
-        params.set(
-          "posted",
-          "success"
-        );
-
-        if (reference) {
-          params.set(
-            "reference",
-            reference
-          );
-        }
-
-        router.push(
-          `/customer/login?${params.toString()}`
-        );
-      }, 1800);
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch (error) {
       console.error(
         "POST JOB ERROR:",
@@ -522,6 +514,207 @@ export default function PostJobPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  /*
+   * ==============================================
+   * JOB POSTED SCREEN
+   * ==============================================
+   */
+
+  if (jobPosted) {
+    return (
+      <main className="min-h-screen bg-[#07100b] text-white">
+
+        {/* HEADER */}
+
+        <header className="border-b border-white/10 bg-[#07100b]">
+
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+
+            <Link href="/">
+              <Image
+                src="/rcs-logo.jpg"
+                alt="Rapid Clear Solutions"
+                width={170}
+                height={65}
+                className="h-12 w-auto object-contain"
+              />
+            </Link>
+
+          </div>
+
+        </header>
+
+        {/* SUCCESS CONTENT */}
+
+        <div className="mx-auto flex min-h-[calc(100vh-81px)] max-w-3xl items-center px-4 py-12 sm:px-6">
+
+          <section className="w-full rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-6 text-center shadow-2xl sm:p-10">
+
+            {/* SUCCESS ICON */}
+
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#529027]/15">
+
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#529027] text-3xl font-black text-white">
+                ✓
+              </div>
+
+            </div>
+
+            <p className="mt-7 text-sm font-black uppercase tracking-[0.2em] text-[#71b33d]">
+              RCS Marketplace
+            </p>
+
+            <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">
+              Your job has been posted.
+            </h1>
+
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#aeb9af] sm:text-lg">
+              Your waste removal job has been
+              successfully sent to the RCS
+              Marketplace.
+            </p>
+
+            {/* REFERENCE */}
+
+            {jobReference && (
+              <div className="mx-auto mt-7 max-w-sm rounded-2xl border border-white/10 bg-[#07100b] p-5">
+
+                <p className="text-xs font-black uppercase tracking-[0.15em] text-[#758177]">
+                  Job reference
+                </p>
+
+                <p className="mt-2 text-2xl font-black text-white">
+                  {jobReference}
+                </p>
+
+              </div>
+            )}
+
+            {/* EMAIL CONFIRMATION */}
+
+            {confirmationRequired ? (
+              <div className="mt-7 rounded-2xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/5 p-5 text-left">
+
+                <div className="flex items-start gap-4">
+
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1BBB8C]/15 text-lg">
+                    ✉
+                  </div>
+
+                  <div>
+
+                    <h2 className="font-black text-[#b8f1dc]">
+                      Please confirm your email
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-[#aeb9af]">
+                      We've sent a confirmation
+                      email to:
+                    </p>
+
+                    <p className="mt-2 break-all font-black text-white">
+                      {email.trim().toLowerCase()}
+                    </p>
+
+                    <p className="mt-3 text-sm leading-6 text-[#aeb9af]">
+                      Open the email and click the
+                      confirmation link. Once your
+                      email has been confirmed, come
+                      back here and log in to your RCS
+                      customer account.
+                    </p>
+
+                  </div>
+
+                </div>
+
+              </div>
+            ) : (
+              <div className="mt-7 rounded-2xl border border-[#529027]/30 bg-[#529027]/5 p-5 text-left">
+
+                <h2 className="font-black text-[#9bd76c]">
+                  Your account is ready
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-[#aeb9af]">
+                  Your RCS customer account has
+                  been created and your job is now
+                  available to approved RCS drivers.
+                </p>
+
+              </div>
+            )}
+
+            {/* WHAT HAPPENS NEXT */}
+
+            <div className="mt-7 rounded-2xl border border-white/10 bg-[#07100b] p-5 text-left">
+
+              <h2 className="font-black text-white">
+                What happens next?
+              </h2>
+
+              <div className="mt-4 space-y-4">
+
+                <NextStep
+                  number="01"
+                  title={
+                    confirmationRequired
+                      ? "Confirm your email"
+                      : "Log in to your account"
+                  }
+                  text={
+                    confirmationRequired
+                      ? "Check your inbox and click the confirmation link we sent you."
+                      : "Use the email address and password you entered when posting your job."
+                  }
+                />
+
+                <NextStep
+                  number="02"
+                  title="Approved drivers review your job"
+                  text="RCS drivers can see your job details and submit their price."
+                />
+
+                <NextStep
+                  number="03"
+                  title="Compare driver quotes"
+                  text="Once drivers have submitted quotes, you can review them from your customer dashboard."
+                />
+
+                <NextStep
+                  number="04"
+                  title="Choose your driver"
+                  text="Select the driver and quote that works best for you."
+                />
+
+              </div>
+
+            </div>
+
+            {/* LOGIN BUTTON */}
+
+            <Link
+              href="/customer/login"
+              className="mt-8 flex w-full items-center justify-center rounded-2xl bg-[#529027] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:bg-[#6aad3a]"
+            >
+              GO TO CUSTOMER LOGIN →
+            </Link>
+
+            <Link
+              href="/"
+              className="mt-4 inline-flex text-sm font-bold text-[#8f9d91] transition hover:text-white"
+            >
+              Return to RCS Marketplace
+            </Link>
+
+          </section>
+
+        </div>
+
+      </main>
+    );
   }
 
   return (
@@ -603,24 +796,6 @@ export default function PostJobPage() {
                 LOG IN TO YOUR ACCOUNT →
               </Link>
             )}
-
-          </div>
-        )}
-
-        {/* ================================================= */}
-        {/* SUCCESS                                           */}
-        {/* ================================================= */}
-
-        {successMessage && (
-          <div className="mt-8 rounded-2xl border border-[#529027]/40 bg-[#529027]/10 p-5">
-
-            <p className="font-bold text-[#9bd76c]">
-              ✓ {successMessage}
-            </p>
-
-            <p className="mt-2 text-sm text-[#aeb9af]">
-              Taking you to customer login...
-            </p>
 
           </div>
         )}
@@ -1285,7 +1460,7 @@ export default function PostJobPage() {
           </section>
 
           {/* ================================================= */}
-          {/* SUBMIT                                             */}
+          {/* SUBMIT                                            */}
           {/* ================================================= */}
 
           <section className="rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
@@ -1357,6 +1532,42 @@ export default function PostJobPage() {
       </div>
 
     </main>
+  );
+}
+
+/* ========================================================= */
+/* NEXT STEP                                                 */
+/* ========================================================= */
+
+function NextStep({
+  number,
+  title,
+  text,
+}: {
+  number: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="flex gap-4">
+
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#529027] text-xs font-black text-white">
+        {number}
+      </div>
+
+      <div>
+
+        <p className="font-black text-white">
+          {title}
+        </p>
+
+        <p className="mt-1 text-sm leading-5 text-[#89968b]">
+          {text}
+        </p>
+
+      </div>
+
+    </div>
   );
 }
 
@@ -1437,7 +1648,7 @@ function SummaryItem({
 }
 
 /* ========================================================= */
-/* INPUT STYLE                                                */
+/* INPUT STYLE                                               */
 /* ========================================================= */
 
 const inputClass =
