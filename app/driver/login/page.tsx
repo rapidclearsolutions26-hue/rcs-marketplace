@@ -14,7 +14,9 @@ export default function DriverLogin() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function handleLogin(e: FormEvent<HTMLFormElement>) {
+  async function handleLogin(
+    e: FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
 
     if (loading) return;
@@ -23,9 +25,6 @@ export default function DriverLogin() {
     setErrorMessage("");
 
     try {
-      // Create Supabase client only when the user submits the form.
-      // This prevents Next.js prerendering from trying to initialise
-      // Supabase during the production build.
       const supabase = createClient();
 
       /*
@@ -34,16 +33,75 @@ export default function DriverLogin() {
        * =====================================================
        */
 
-      const { data, error } =
+      const {
+        data,
+        error,
+      } =
         await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: email.trim().toLowerCase(),
           password,
         });
 
       if (error || !data.user) {
         setErrorMessage(
-          error?.message || "Unable to sign in."
+          error?.message ||
+            "Unable to sign in."
         );
+
+        setLoading(false);
+        return;
+      }
+
+      /*
+       * =====================================================
+       * CHECK PROFILE ROLE
+       * =====================================================
+       */
+
+      const {
+        data: profile,
+        error: profileError,
+      } =
+        await supabase
+          .from("profiles")
+          .select("id, role, full_name, email")
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+      if (profileError) {
+        console.error(
+          "Driver profile lookup error:",
+          profileError
+        );
+
+        setErrorMessage(
+          "We couldn't verify your driver account. Please try again."
+        );
+
+        await supabase.auth.signOut();
+
+        setLoading(false);
+        return;
+      }
+
+      if (!profile) {
+        setErrorMessage(
+          "Your account profile could not be found. Please contact RCS."
+        );
+
+        await supabase.auth.signOut();
+
+        setLoading(false);
+        return;
+      }
+
+      if (profile.role !== "driver") {
+        setErrorMessage(
+          "This account is not registered as an RCS driver. Please use the correct login."
+        );
+
+        await supabase.auth.signOut();
+
         setLoading(false);
         return;
       }
@@ -57,11 +115,14 @@ export default function DriverLogin() {
       const {
         data: driver,
         error: driverError,
-      } = await supabase
-        .from("drivers")
-        .select("id, approved, application_status")
-        .eq("id", data.user.id)
-        .maybeSingle();
+      } =
+        await supabase
+          .from("drivers")
+          .select(
+            "id, approved, application_status"
+          )
+          .eq("id", data.user.id)
+          .maybeSingle();
 
       if (driverError) {
         console.error(
@@ -98,7 +159,8 @@ export default function DriverLogin() {
 
       const isApproved =
         driver.approved === true &&
-        driver.application_status === "approved";
+        driver.application_status ===
+          "approved";
 
       if (!isApproved) {
         setErrorMessage(
@@ -117,8 +179,9 @@ export default function DriverLogin() {
        * =====================================================
        */
 
-      router.replace("/driver/dashboard");
-
+      router.replace(
+        "/driver/dashboard"
+      );
     } catch (error) {
       console.error(
         "Unexpected driver login error:",
@@ -142,9 +205,7 @@ export default function DriverLogin() {
       <div className="relative mx-auto flex min-h-screen max-w-6xl items-center justify-center px-5 py-10">
         <div className="grid w-full overflow-hidden rounded-[32px] border border-[#26372a] bg-[#0d1710] shadow-2xl lg:grid-cols-2">
 
-          {/* ================================================= */}
-          {/* BRAND                                             */}
-          {/* ================================================= */}
+          {/* BRAND */}
 
           <div className="relative hidden min-h-[650px] overflow-hidden lg:block">
             <Image
@@ -184,9 +245,7 @@ export default function DriverLogin() {
             </div>
           </div>
 
-          {/* ================================================= */}
-          {/* LOGIN                                             */}
-          {/* ================================================= */}
+          {/* LOGIN */}
 
           <div className="flex items-center justify-center p-7 sm:p-12">
             <div className="w-full max-w-md">
