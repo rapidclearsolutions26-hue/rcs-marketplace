@@ -5,31 +5,40 @@ export const runtime = "nodejs";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
-  "https://rcs-marketplace.vercel.app";
+  "https://rapidclearsolutions.co.uk";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
 
   const code = requestUrl.searchParams.get("code");
+
   const next =
     requestUrl.searchParams.get("next") ||
     "/customer/login";
 
   /*
    * Only allow internal paths.
-   * This prevents the confirmation URL being used
-   * to redirect customers to an external website.
+   * This prevents the confirmation URL from
+   * redirecting users to an external website.
    */
   const safeNext =
-    next.startsWith("/") &&
-    !next.startsWith("//")
+    next.startsWith("/") && !next.startsWith("//")
       ? next
       : "/customer/login";
+
+  /*
+   * Decide where errors should go.
+   * If a driver is confirming their email,
+   * keep them on the driver login page.
+   */
+  const errorPath = safeNext.startsWith("/driver")
+    ? "/driver/login"
+    : "/customer/login";
 
   if (!code) {
     return NextResponse.redirect(
       new URL(
-        "/customer/login?verified=error",
+        `${errorPath}?verified=error`,
         SITE_URL,
       ),
     );
@@ -49,7 +58,7 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(
       new URL(
-        "/customer/login?verified=error",
+        `${errorPath}?verified=error`,
         SITE_URL,
       ),
     );
@@ -62,17 +71,16 @@ export async function GET(request: Request) {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+        detectSessionInUrl: false,
       },
     },
   );
 
   /*
-   * Exchange the email confirmation code for
-   * the customer's authenticated session.
+   * Exchange the Supabase email confirmation code
+   * for a session.
    */
-  const {
-    error,
-  } =
+  const { error } =
     await supabase.auth.exchangeCodeForSession(
       code,
     );
@@ -85,21 +93,25 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(
       new URL(
-        "/customer/login?verified=error",
+        `${errorPath}?verified=error`,
         SITE_URL,
       ),
     );
   }
 
   /*
-   * Send the customer to the requested internal
-   * destination after successful verification.
+   * Successful verification.
+   *
+   * Driver:
+   * /driver/login?verified=success
+   *
+   * Customer:
+   * /customer/login?verified=success
    */
-  const redirectUrl =
-    new URL(
-      safeNext,
-      SITE_URL,
-    );
+  const redirectUrl = new URL(
+    safeNext,
+    SITE_URL,
+  );
 
   redirectUrl.searchParams.set(
     "verified",
