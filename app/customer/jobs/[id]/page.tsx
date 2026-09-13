@@ -614,9 +614,23 @@ export default function CustomerJobPage() {
               </span>
             </div>
 
-            <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-4xl">
-              {job.job_type || "Removal Job"}
-            </h1>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">
+                {job.job_type || "Removal Job"}
+              </h1>
+
+              {!driverSelected &&
+                !["active", "in_progress", "completed", "cancelled"].includes(
+                  jobStatus
+                ) && (
+                  <Link
+                    href={`/customer/jobs/${job.id}/edit`}
+                    className="inline-flex min-h-[42px] items-center justify-center rounded-xl border border-[#79c51c] bg-[#79c51c] px-4 py-2 text-xs font-black text-black transition hover:bg-[#91db32]"
+                  >
+                    EDIT JOB
+                  </Link>
+                )}
+            </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               <QuickInfo
