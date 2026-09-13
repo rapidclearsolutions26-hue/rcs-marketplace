@@ -40,13 +40,12 @@ const locations = [
   "Multiple areas",
 ];
 
-const WHATSAPP_NUMBER =
-  "447555980651";
+const WHATSAPP_NUMBER = "447555980651";
 
-const PHOTO_BUCKET =
-  "customer-job-photos";
+const PHOTO_BUCKET = "customer-job-photos";
 
 const MAX_PHOTOS = 10;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 type SelectedPhoto = {
   file: File;
@@ -60,9 +59,8 @@ type UploadItem = {
 
 async function readResponse(
   response: Response,
-) {
-  const text =
-    await response.text();
+): Promise<any> {
+  const text = await response.text();
 
   if (!text) {
     return {};
@@ -71,92 +69,64 @@ async function readResponse(
   try {
     return JSON.parse(text);
   } catch {
+    if (response.status === 413) {
+      return {
+        error:
+          "The upload was too large. Please choose fewer or smaller photos and try again.",
+      };
+    }
+
     return {
       error:
-        response.status === 413
-          ? "The upload was too large. Please choose fewer or smaller photos and try again."
-          : "RCS returned an unexpected response. Please try again.",
+        "RCS returned an unexpected response. Please try again.",
     };
   }
 }
 
 async function compressImage(
   file: File,
-) {
-  /*
-   * Keep smaller files as they are.
-   */
-
+): Promise<File> {
   if (
-    file.size <=
-      1.8 * 1024 * 1024 &&
-    !file.type.includes(
-      "heic",
-    ) &&
-    !file.type.includes(
-      "heif",
-    )
+    file.size <= 1.8 * 1024 * 1024 &&
+    !file.type.includes("heic") &&
+    !file.type.includes("heif")
   ) {
     return file;
   }
 
   try {
-    const bitmap =
-      await createImageBitmap(
-        file,
-      );
+    const bitmap = await createImageBitmap(
+      file,
+    );
 
-    const maxDimension =
-      1920;
+    const maxDimension = 1920;
 
-    let width =
-      bitmap.width;
-
-    let height =
-      bitmap.height;
+    let width = bitmap.width;
+    let height = bitmap.height;
 
     if (
-      width >
-        maxDimension ||
-      height >
-        maxDimension
+      width > maxDimension ||
+      height > maxDimension
     ) {
-      const scale =
-        Math.min(
-          maxDimension /
-            width,
-          maxDimension /
-            height,
-        );
-
-      width = Math.round(
-        width * scale,
+      const scale = Math.min(
+        maxDimension / width,
+        maxDimension / height,
       );
 
-      height = Math.round(
-        height * scale,
-      );
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
     }
 
     const canvas =
-      document.createElement(
-        "canvas",
-      );
+      document.createElement("canvas");
 
-    canvas.width =
-      width;
+    canvas.width = width;
+    canvas.height = height;
 
-    canvas.height =
-      height;
-
-    const context =
-      canvas.getContext(
-        "2d",
-      );
+    const context = canvas.getContext("2d");
 
     if (!context) {
       bitmap.close();
-
       return file;
     }
 
@@ -170,40 +140,35 @@ async function compressImage(
 
     bitmap.close();
 
-    const blob =
-      await new Promise<Blob | null>(
-        (resolve) =>
-          canvas.toBlob(
-            resolve,
-            "image/jpeg",
-            0.82,
-          ),
-      );
+    const blob = await new Promise<Blob | null>(
+      (resolve) =>
+        canvas.toBlob(
+          resolve,
+          "image/jpeg",
+          0.82,
+        ),
+    );
 
     if (!blob) {
       return file;
     }
 
-    const originalName =
-      file.name.replace(
-        /\.[^/.]+$/,
-        "",
-      );
+    const originalName = file.name.replace(
+      /\.[^/.]+$/,
+      "",
+    );
 
     return new File(
-      [
-        blob,
-      ],
+      [blob],
       `${originalName}.jpg`,
       {
         type: "image/jpeg",
-        lastModified:
-          Date.now(),
+        lastModified: Date.now(),
       },
     );
   } catch (error) {
     console.warn(
-      "Image compression failed, using original file:",
+      "Image compression failed:",
       error,
     );
 
@@ -212,138 +177,87 @@ async function compressImage(
 }
 
 export default function PostJobPage() {
-  const supabase =
-    useMemo(
-      () => createClient(),
-      [],
-    );
+  const supabase = useMemo(
+    () => createClient(),
+    [],
+  );
 
   const [loading, setLoading] =
     useState(false);
 
-  const [
-    checkingSession,
-    setCheckingSession,
-  ] = useState(true);
+  const [checkingSession, setCheckingSession] =
+    useState(true);
 
-  const [
-    isLoggedIn,
-    setIsLoggedIn,
-  ] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] =
+    useState(false);
 
-  const [
-    customerEmail,
-    setCustomerEmail,
-  ] = useState("");
+  const [customerEmail, setCustomerEmail] =
+    useState("");
 
-  const [
-    errorMessage,
-    setErrorMessage,
-  ] = useState("");
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
-  const [
-    successMessage,
-    setSuccessMessage,
-  ] = useState("");
+  const [successMessage, setSuccessMessage] =
+    useState("");
 
-  const [
-    uploadStatus,
-    setUploadStatus,
-  ] = useState("");
+  const [uploadStatus, setUploadStatus] =
+    useState("");
 
-  const [
-    jobPosted,
-    setJobPosted,
-  ] = useState(false);
+  const [jobPosted, setJobPosted] =
+    useState(false);
 
-  const [
-    jobReference,
-    setJobReference,
-  ] = useState("");
+  const [jobReference, setJobReference] =
+    useState("");
 
-  const [
-    jobId,
-    setJobId,
-  ] = useState<number | null>(
-    null,
-  );
+  const [jobId, setJobId] =
+    useState<number | null>(null);
 
   const [
     confirmationRequired,
     setConfirmationRequired,
   ] = useState(false);
 
-  const [
-    wasteType,
-    setWasteType,
-  ] = useState("");
+  const [wasteType, setWasteType] =
+    useState("");
 
-  const [
-    loadSize,
-    setLoadSize,
-  ] = useState("");
+  const [loadSize, setLoadSize] =
+    useState("");
 
-  const [
-    location,
-    setLocation,
-  ] = useState("");
+  const [location, setLocation] =
+    useState("");
 
-  const [
-    postcode,
-    setPostcode,
-  ] = useState("");
+  const [postcode, setPostcode] =
+    useState("");
 
-  const [
-    address,
-    setAddress,
-  ] = useState("");
+  const [address, setAddress] =
+    useState("");
 
-  const [
-    collectionDate,
-    setCollectionDate,
-  ] = useState("");
+  const [collectionDate, setCollectionDate] =
+    useState("");
 
-  const [
-    preferredTime,
-    setPreferredTime,
-  ] = useState("");
+  const [preferredTime, setPreferredTime] =
+    useState("");
 
-  const [
-    description,
-    setDescription,
-  ] = useState("");
+  const [description, setDescription] =
+    useState("");
 
-  const [
-    accessNotes,
-    setAccessNotes,
-  ] = useState("");
+  const [accessNotes, setAccessNotes] =
+    useState("");
 
-  const [
-    photos,
-    setPhotos,
-  ] = useState<
-    SelectedPhoto[]
-  >([]);
+  const [photos, setPhotos] =
+    useState<SelectedPhoto[]>([]);
 
-  const [
-    fullName,
-    setFullName,
-  ] = useState("");
+  const [fullName, setFullName] =
+    useState("");
 
-  const [
-    email,
-    setEmail,
-  ] = useState("");
+  const [email, setEmail] =
+    useState("");
 
-  const [
-    phone,
-    setPhone,
-  ] = useState("");
+  const [phone, setPhone] =
+    useState("");
 
-  const [
-    password,
-    setPassword,
-  ] = useState("");
+  const [password, setPassword] =
+    useState("");
 
   const [
     confirmPassword,
@@ -351,34 +265,29 @@ export default function PostJobPage() {
   ] = useState("");
 
   const today = useMemo(() => {
-    const date =
-      new Date();
+    const date = new Date();
 
-    const year =
-      date.getFullYear();
+    const year = date.getFullYear();
 
-    const month =
-      String(
-        date.getMonth() + 1,
-      ).padStart(2, "0");
+    const month = String(
+      date.getMonth() + 1,
+    ).padStart(2, "0");
 
-    const day =
-      String(
-        date.getDate(),
-      ).padStart(2, "0");
+    const day = String(
+      date.getDate(),
+    ).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
   }, []);
 
-  const whatsappHref =
-    useMemo(() => {
-      const message =
-        "Hi RCS, I need some help with posting a waste removal job.";
+  const whatsappHref = useMemo(() => {
+    const message =
+      "Hi RCS, I need some help with posting a waste removal job.";
 
-      return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-        message,
-      )}`;
-    }, []);
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      message,
+    )}`;
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -386,12 +295,9 @@ export default function PostJobPage() {
     async function checkCustomerSession() {
       try {
         const {
-          data: {
-            user,
-          },
+          data: { user },
           error,
-        } =
-          await supabase.auth.getUser();
+        } = await supabase.auth.getUser();
 
         if (!mounted) {
           return;
@@ -403,33 +309,23 @@ export default function PostJobPage() {
             error,
           );
 
-          setIsLoggedIn(
-            false,
-          );
-
-          setCustomerEmail(
-            "",
-          );
+          setIsLoggedIn(false);
+          setCustomerEmail("");
 
           return;
         }
 
         if (user) {
-          setIsLoggedIn(
-            true,
-          );
+          setIsLoggedIn(true);
 
           setCustomerEmail(
             user.email || "",
           );
 
-          setEmail(
-            user.email || "",
-          );
+          setEmail(user.email || "");
 
           const metadata =
-            user.user_metadata ||
-            {};
+            user.user_metadata || {};
 
           if (
             typeof metadata.full_name ===
@@ -449,13 +345,8 @@ export default function PostJobPage() {
             );
           }
         } else {
-          setIsLoggedIn(
-            false,
-          );
-
-          setCustomerEmail(
-            "",
-          );
+          setIsLoggedIn(false);
+          setCustomerEmail("");
         }
       } catch (error) {
         console.error(
@@ -464,19 +355,12 @@ export default function PostJobPage() {
         );
 
         if (mounted) {
-          setIsLoggedIn(
-            false,
-          );
-
-          setCustomerEmail(
-            "",
-          );
+          setIsLoggedIn(false);
+          setCustomerEmail("");
         }
       } finally {
         if (mounted) {
-          setCheckingSession(
-            false,
-          );
+          setCheckingSession(false);
         }
       }
     }
@@ -491,28 +375,20 @@ export default function PostJobPage() {
   function handlePhotos(
     event: React.ChangeEvent<HTMLInputElement>,
   ) {
-    const selectedFiles =
-      Array.from(
-        event.target.files ||
-          [],
-      );
+    const selectedFiles = Array.from(
+      event.target.files || [],
+    );
 
-    if (
-      !selectedFiles.length
-    ) {
+    if (!selectedFiles.length) {
       return;
     }
 
     const invalidFile =
       selectedFiles.find(
         (file) =>
-          !file.type.startsWith(
-            "image/",
-          ) ||
+          !file.type.startsWith("image/") ||
           file.size >
-            10 *
-              1024 *
-              1024,
+            MAX_FILE_SIZE,
       );
 
     if (invalidFile) {
@@ -520,28 +396,20 @@ export default function PostJobPage() {
         "Only image files under 10MB can be uploaded.",
       );
     } else {
-      setErrorMessage(
-        "",
-      );
+      setErrorMessage("");
     }
 
     const validFiles =
       selectedFiles.filter(
         (file) =>
-          file.type.startsWith(
-            "image/",
-          ) &&
-          file.size <=
-            10 *
-              1024 *
-              1024,
+          file.type.startsWith("image/") &&
+          file.size <= MAX_FILE_SIZE,
       );
 
     const availableSlots =
       Math.max(
         0,
-        MAX_PHOTOS -
-          photos.length,
+        MAX_PHOTOS - photos.length,
       );
 
     const filesToAdd =
@@ -559,31 +427,22 @@ export default function PostJobPage() {
       );
     }
 
-    setPhotos(
-      (current) => [
-        ...current,
-        ...filesToAdd.map(
-          (file) => ({
-            file,
-            id: `${file.name}-${file.lastModified}-${Math.random()}`,
-          }),
-        ),
-      ],
-    );
+    setPhotos((current) => [
+      ...current,
+      ...filesToAdd.map((file) => ({
+        file,
+        id: `${file.name}-${file.lastModified}-${Math.random()}`,
+      })),
+    ]);
 
-    event.target.value =
-      "";
+    event.target.value = "";
   }
 
-  function removePhoto(
-    id: string,
-  ) {
-    setPhotos(
-      (current) =>
-        current.filter(
-          (photo) =>
-            photo.id !== id,
-        ),
+  function removePhoto(id: string) {
+    setPhotos((current) =>
+      current.filter(
+        (photo) => photo.id !== id,
+      ),
     );
   }
 
@@ -604,10 +463,7 @@ export default function PostJobPage() {
       return "Please choose a collection date.";
     }
 
-    if (
-      collectionDate <
-      today
-    ) {
+    if (collectionDate < today) {
       return "Please choose today or a future collection date.";
     }
 
@@ -649,16 +505,11 @@ export default function PostJobPage() {
         return "Please create a password.";
       }
 
-      if (
-        password.length <
-        6
-      ) {
+      if (password.length < 6) {
         return "Your password must be at least 6 characters.";
       }
 
-      if (
-        !confirmPassword
-      ) {
+      if (!confirmPassword) {
         return "Please confirm your password.";
       }
 
@@ -677,30 +528,26 @@ export default function PostJobPage() {
     body: unknown,
     accessToken?: string,
   ) {
-    const response =
-      await fetch(
-        "/api/customer/post-job",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-            ...(accessToken
-              ? {
-                  Authorization: `Bearer ${accessToken}`,
-                }
-              : {}),
-          },
-          body: JSON.stringify(
-            body,
-          ),
+    const response = await fetch(
+      "/api/customer/post-job",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          ...(accessToken
+            ? {
+                Authorization: `Bearer ${accessToken}`,
+              }
+            : {}),
         },
-      );
+        body: JSON.stringify(body),
+      },
+    );
 
     const result =
-      await readResponse(
-        response,
-      );
+      await readResponse(response);
 
     return {
       response,
@@ -749,17 +596,13 @@ export default function PostJobPage() {
       return;
     }
 
-    let currentAccessToken =
-      "";
+    let currentAccessToken = "";
 
     try {
       const {
-        data: {
-          session,
-        },
+        data: { session },
         error: sessionError,
-      } =
-        await supabase.auth.getSession();
+      } = await supabase.auth.getSession();
 
       if (sessionError) {
         console.error(
@@ -772,18 +615,13 @@ export default function PostJobPage() {
         currentAccessToken =
           session.access_token;
 
-        setIsLoggedIn(
-          true,
-        );
+        setIsLoggedIn(true);
 
         setCustomerEmail(
-          session.user.email ||
-            "",
+          session.user.email || "",
         );
       } else {
-        setIsLoggedIn(
-          false,
-        );
+        setIsLoggedIn(false);
       }
     } catch (error) {
       console.error(
@@ -810,54 +648,35 @@ export default function PostJobPage() {
 
     setLoading(true);
 
-    let uploadSessionToken =
-      "";
+    let uploadSessionToken = "";
 
     try {
-      /*
-       * -------------------------------------------------------
-       * PREPARE JOB
-       * -------------------------------------------------------
-       *
-       * Only small JSON metadata is sent to Vercel.
-       * No photo binary data is included.
-       */
-
       setUploadStatus(
         "Preparing your RCS job...",
       );
 
       const photoMetadata =
-        photos.map(
-          ({
-            file,
-          }) => ({
-            name:
-              file.name,
-            type:
-              file.type,
-            size:
-              file.size,
-          }),
-        );
+        photos.map(({ file }) => ({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+        }));
 
-      const combinedAccessNotes =
-        [
-          location
-            ? `Waste location: ${location}`
-            : "",
-          accessNotes.trim()
-            ? `Access notes: ${accessNotes.trim()}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n");
+      const combinedAccessNotes = [
+        location
+          ? `Waste location: ${location}`
+          : "",
+        accessNotes.trim()
+          ? `Access notes: ${accessNotes.trim()}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
 
       const prepareResult =
         await postJson(
           {
-            action:
-              "prepare",
+            action: "prepare",
 
             fullName:
               !isLoggedIn
@@ -881,8 +700,7 @@ export default function PostJobPage() {
                 ? password
                 : "",
 
-            jobType:
-              wasteType,
+            jobType: wasteType,
 
             description:
               description.trim(),
@@ -900,8 +718,7 @@ export default function PostJobPage() {
             floor: "",
 
             stairs:
-              location ===
-              "Upstairs",
+              location === "Upstairs",
 
             accessNotes:
               combinedAccessNotes,
@@ -913,20 +730,19 @@ export default function PostJobPage() {
               preferredTime ||
               "Any time",
 
-            photos:
-              photoMetadata,
+            photos: photoMetadata,
           },
           currentAccessToken,
         );
 
-      const {
-        response,
-        result,
-      } = prepareResult;
+      const response =
+        prepareResult.response;
+
+      const result =
+        prepareResult.result;
 
       if (
-        response.status ===
-          409 &&
+        response.status === 409 &&
         result.code ===
           "ACCOUNT_EXISTS"
       ) {
@@ -942,10 +758,7 @@ export default function PostJobPage() {
         return;
       }
 
-      if (
-        response.status ===
-        401
-      ) {
+      if (response.status === 401) {
         setErrorMessage(
           "Your customer session has expired. Please log in again.",
         );
@@ -958,9 +771,7 @@ export default function PostJobPage() {
         return;
       }
 
-      if (
-        !response.ok
-      ) {
+      if (!response.ok) {
         throw new Error(
           result.error ||
             "We couldn't prepare your job. Please try again.",
@@ -971,34 +782,21 @@ export default function PostJobPage() {
         result.uploadSessionToken ||
         "";
 
-      if (
-        !uploadSessionToken
-      ) {
+      if (!uploadSessionToken) {
         throw new Error(
           "RCS could not create the secure upload session.",
         );
       }
 
       const uploads: UploadItem[] =
-        Array.isArray(
-          result.uploads,
-        )
+        Array.isArray(result.uploads)
           ? result.uploads
           : [];
-
-      /*
-       * -------------------------------------------------------
-       * UPLOAD PHOTOS DIRECTLY TO SUPABASE
-       * -------------------------------------------------------
-       */
 
       const uploadedPaths: string[] =
         [];
 
-      if (
-        photos.length >
-        0
-      ) {
+      if (photos.length > 0) {
         if (
           uploads.length !==
           photos.length
@@ -1010,15 +808,16 @@ export default function PostJobPage() {
 
         for (
           let index = 0;
-          index <
-          photos.length;
+          index < photos.length;
           index += 1
         ) {
           const originalFile =
             photos[index].file;
 
           setUploadStatus(
-            `Preparing photo ${index + 1} of ${photos.length}...`,
+            `Preparing photo ${
+              index + 1
+            } of ${photos.length}...`,
           );
 
           const uploadFile =
@@ -1029,41 +828,44 @@ export default function PostJobPage() {
           const upload =
             uploads[index];
 
+          if (
+            !upload?.path ||
+            !upload?.token
+          ) {
+            throw new Error(
+              `RCS could not prepare photo ${
+                index + 1
+              }.`,
+            );
+          }
+
           setUploadStatus(
-            `Uploading photo ${index + 1} of ${photos.length}...`,
+            `Uploading photo ${
+              index + 1
+            } of ${photos.length}...`,
           );
 
           const {
-            error:
-              uploadError,
+            error: uploadError,
           } =
             await supabase.storage
-              .from(
-                PHOTO_BUCKET,
-              )
+              .from(PHOTO_BUCKET)
               .uploadToSignedUrl(
                 upload.path,
                 upload.token,
                 uploadFile,
-                {
-                  cacheControl:
-                    "3600",
-                  contentType:
-                    uploadFile.type ||
-                    "image/jpeg",
-                },
               );
 
-          if (
-            uploadError
-          ) {
+          if (uploadError) {
             console.error(
               "Direct photo upload error:",
               uploadError,
             );
 
             throw new Error(
-              `We couldn't upload photo ${index + 1}. Please try again.`,
+              `We couldn't upload photo ${
+                index + 1
+              }. Please try again.`,
             );
           }
 
@@ -1073,47 +875,16 @@ export default function PostJobPage() {
         }
       }
 
-      /*
-       * -------------------------------------------------------
-       * COMPLETE JOB
-       * -------------------------------------------------------
-       */
-
       setUploadStatus(
         "Finishing your RCS job...",
       );
 
-      let completeResult =
+      const completeResult =
         await postJson({
-          action:
-            "complete",
-
+          action: "complete",
           uploadSessionToken,
-
           uploadedPaths,
         });
-
-      /*
-       * Retry once if the network drops after
-       * the server may already have completed the job.
-       */
-
-      if (
-        !completeResult.response.ok
-      ) {
-        const retry =
-          await postJson({
-            action:
-              "complete",
-
-            uploadSessionToken,
-
-            uploadedPaths,
-          });
-
-        completeResult =
-          retry;
-      }
 
       if (
         !completeResult.response.ok
@@ -1125,34 +896,30 @@ export default function PostJobPage() {
         );
       }
 
-      const result =
+      const completeData =
         completeResult.result;
 
       setJobReference(
-        result.reference ||
-          prepareResult.result
-            .reference ||
+        completeData.reference ||
+          result.reference ||
           "",
       );
 
       setJobId(
-        result.jobId
+        completeData.jobId
           ? Number(
-              result.jobId,
+              completeData.jobId,
             )
-          : prepareResult.result
-              .jobId
+          : result.jobId
             ? Number(
-                prepareResult.result
-                  .jobId,
+                result.jobId,
               )
             : null,
       );
 
       setConfirmationRequired(
         Boolean(
-          prepareResult.result
-            .emailConfirmationRequired,
+          result.emailConfirmationRequired,
         ),
       );
 
@@ -1162,9 +929,7 @@ export default function PostJobPage() {
 
       setUploadStatus("");
 
-      setJobPosted(
-        true,
-      );
+      setJobPosted(true);
 
       window.scrollTo({
         top: 0,
@@ -1176,14 +941,7 @@ export default function PostJobPage() {
         error,
       );
 
-      /*
-       * If a job was prepared and photo upload failed,
-       * remove the prepared job and newly created account.
-       */
-
-      if (
-        uploadSessionToken
-      ) {
+      if (uploadSessionToken) {
         await cancelPreparedJob(
           uploadSessionToken,
         );
@@ -1191,20 +949,20 @@ export default function PostJobPage() {
 
       setUploadStatus("");
 
-      setErrorMessage(
-        error instanceof Error
+      const message =
+        error instanceof Error &&
+        error.message
           ? error.message
-          : "Something went wrong while posting your job. Please try again.",
-      );
+          : "Something went wrong while posting your job. Please try again.";
+
+      setErrorMessage(message);
 
       window.scrollTo({
         top: 0,
         behavior: "smooth",
-      );
+      });
     } finally {
-      setLoading(
-        false,
-      );
+      setLoading(false);
     }
   }
 
@@ -1365,8 +1123,7 @@ export default function PostJobPage() {
 
             <Link
               href={
-                isLoggedIn &&
-                jobId
+                isLoggedIn && jobId
                   ? `/customer/jobs/${jobId}`
                   : "/customer/login"
               }
@@ -1378,9 +1135,7 @@ export default function PostJobPage() {
             </Link>
 
             <a
-              href={
-                whatsappHref
-              }
+              href={whatsappHref}
               target="_blank"
               rel="noreferrer"
               className="mt-4 flex w-full items-center justify-center rounded-2xl border border-[#79c51c]/30 bg-[#79c51c]/5 px-6 py-4 text-sm font-black text-[#9de450] transition hover:bg-[#79c51c]/10"
@@ -1420,9 +1175,7 @@ export default function PostJobPage() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <a
-              href={
-                whatsappHref
-              }
+              href={whatsappHref}
               target="_blank"
               rel="noreferrer"
               className="hidden rounded-xl border border-[#79c51c]/30 bg-[#79c51c]/5 px-4 py-2.5 text-sm font-black text-[#9de450] transition hover:bg-[#79c51c]/10 sm:inline-flex"
@@ -1535,9 +1288,7 @@ export default function PostJobPage() {
         )}
 
         <form
-          onSubmit={
-            submitJob
-          }
+          onSubmit={submitJob}
           className="mt-8 space-y-6"
         >
           <section className="rounded-[2rem] border border-white/10 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
@@ -1548,27 +1299,22 @@ export default function PostJobPage() {
             />
 
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {wasteTypes.map(
-                (type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() =>
-                      setWasteType(
-                        type,
-                      )
-                    }
-                    className={`min-h-[62px] rounded-2xl border px-3 py-3 text-sm font-bold transition ${
-                      wasteType ===
-                      type
-                        ? "border-[#79c51c] bg-[#79c51c] text-[#050705] shadow-lg shadow-[#79c51c]/10"
-                        : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ),
-              )}
+              {wasteTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() =>
+                    setWasteType(type)
+                  }
+                  className={`min-h-[62px] rounded-2xl border px-3 py-3 text-sm font-bold transition ${
+                    wasteType === type
+                      ? "border-[#79c51c] bg-[#79c51c] text-[#050705] shadow-lg shadow-[#79c51c]/10"
+                      : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
             </div>
           </section>
 
@@ -1585,21 +1331,14 @@ export default function PostJobPage() {
                 required
               >
                 <input
-                  value={
-                    postcode
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={postcode}
+                  onChange={(event) =>
                     setPostcode(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                   placeholder="e.g. B1 1AA"
-                  className={
-                    inputClass
-                  }
+                  className={inputClass}
                   autoComplete="postal-code"
                 />
               </Field>
@@ -1609,21 +1348,14 @@ export default function PostJobPage() {
                 required
               >
                 <input
-                  value={
-                    address
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={address}
+                  onChange={(event) =>
                     setAddress(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                   placeholder="House number and street"
-                  className={
-                    inputClass
-                  }
+                  className={inputClass}
                   autoComplete="street-address"
                 />
               </Field>
@@ -1645,15 +1377,10 @@ export default function PostJobPage() {
                 <input
                   type="date"
                   min={today}
-                  value={
-                    collectionDate
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={collectionDate}
+                  onChange={(event) =>
                     setCollectionDate(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                   className={`${inputClass} [color-scheme:dark]`}
@@ -1663,20 +1390,13 @@ export default function PostJobPage() {
 
               <Field label="Preferred time">
                 <select
-                  value={
-                    preferredTime
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={preferredTime}
+                  onChange={(event) =>
                     setPreferredTime(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
-                  className={
-                    inputClass
-                  }
+                  className={inputClass}
                 >
                   <option value="">
                     Any time
@@ -1722,27 +1442,22 @@ export default function PostJobPage() {
                 required
               >
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                  {loadSizes.map(
-                    (size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() =>
-                          setLoadSize(
-                            size,
-                          )
-                        }
-                        className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
-                          loadSize ===
-                          size
-                            ? "border-[#79c51c] bg-[#79c51c] text-[#050705]"
-                            : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ),
-                  )}
+                  {loadSizes.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() =>
+                        setLoadSize(size)
+                      }
+                      className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
+                        loadSize === size
+                          ? "border-[#79c51c] bg-[#79c51c] text-[#050705]"
+                          : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
                 </div>
               </Field>
 
@@ -1752,27 +1467,22 @@ export default function PostJobPage() {
                   required
                 >
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {locations.map(
-                      (item) => (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() =>
-                            setLocation(
-                              item,
-                            )
-                          }
-                          className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
-                            location ===
-                            item
-                              ? "border-[#79c51c] bg-[#79c51c] text-[#050705]"
-                              : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
-                          }`}
-                        >
-                          {item}
-                        </button>
-                      ),
-                    )}
+                    {locations.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() =>
+                          setLocation(item)
+                        }
+                        className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
+                          location === item
+                            ? "border-[#79c51c] bg-[#79c51c] text-[#050705]"
+                            : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    ))}
                   </div>
                 </Field>
               </div>
@@ -1808,9 +1518,7 @@ export default function PostJobPage() {
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={
-                  handlePhotos
-                }
+                onChange={handlePhotos}
                 className="hidden"
               />
             </label>
@@ -1818,45 +1526,32 @@ export default function PostJobPage() {
             <p className="mt-3 text-center text-xs text-white/35">
               You can upload up to 10 photos.
               Each photo must be under 10MB.
-              RCS securely uploads them directly
-              to storage.
             </p>
 
-            {photos.length >
-              0 && (
+            {photos.length > 0 && (
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {photos.map(
-                  (
-                    photo,
-                  ) => (
-                    <div
-                      key={
-                        photo.id
-                      }
-                      className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#050705] p-2"
-                    >
-                      <div className="truncate px-1 py-2 text-xs text-white/55">
-                        {
-                          photo
-                            .file
-                            .name
-                        }
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removePhoto(
-                            photo.id,
-                          )
-                        }
-                        className="absolute right-2 top-2 rounded-lg border border-white/10 bg-black/80 px-2 py-1 text-xs font-bold text-white transition hover:border-red-400/40 hover:text-red-300"
-                      >
-                        Remove
-                      </button>
+                {photos.map((photo) => (
+                  <div
+                    key={photo.id}
+                    className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#050705] p-2"
+                  >
+                    <div className="truncate px-1 py-2 text-xs text-white/55">
+                      {photo.file.name}
                     </div>
-                  ),
-                )}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removePhoto(
+                          photo.id,
+                        )
+                      }
+                      className="absolute right-2 top-2 rounded-lg border border-white/10 bg-black/80 px-2 py-1 text-xs font-bold text-white transition hover:border-red-400/40 hover:text-red-300"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </section>
@@ -1874,15 +1569,10 @@ export default function PostJobPage() {
                 required
               >
                 <textarea
-                  value={
-                    description
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={description}
+                  onChange={(event) =>
                     setDescription(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                   rows={5}
@@ -1893,15 +1583,10 @@ export default function PostJobPage() {
 
               <Field label="Access notes">
                 <textarea
-                  value={
-                    accessNotes
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={accessNotes}
+                  onChange={(event) =>
                     setAccessNotes(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                   rows={4}
@@ -1941,22 +1626,15 @@ export default function PostJobPage() {
                   >
                     <input
                       type="text"
-                      value={
-                        fullName
-                      }
-                      onChange={(
-                        event,
-                      ) =>
+                      value={fullName}
+                      onChange={(event) =>
                         setFullName(
-                          event.target
-                            .value,
+                          event.target.value,
                         )
                       }
                       placeholder="Your full name"
                       autoComplete="name"
-                      className={
-                        inputClass
-                      }
+                      className={inputClass}
                     />
                   </Field>
 
@@ -1966,22 +1644,15 @@ export default function PostJobPage() {
                   >
                     <input
                       type="tel"
-                      value={
-                        phone
-                      }
-                      onChange={(
-                        event,
-                      ) =>
+                      value={phone}
+                      onChange={(event) =>
                         setPhone(
-                          event.target
-                            .value,
+                          event.target.value,
                         )
                       }
                       placeholder="e.g. 07123 456789"
                       autoComplete="tel"
-                      className={
-                        inputClass
-                      }
+                      className={inputClass}
                     />
                   </Field>
                 </div>
@@ -1993,22 +1664,15 @@ export default function PostJobPage() {
                   >
                     <input
                       type="email"
-                      value={
-                        email
-                      }
-                      onChange={(
-                        event,
-                      ) =>
+                      value={email}
+                      onChange={(event) =>
                         setEmail(
-                          event.target
-                            .value,
+                          event.target.value,
                         )
                       }
                       placeholder="you@example.com"
                       autoComplete="email"
-                      className={
-                        inputClass
-                      }
+                      className={inputClass}
                     />
                   </Field>
                 </div>
@@ -2020,22 +1684,15 @@ export default function PostJobPage() {
                   >
                     <input
                       type="password"
-                      value={
-                        password
-                      }
-                      onChange={(
-                        event,
-                      ) =>
+                      value={password}
+                      onChange={(event) =>
                         setPassword(
-                          event.target
-                            .value,
+                          event.target.value,
                         )
                       }
                       placeholder="Minimum 6 characters"
                       autoComplete="new-password"
-                      className={
-                        inputClass
-                      }
+                      className={inputClass}
                     />
                   </Field>
 
@@ -2048,19 +1705,14 @@ export default function PostJobPage() {
                       value={
                         confirmPassword
                       }
-                      onChange={(
-                        event,
-                      ) =>
+                      onChange={(event) =>
                         setConfirmPassword(
-                          event.target
-                            .value,
+                          event.target.value,
                         )
                       }
                       placeholder="Enter your password again"
                       autoComplete="new-password"
-                      className={
-                        inputClass
-                      }
+                      className={inputClass}
                     />
                   </Field>
                 </div>
@@ -2099,7 +1751,9 @@ export default function PostJobPage() {
 
                       <p className="mt-3 text-sm leading-6 text-white/50">
                         Your existing RCS account will
-                        be used automatically.
+                        be used automatically. You do
+                        not need to enter your account
+                        details again.
                       </p>
                     </div>
                   </div>
@@ -2192,9 +1846,7 @@ export default function PostJobPage() {
           </section>
 
           <a
-            href={
-              whatsappHref
-            }
+            href={whatsappHref}
             target="_blank"
             rel="noreferrer"
             className="flex items-center justify-center gap-3 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 px-5 py-4 text-sm font-black text-[#a9eb68] transition hover:bg-[#79c51c]/10"
