@@ -4,10 +4,8 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 export default function DriverRegister() {
-  const supabase = createClient();
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
@@ -52,33 +50,6 @@ export default function DriverRegister() {
 
   const [vanPhoto, setVanPhoto] = useState<File | null>(null);
 
-  async function uploadFile(
-    file: File,
-    userId: string,
-    folder: string
-  ) {
-    const extension =
-      file.name.split(".").pop()?.toLowerCase() || "file";
-
-    const fileName = `${crypto.randomUUID()}.${extension}`;
-    const filePath = `${userId}/${folder}/${fileName}`;
-
-    const { error } = await supabase.storage
-      .from("driver-documents")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
-
-    if (error) {
-      throw new Error(
-        `Could not upload ${folder.replace("-", " ")}: ${error.message}`
-      );
-    }
-
-    return filePath;
-  }
-
   async function handleRegister(
     event: React.FormEvent<HTMLFormElement>
   ) {
@@ -119,105 +90,122 @@ export default function DriverRegister() {
         );
       }
 
-      const {
-        data: { user, session },
-        error: signUpError,
-      } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: {
-          data: {
-            full_name: cleanName,
-            phone: cleanPhone,
-            account_type: "driver",
-          },
-        },
-      });
+      const formData = new FormData();
 
-      if (signUpError) {
-        throw new Error(signUpError.message);
-      }
+      formData.append("fullName", cleanName);
+      formData.append("email", cleanEmail);
+      formData.append("phone", cleanPhone);
+      formData.append("address", address.trim());
+      formData.append("postcode", cleanPostcode);
 
-      if (!user) {
+      formData.append(
+        "companyName",
+        companyName.trim()
+      );
+      formData.append(
+        "tradingName",
+        tradingName.trim()
+      );
+      formData.append(
+        "companyNumber",
+        companyNumber.trim()
+      );
+      formData.append(
+        "yearsTrading",
+        yearsTrading
+      );
+
+      formData.append(
+        "wasteCarrierNumber",
+        wasteCarrierNumber.trim()
+      );
+      formData.append(
+        "wasteCarrierType",
+        wasteCarrierType
+      );
+      formData.append(
+        "wasteCarrierExpiry",
+        wasteCarrierExpiry
+      );
+
+      formData.append(
+        "insuranceProvider",
+        insuranceProvider.trim()
+      );
+      formData.append(
+        "insurancePolicyNumber",
+        insurancePolicyNumber.trim()
+      );
+      formData.append(
+        "insuranceExpiry",
+        insuranceExpiry
+      );
+
+      formData.append(
+        "vehicleType",
+        vehicleType
+      );
+      formData.append(
+        "vehicleRegistration",
+        cleanRegistration
+      );
+      formData.append(
+        "vehicleMake",
+        vehicleMake.trim()
+      );
+      formData.append(
+        "vehicleModel",
+        vehicleModel.trim()
+      );
+      formData.append(
+        "vehicleCapacity",
+        vehicleCapacity.trim()
+      );
+
+      formData.append("password", password);
+
+      formData.append(
+        "wasteLicenceFile",
+        wasteLicenceFile
+      );
+
+      formData.append(
+        "insuranceFile",
+        insuranceFile
+      );
+
+      formData.append(
+        "vanPhoto",
+        vanPhoto
+      );
+
+      const response = await fetch(
+        "/api/driver/register",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
         throw new Error(
-          "Your account could not be created. Please try again."
+          result?.error ||
+            "Your driver application could not be submitted."
         );
       }
 
-      const wasteLicencePath = await uploadFile(
-        wasteLicenceFile,
-        user.id,
-        "waste-licence"
-      );
-
-      const insurancePath = await uploadFile(
-        insuranceFile,
-        user.id,
-        "insurance"
-      );
-
-      const vanPhotoPath = await uploadFile(
-        vanPhoto,
-        user.id,
-        "van-photo"
-      );
-
-      const { error: driverError } = await supabase
-        .from("drivers")
-        .insert({
-          id: user.id,
-
-          full_name: cleanName,
-          email: cleanEmail,
-          phone: cleanPhone,
-          address: address.trim(),
-          postcode: cleanPostcode,
-
-          company_name: companyName.trim() || null,
-          trading_name: tradingName.trim() || null,
-          company_number: companyNumber.trim() || null,
-          years_trading: yearsTrading
-            ? Number(yearsTrading)
-            : null,
-
-          waste_carrier_number:
-            wasteCarrierNumber.trim(),
-          waste_carrier_type: wasteCarrierType,
-          waste_carrier_expiry: wasteCarrierExpiry,
-          waste_licence_url: wasteLicencePath,
-
-          insurance_provider: insuranceProvider.trim(),
-          insurance_policy_number:
-            insurancePolicyNumber.trim(),
-          insurance_expiry: insuranceExpiry,
-          insurance_certificate_url: insurancePath,
-
-          vehicle_type: vehicleType,
-          vehicle_registration: cleanRegistration,
-          vehicle_make: vehicleMake.trim(),
-          vehicle_model: vehicleModel.trim(),
-          vehicle_capacity: vehicleCapacity.trim(),
-          van_photo_url: vanPhotoPath,
-
-          approved: false,
-          application_status: "pending",
-        });
-
-      if (driverError) {
-        console.error("Driver insert error:", driverError);
-
-        throw new Error(
-          `Your account was created, but your driver application could not be saved: ${driverError.message}`
-        );
-      }
-
-      if (!session) {
+      if (result.emailConfirmationRequired) {
         setNeedsConfirmation(true);
       } else {
         setSuccess(true);
       }
     } catch (error) {
-      console.error("Driver registration error:", error);
+      console.error(
+        "Driver registration error:",
+        error
+      );
 
       setErrorMessage(
         error instanceof Error
@@ -264,7 +252,9 @@ export default function DriverRegister() {
 
             <p className="mx-auto mt-4 max-w-lg leading-7 text-gray-400">
               {needsConfirmation
-                ? `Your account and driver application have been created. Please confirm your email address at ${email.trim().toLowerCase()} before logging in.`
+                ? `Your account and driver application have been created. Please confirm your email address at ${email
+                    .trim()
+                    .toLowerCase()} before logging in.`
                 : "Thanks for applying to join the RCS Driver Network. Your details and documents have been submitted for review."}
             </p>
 
@@ -275,22 +265,31 @@ export default function DriverRegister() {
 
               <div className="mt-4 space-y-3 text-sm leading-6 text-gray-400">
                 <p>
-                  <span className="text-[#79c51c]">✓</span>{" "}
+                  <span className="text-[#79c51c]">
+                    ✓
+                  </span>{" "}
                   Your driver details have been saved.
                 </p>
 
                 <p>
-                  <span className="text-[#79c51c]">✓</span>{" "}
-                  Your licence and insurance have been uploaded.
+                  <span className="text-[#79c51c]">
+                    ✓
+                  </span>{" "}
+                  Your licence and insurance have been
+                  uploaded.
                 </p>
 
                 <p>
-                  <span className="text-[#79c51c]">✓</span>{" "}
+                  <span className="text-[#79c51c]">
+                    ✓
+                  </span>{" "}
                   Your vehicle has been added.
                 </p>
 
                 <p>
-                  <span className="text-[#79c51c]">✓</span>{" "}
+                  <span className="text-[#79c51c]">
+                    ✓
+                  </span>{" "}
                   RCS can now review your application.
                 </p>
               </div>
@@ -308,7 +307,9 @@ export default function DriverRegister() {
 
             <button
               type="button"
-              onClick={() => router.push("/driver/login")}
+              onClick={() =>
+                router.push("/driver/login")
+              }
               className="mt-7 w-full rounded-xl bg-[#79c51c] px-5 py-4 font-black text-black transition hover:bg-[#91db32]"
             >
               Go to Driver Login
@@ -362,12 +363,16 @@ export default function DriverRegister() {
 
           <h1 className="mt-5 text-4xl font-black uppercase leading-tight sm:text-5xl">
             Become an
-            <span className="text-[#79c51c]"> RCS Driver.</span>
+            <span className="text-[#79c51c]">
+              {" "}
+              RCS Driver.
+            </span>
           </h1>
 
           <p className="mt-4 max-w-2xl text-base leading-7 text-gray-400 sm:text-lg">
-            Apply to join the RCS Marketplace. Submit your details,
-            licence, insurance and vehicle information for review.
+            Apply to join the RCS Marketplace. Submit your
+            details, licence, insurance and vehicle
+            information for review.
           </p>
 
           <div className="mt-7 grid gap-3 sm:grid-cols-3">
@@ -681,9 +686,10 @@ export default function DriverRegister() {
               </p>
 
               <p className="mt-2 text-sm leading-6 text-gray-400">
-                Your application will be reviewed by RCS. You will
-                not be able to bid on marketplace jobs until your
-                driver account has been approved.
+                Your application will be reviewed by RCS.
+                You will not be able to bid on marketplace
+                jobs until your driver account has been
+                approved.
               </p>
             </div>
 
@@ -788,17 +794,29 @@ function Input({
         {label}
 
         {required && (
-          <span className="ml-1 text-[#79c51c]">*</span>
+          <span className="ml-1 text-[#79c51c]">
+            *
+          </span>
         )}
       </label>
 
       <input
         required={required}
         type={type}
-        min={type === "number" ? "0" : undefined}
-        minLength={type === "password" ? 6 : undefined}
+        min={
+          type === "number"
+            ? "0"
+            : undefined
+        }
+        minLength={
+          type === "password"
+            ? 6
+            : undefined
+        }
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
         placeholder={placeholder}
         className="mt-2 w-full rounded-xl border border-[#354433] bg-[#080d09] px-4 py-3 text-white placeholder:text-gray-600 outline-none transition focus:border-[#79c51c] focus:ring-2 focus:ring-[#79c51c]/20"
       />
@@ -825,17 +843,25 @@ function Select({
         {label}
 
         {required && (
-          <span className="ml-1 text-[#79c51c]">*</span>
+          <span className="ml-1 text-[#79c51c]">
+            *
+          </span>
         )}
       </label>
 
       <select
         required={required}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
         className="mt-2 w-full rounded-xl border border-[#354433] bg-[#080d09] px-4 py-3 text-white outline-none transition focus:border-[#79c51c] focus:ring-2 focus:ring-[#79c51c]/20"
       >
-        <option value="" disabled className="bg-[#080d09]">
+        <option
+          value=""
+          disabled
+          className="bg-[#080d09]"
+        >
           Select an option
         </option>
 
@@ -870,7 +896,9 @@ function DateInput({
         {label}
 
         {required && (
-          <span className="ml-1 text-[#79c51c]">*</span>
+          <span className="ml-1 text-[#79c51c]">
+            *
+          </span>
         )}
       </label>
 
@@ -878,7 +906,9 @@ function DateInput({
         required={required}
         type="date"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
         className="mt-2 w-full rounded-xl border border-[#354433] bg-[#080d09] px-4 py-3 text-white outline-none transition focus:border-[#79c51c] focus:ring-2 focus:ring-[#79c51c]/20"
       />
     </div>
@@ -906,7 +936,9 @@ function FileUpload({
         {label}
 
         {required && (
-          <span className="ml-1 text-[#79c51c]">*</span>
+          <span className="ml-1 text-[#79c51c]">
+            *
+          </span>
         )}
       </label>
 
@@ -916,7 +948,9 @@ function FileUpload({
         </span>
 
         <span className="mt-3 break-all font-bold text-white">
-          {file ? file.name : "Choose a file"}
+          {file
+            ? file.name
+            : "Choose a file"}
         </span>
 
         <span className="mt-1 text-sm text-gray-600">
@@ -927,10 +961,15 @@ function FileUpload({
 
         <input
           type="file"
-          required={required && !file}
+          required={
+            required && !file
+          }
           accept={accept}
           onChange={(e) =>
-            onChange(e.target.files?.[0] || null)
+            onChange(
+              e.target.files?.[0] ||
+                null
+            )
           }
           className="hidden"
         />
