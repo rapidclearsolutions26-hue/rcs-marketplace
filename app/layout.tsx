@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import PushNotificationSetup from "./components/notifications/PushNotificationSetup";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -55,6 +56,8 @@ export default function RootLayout({
     <html lang="en">
       <body>
         {children}
+
+        <PushNotificationSetup />
 
         <Analytics />
       </body>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "358825515260",
+    "project_id": "rapid-clear-solutions",
+    "storage_bucket": "rapid-clear-solutions.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:358825515260:android:22d6f12200cd0fbf449f79",
+        "android_client_info": {
+          "package_name": "com.rapidclearsolutions.marketplace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApzNdKOUDRlxVGXfBz8PWqQTBZhhqQiyw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

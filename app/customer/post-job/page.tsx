@@ -1,781 +1,1444 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import {
+  FormEvent,
+  useMemo,
+  useState,
+} from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
-type Customer = {
-  id: string;
-  full_name: string;
-  business_name: string;
-  email: string;
-  phone: string;
-};
+const wasteTypes = [
+  "House clearance",
+  "Garden waste",
+  "General rubbish",
+  "Furniture",
+  "Builders waste",
+  "Scrap",
+  "Shed / garage clearance",
+  "Other",
+];
 
-type PhotoPreview = {
-  id: string;
-  file: File;
-  preview: string;
-};
+const loadSizes = [
+  "Small",
+  "Medium",
+  "Large",
+  "Full van",
+  "Not sure",
+];
+
+const locations = [
+  "Inside the property",
+  "Outside",
+  "Garage",
+  "Shed",
+  "Garden",
+  "Upstairs",
+  "Multiple areas",
+];
 
 export default function PostJobPage() {
   const router = useRouter();
-  const supabase = createClient();
 
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [loadingCustomer, setLoadingCustomer] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [jobType, setJobType] = useState("House clearance");
-  const [description, setDescription] = useState("");
-  const [postcode, setPostcode] = useState("");
-  const [address, setAddress] = useState("");
-  const [loadSize, setLoadSize] = useState("");
-  const [floor, setFloor] = useState("");
-  const [stairs, setStairs] = useState(false);
-  const [accessNotes, setAccessNotes] = useState("");
-  const [preferredDate, setPreferredDate] = useState("");
-  const [preferredTime, setPreferredTime] = useState<number | "">("");
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
-  const [photos, setPhotos] = useState<PhotoPreview[]>([]);
+  const [successMessage, setSuccessMessage] =
+    useState("");
 
-  const MAX_PHOTOS = 10;
-  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  /*
+   * JOB DETAILS
+   */
 
-  useEffect(() => {
-    loadCustomer();
+  const [wasteType, setWasteType] =
+    useState("");
+
+  const [loadSize, setLoadSize] =
+    useState("");
+
+  const [location, setLocation] =
+    useState("");
+
+  const [postcode, setPostcode] =
+    useState("");
+
+  const [address, setAddress] =
+    useState("");
+
+  const [collectionDate, setCollectionDate] =
+    useState("");
+
+  const [preferredTime, setPreferredTime] =
+    useState("");
+
+  const [description, setDescription] =
+    useState("");
+
+  const [accessNotes, setAccessNotes] =
+    useState("");
+
+  const [photos, setPhotos] =
+    useState<File[]>([]);
+
+  /*
+   * CUSTOMER DETAILS
+   */
+
+  const [fullName, setFullName] =
+    useState("");
+
+  const [email, setEmail] =
+    useState("");
+
+  const [phone, setPhone] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [confirmPassword, setConfirmPassword] =
+    useState("");
+
+  /*
+   * TODAY
+   */
+
+  const today = useMemo(() => {
+    const date = new Date();
+
+    const year =
+      date.getFullYear();
+
+    const month = String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+      date.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
   }, []);
 
-  async function loadCustomer() {
-    try {
-      setLoadingCustomer(true);
-      setError("");
+  /*
+   * PHOTO SELECTION
+   */
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
+  function handlePhotos(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const selectedFiles = Array.from(
+      event.target.files || []
+    );
 
-      if (authError) {
-        console.error("Auth error:", authError);
-        setError("Unable to load your account.");
-        return;
-      }
-
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-
-      const metadata = user.user_metadata ?? {};
-
-      setCustomer({
-        id: user.id,
-        full_name:
-          metadata.full_name ||
-          metadata.name ||
-          metadata.fullName ||
-          "",
-        business_name:
-          metadata.business_name ||
-          metadata.businessName ||
-          "",
-        email: user.email || "",
-        phone: metadata.phone || "",
-      });
-    } catch (err) {
-      console.error("Customer loading error:", err);
-      setError("Something went wrong loading your account.");
-    } finally {
-      setLoadingCustomer(false);
-    }
-  }
-
-  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
-    setError("");
-
-    const selectedFiles = Array.from(event.target.files || []);
-
-    if (selectedFiles.length === 0) {
+    if (!selectedFiles.length) {
       return;
     }
 
-    if (photos.length + selectedFiles.length > MAX_PHOTOS) {
-      setError(`You can upload a maximum of ${MAX_PHOTOS} photos.`);
-      event.target.value = "";
-      return;
+    const invalidFile =
+      selectedFiles.find(
+        (file) =>
+          !file.type.startsWith("image/") ||
+          file.size > 10 * 1024 * 1024
+      );
+
+    if (invalidFile) {
+      setErrorMessage(
+        "Only image files under 10MB can be uploaded."
+      );
+    } else {
+      setErrorMessage("");
     }
 
-    const validFiles: PhotoPreview[] = [];
+    const validFiles =
+      selectedFiles.filter(
+        (file) =>
+          file.type.startsWith("image/") &&
+          file.size <=
+            10 * 1024 * 1024
+      );
 
-    for (const file of selectedFiles) {
-      if (!file.type.startsWith("image/")) {
-        setError("Only image files can be uploaded.");
-        continue;
-      }
-
-      if (file.size > MAX_FILE_SIZE) {
-        setError(
-          `${file.name} is too large. Each photo must be 10MB or smaller.`,
-        );
-        continue;
-      }
-
-      validFiles.push({
-        id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
-        file,
-        preview: URL.createObjectURL(file),
-      });
-    }
-
-    setPhotos((current) => [...current, ...validFiles]);
+    setPhotos((current) =>
+      [...current, ...validFiles].slice(
+        0,
+        10
+      )
+    );
 
     event.target.value = "";
   }
 
-  function removePhoto(id: string) {
-    setPhotos((current) => {
-      const photo = current.find((item) => item.id === id);
-
-      if (photo) {
-        URL.revokeObjectURL(photo.preview);
-      }
-
-      return current.filter((item) => item.id !== id);
-    });
-  }
-
-  async function uploadPhotos(jobId: number) {
-    if (photos.length === 0) {
-      return;
-    }
-
-    for (const photo of photos) {
-      const extension =
-        photo.file.name.split(".").pop()?.toLowerCase() || "jpg";
-
-      const safeExtension = extension.replace(/[^a-z0-9]/g, "");
-
-      const fileName = `${crypto.randomUUID()}.${safeExtension}`;
-
-      const storagePath = `${jobId}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("customer-job-photos")
-        .upload(storagePath, photo.file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: photo.file.type,
-        });
-
-      if (uploadError) {
-        console.error("Photo upload error:", {
-          message: uploadError.message,
-          name: uploadError.name,
-          cause: uploadError.cause,
-        });
-
-        throw new Error(
-          `We couldn't upload ${photo.file.name}. ${uploadError.message}`,
-        );
-      }
-
-      const { error: photoRecordError } = await supabase
-        .from("job_photos")
-        .insert({
-          job_id: jobId,
-          storage_path: storagePath,
-        });
-
-      if (photoRecordError) {
-        console.error("Photo record error:", {
-          message: photoRecordError.message,
-          details: photoRecordError.details,
-          hint: photoRecordError.hint,
-          code: photoRecordError.code,
-        });
-
-        await supabase.storage
-          .from("customer-job-photos")
-          .remove([storagePath]);
-
-        throw new Error(
-          `The photo uploaded but could not be attached to the job. ${photoRecordError.message}`,
-        );
-      }
-    }
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    setError("");
-    setSuccessMessage("");
-
-    if (!customer) {
-      setError("We couldn't load your customer account.");
-      return;
-    }
-
-    if (!postcode.trim()) {
-      setError("Please enter the postcode.");
-      return;
-    }
-
-    if (!address.trim()) {
-      setError("Please enter the address.");
-      return;
-    }
-
-    if (!description.trim()) {
-      setError("Please describe what needs removing.");
-      return;
-    }
-
-    if (!loadSize) {
-      setError("Please select an estimated load size.");
-      return;
-    }
-
-    if (preferredTime === "") {
-      setError("Please select a preferred collection time.");
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        router.push("/login");
-        return;
-      }
-
-      const reference = `RC-${Math.floor(
-        100000 + Math.random() * 900000,
-      )}`;
-
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert({
-          reference,
-          customer_id: user.id,
-          job_type: jobType,
-          postcode: postcode.trim(),
-          address: address.trim(),
-          load_size: loadSize,
-          description: description.trim(),
-          floor: floor.trim() || null,
-          stairs,
-          access_notes: accessNotes.trim() || null,
-          preferred_date: preferredDate || null,
-          preferred_time: preferredTime,
-          status: "open",
-        })
-        .select("id, reference")
-        .single();
-
-      if (jobError) {
-        console.error("Job creation error:", {
-          message: jobError.message,
-          details: jobError.details,
-          hint: jobError.hint,
-          code: jobError.code,
-        });
-
-        throw new Error(
-          jobError.message || "We couldn't create your job.",
-        );
-      }
-
-      if (!job) {
-        throw new Error("The job was created without a job ID.");
-      }
-
-      if (photos.length > 0) {
-        setSuccessMessage(
-          `Job ${job.reference} created. Uploading ${
-            photos.length
-          } photo${photos.length === 1 ? "" : "s"}...`,
-        );
-
-        await uploadPhotos(job.id);
-      }
-
-      router.push(`/customer/jobs/${job.id}`);
-    } catch (err) {
-      console.error("Post job error:", err);
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong posting your job.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (loadingCustomer) {
-    return (
-      <main className="min-h-screen bg-[#06100c] text-white">
-        <div className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-6">
-          <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] px-8 py-6 text-center">
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[#1BBB8C] border-t-transparent" />
-
-            <p className="text-sm text-gray-300">
-              Loading your account...
-            </p>
-          </div>
-        </div>
-      </main>
+  function removePhoto(
+    index: number
+  ) {
+    setPhotos((current) =>
+      current.filter(
+        (_, i) => i !== index
+      )
     );
   }
 
+  /*
+   * VALIDATION
+   */
+
+  function validateForm() {
+    if (!wasteType) {
+      return "Please choose what needs removing.";
+    }
+
+    if (!postcode.trim()) {
+      return "Please enter the collection postcode.";
+    }
+
+    if (!address.trim()) {
+      return "Please enter the collection address.";
+    }
+
+    if (!collectionDate) {
+      return "Please choose a collection date.";
+    }
+
+    if (collectionDate < today) {
+      return "Please choose today or a future collection date.";
+    }
+
+    if (!loadSize) {
+      return "Please tell us roughly how much waste there is.";
+    }
+
+    if (!location) {
+      return "Please tell us where the waste is located.";
+    }
+
+    if (!description.trim()) {
+      return "Please describe what needs removing.";
+    }
+
+    /*
+     * CUSTOMER DETAILS
+     */
+
+    if (!fullName.trim()) {
+      return "Please enter your full name.";
+    }
+
+    if (!email.trim()) {
+      return "Please enter your email address.";
+    }
+
+    if (!phone.trim()) {
+      return "Please enter your phone number.";
+    }
+
+    if (!password) {
+      return "Please create a password.";
+    }
+
+    if (password.length < 6) {
+      return "Your password must be at least 6 characters.";
+    }
+
+    if (!confirmPassword) {
+      return "Please confirm your password.";
+    }
+
+    if (password !== confirmPassword) {
+      return "Your passwords do not match.";
+    }
+
+    return "";
+  }
+
+  /*
+   * SUBMIT JOB
+   */
+
+  async function submitJob(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    const validationError =
+      validateForm();
+
+    if (validationError) {
+      setErrorMessage(
+        validationError
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      /*
+       * ==============================================
+       * BUILD FORM DATA
+       * ==============================================
+       */
+
+      const formData = new FormData();
+
+      formData.append(
+        "fullName",
+        fullName.trim()
+      );
+
+      formData.append(
+        "email",
+        email.trim().toLowerCase()
+      );
+
+      formData.append(
+        "phone",
+        phone.trim()
+      );
+
+      formData.append(
+        "password",
+        password
+      );
+
+      formData.append(
+        "jobType",
+        wasteType
+      );
+
+      formData.append(
+        "description",
+        description.trim()
+      );
+
+      formData.append(
+        "postcode",
+        postcode.trim().toUpperCase()
+      );
+
+      formData.append(
+        "address",
+        address.trim()
+      );
+
+      formData.append(
+        "loadSize",
+        loadSize
+      );
+
+      /*
+       * Location is included inside the
+       * access notes so the driver can see it.
+       */
+
+      formData.append(
+        "floor",
+        ""
+      );
+
+      formData.append(
+        "stairs",
+        location === "Upstairs"
+          ? "true"
+          : "false"
+      );
+
+      const combinedAccessNotes = [
+        location
+          ? `Waste location: ${location}`
+          : "",
+        accessNotes.trim()
+          ? `Access notes: ${accessNotes.trim()}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      formData.append(
+        "accessNotes",
+        combinedAccessNotes
+      );
+
+      formData.append(
+        "preferredDate",
+        collectionDate
+      );
+
+      formData.append(
+        "preferredTime",
+        preferredTime
+      );
+
+      /*
+       * PHOTOS
+       */
+
+      photos.forEach((photo) => {
+        formData.append(
+          "photos",
+          photo
+        );
+      });
+
+      /*
+       * ==============================================
+       * SEND TO SERVER
+       * ==============================================
+       */
+
+      const response =
+        await fetch(
+          "/api/customer/post-job",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+      const result =
+        await response.json();
+
+      /*
+       * ==============================================
+       * EXISTING ACCOUNT
+       * ==============================================
+       */
+
+      if (
+        response.status === 409 &&
+        result.code ===
+          "ACCOUNT_EXISTS"
+      ) {
+        setErrorMessage(
+          "An RCS customer account already exists with this email address. Please log in to your existing account before posting a new job."
+        );
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+
+        return;
+      }
+
+      /*
+       * ==============================================
+       * SERVER ERROR
+       * ==============================================
+       */
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "We couldn't post your job. Please try again."
+        );
+      }
+
+      /*
+       * ==============================================
+       * SUCCESS
+       * ==============================================
+       */
+
+      const reference =
+        result.reference ||
+        "";
+
+      const emailConfirmationRequired =
+        result.emailConfirmationRequired;
+
+      if (
+        emailConfirmationRequired
+      ) {
+        setSuccessMessage(
+          reference
+            ? `Your job ${reference} has been posted successfully. We've sent a confirmation email to ${email.trim()}. Please confirm your email address, then log in to view your job and driver quotes.`
+            : `Your job has been posted successfully. We've sent a confirmation email to ${email.trim()}. Please confirm your email address, then log in to view your job and driver quotes.`
+        );
+      } else {
+        setSuccessMessage(
+          reference
+            ? `Your job ${reference} has been posted successfully.`
+            : "Your job has been posted successfully."
+        );
+      }
+
+      /*
+       * ==============================================
+       * SEND CUSTOMER TO LOGIN
+       *
+       * We do NOT send the password or session
+       * through the browser.
+       * ==============================================
+       */
+
+      setTimeout(() => {
+        const params =
+          new URLSearchParams();
+
+        params.set(
+          "posted",
+          "success"
+        );
+
+        if (reference) {
+          params.set(
+            "reference",
+            reference
+          );
+        }
+
+        router.push(
+          `/customer/login?${params.toString()}`
+        );
+      }, 1800);
+    } catch (error) {
+      console.error(
+        "POST JOB ERROR:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while posting your job. Please try again."
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-[#06100c] text-white">
-      <header className="border-b border-[#17382b] bg-[#081710]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1BBB8C]">
-              Rapid Clear Solutions
-            </p>
+    <main className="min-h-screen bg-[#07100b] text-white">
 
-            <h1 className="mt-1 text-2xl font-bold">
-              Post a Job
-            </h1>
-          </div>
+      {/* ================================================= */}
+      {/* HEADER                                            */}
+      {/* ================================================= */}
 
-          <button
-            type="button"
-            onClick={() => router.push("/customer/dashboard")}
-            className="rounded-xl border border-[#29483a] bg-[#0b1b14] px-4 py-2 text-sm font-medium text-gray-200 transition hover:border-[#1BBB8C] hover:text-white"
+      <header className="border-b border-white/10 bg-[#07100b]">
+
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+
+          <Link href="/">
+            <Image
+              src="/rcs-logo.jpg"
+              alt="Rapid Clear Solutions"
+              width={170}
+              height={65}
+              className="h-12 w-auto object-contain"
+            />
+          </Link>
+
+          <Link
+            href="/customer/login"
+            className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/5"
           >
-            Dashboard
-          </button>
+            Customer Login
+          </Link>
+
         </div>
+
       </header>
 
-      <div className="mx-auto max-w-4xl px-6 py-10">
-        <div className="mb-8">
-          <p className="mb-2 text-sm font-medium text-[#1BBB8C]">
-            Get quotes from local drivers
+      {/* ================================================= */}
+      {/* CONTENT                                           */}
+      {/* ================================================= */}
+
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+
+        {/* INTRO */}
+
+        <div className="max-w-3xl">
+
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-[#71b33d]">
+            RCS Marketplace
           </p>
 
-          <h2 className="text-3xl font-bold tracking-tight">
-            Tell us about your waste
-          </h2>
+          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">
+            Get a quote for your waste removal.
+          </h1>
 
-          <p className="mt-2 max-w-2xl text-gray-400">
-            Add as much detail as possible. Photos are especially useful
-            because drivers can see exactly what needs collecting before
-            submitting their quote.
+          <p className="mt-4 text-base leading-7 text-[#aeb9af] sm:text-lg">
+            Tell us what needs removing and
+            approved RCS drivers can review
+            your job and submit their price.
           </p>
+
         </div>
 
-        {error && (
-          <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {error}
+        {/* ================================================= */}
+        {/* ERROR                                             */}
+        {/* ================================================= */}
+
+        {errorMessage && (
+          <div className="mt-8 rounded-2xl border border-red-400/30 bg-red-500/10 p-5">
+
+            <p className="font-bold text-red-300">
+              {errorMessage}
+            </p>
+
+            {errorMessage.includes(
+              "already exists"
+            ) && (
+              <Link
+                href="/customer/login"
+                className="mt-4 inline-flex rounded-xl bg-[#1BBB8C] px-5 py-3 text-sm font-black text-[#06100c] transition hover:bg-[#16a77c]"
+              >
+                LOG IN TO YOUR ACCOUNT →
+              </Link>
+            )}
+
           </div>
         )}
+
+        {/* ================================================= */}
+        {/* SUCCESS                                           */}
+        {/* ================================================= */}
 
         {successMessage && (
-          <div className="mb-6 rounded-xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/10 px-4 py-3 text-sm text-[#8ff0d0]">
-            {successMessage}
+          <div className="mt-8 rounded-2xl border border-[#529027]/40 bg-[#529027]/10 p-5">
+
+            <p className="font-bold text-[#9bd76c]">
+              ✓ {successMessage}
+            </p>
+
+            <p className="mt-2 text-sm text-[#aeb9af]">
+              Taking you to customer login...
+            </p>
+
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <section className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-6">
-            <div className="mb-5">
-              <h3 className="text-lg font-semibold">
-                Your details
-              </h3>
+        {/* ================================================= */}
+        {/* FORM                                              */}
+        {/* ================================================= */}
 
-              <p className="mt-1 text-sm text-gray-400">
-                We'll use these details for your job.
-              </p>
-            </div>
+        <form
+          onSubmit={submitJob}
+          className="mt-8 space-y-6"
+        >
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Name
-                </label>
+          {/* ================================================= */}
+          {/* STEP 01                                           */}
+          {/* ================================================= */}
 
-                <input
-                  value={customer?.full_name || ""}
-                  readOnly
-                  className="w-full rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none"
-                />
-              </div>
+          <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+
+            <div className="flex items-center gap-4">
+
+              <StepNumber number="01" />
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Email
-                </label>
 
-                <input
-                  value={customer?.email || ""}
-                  readOnly
-                  className="w-full rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none"
-                />
-              </div>
-            </div>
-          </section>
+                <h2 className="text-xl font-black sm:text-2xl">
+                  What needs removing?
+                </h2>
 
-          <section className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-6">
-            <div className="mb-5">
-              <h3 className="text-lg font-semibold">
-                Job details
-              </h3>
-
-              <p className="mt-1 text-sm text-gray-400">
-                Tell drivers what needs doing.
-              </p>
-            </div>
-
-            <div className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Job type
-                </label>
-
-                <select
-                  value={jobType}
-                  onChange={(e) => setJobType(e.target.value)}
-                  className="w-full rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none focus:border-[#1BBB8C]"
-                >
-                  <option>House clearance</option>
-                  <option>Waste removal</option>
-                  <option>Garden waste removal</option>
-                  <option>Furniture removal</option>
-                  <option>Builders waste</option>
-                  <option>Shed / Garage clearance</option>
-                  <option>Scrap collection</option>
-                  <option>Small removals</option>
-                  <option>Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  What needs removing? *
-                </label>
-
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={5}
-                  required
-                  placeholder="Example: Old sofa, broken furniture, bags of rubbish and garden waste..."
-                  className="w-full resize-none rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none placeholder:text-gray-600 focus:border-[#1BBB8C]"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Estimated load size *
-                </label>
-
-                <select
-                  value={loadSize}
-                  onChange={(e) => setLoadSize(e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none focus:border-[#1BBB8C]"
-                >
-                  <option value="">Select load size</option>
-                  <option>Small</option>
-                  <option>Quarter van</option>
-                  <option>Half van</option>
-                  <option>Three-quarter van</option>
-                  <option>Full van</option>
-                  <option>Multiple loads</option>
-                  <option>Not sure</option>
-                </select>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-[#1BBB8C]/30 bg-[#0b1b14] p-6">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">
-                  Photos of the waste
-                </h3>
-
-                <p className="mt-1 text-sm text-gray-400">
-                  Drivers will be able to see these before they bid.
+                <p className="mt-1 text-sm text-[#8f9d91]">
+                  Choose the option that best
+                  describes your job.
                 </p>
+
               </div>
 
-              <span className="rounded-full bg-[#1BBB8C]/10 px-3 py-1 text-xs font-semibold text-[#1BBB8C]">
-                {photos.length}/{MAX_PHOTOS}
-              </span>
             </div>
 
-            <label
-              htmlFor="job-photos"
-              className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-[#29483a] bg-[#081710] px-6 py-10 text-center transition hover:border-[#1BBB8C] hover:bg-[#0a1e16]"
-            >
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#1BBB8C]/10 text-2xl text-[#1BBB8C]">
-                +
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+              {wasteTypes.map(
+                (type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() =>
+                      setWasteType(
+                        type
+                      )
+                    }
+                    className={`min-h-[58px] rounded-2xl border px-3 py-3 text-sm font-bold transition ${
+                      wasteType ===
+                      type
+                        ? "border-[#529027] bg-[#529027] text-white"
+                        : "border-white/10 bg-[#07100b] text-[#d7ded8] hover:border-[#529027]/60"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                )
+              )}
+
+            </div>
+
+          </section>
+
+          {/* ================================================= */}
+          {/* STEP 02                                           */}
+          {/* ================================================= */}
+
+          <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+
+            <div className="flex items-center gap-4">
+
+              <StepNumber number="02" />
+
+              <div>
+
+                <h2 className="text-xl font-black sm:text-2xl">
+                  Where are we collecting from?
+                </h2>
+
+                <p className="mt-1 text-sm text-[#8f9d91]">
+                  Give the driver everything
+                  they need to find you.
+                </p>
+
               </div>
 
-              <p className="font-semibold text-white">
+            </div>
+
+            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+
+              <Field
+                label="Postcode"
+                required
+              >
+                <input
+                  value={postcode}
+                  onChange={(e) =>
+                    setPostcode(
+                      e.target.value
+                    )
+                  }
+                  placeholder="e.g. B1 1AA"
+                  className={inputClass}
+                  autoComplete="postal-code"
+                />
+              </Field>
+
+              <Field
+                label="Collection address"
+                required
+              >
+                <input
+                  value={address}
+                  onChange={(e) =>
+                    setAddress(
+                      e.target.value
+                    )
+                  }
+                  placeholder="House number and street"
+                  className={inputClass}
+                  autoComplete="street-address"
+                />
+              </Field>
+
+            </div>
+
+          </section>
+
+          {/* ================================================= */}
+          {/* STEP 03                                           */}
+          {/* ================================================= */}
+
+          <section className="rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+
+            <div className="flex items-center gap-4">
+
+              <StepNumber number="03" />
+
+              <div>
+
+                <h2 className="text-xl font-black sm:text-2xl">
+                  When should we collect it?
+                </h2>
+
+                <p className="mt-1 text-sm text-[#8f9d91]">
+                  Choose the day you want the
+                  driver to attend.
+                </p>
+
+              </div>
+
+            </div>
+
+            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+
+              <Field
+                label="Collection date"
+                required
+              >
+                <input
+                  type="date"
+                  min={today}
+                  value={
+                    collectionDate
+                  }
+                  onChange={(e) =>
+                    setCollectionDate(
+                      e.target.value
+                    )
+                  }
+                  className={`${inputClass} [color-scheme:dark]`}
+                  required
+                />
+              </Field>
+
+              <Field label="Preferred time">
+
+                <select
+                  value={
+                    preferredTime
+                  }
+                  onChange={(e) =>
+                    setPreferredTime(
+                      e.target.value
+                    )
+                  }
+                  className={inputClass}
+                >
+
+                  <option value="">
+                    Any time
+                  </option>
+
+                  <option value="Morning">
+                    Morning
+                  </option>
+
+                  <option value="Afternoon">
+                    Afternoon
+                  </option>
+
+                  <option value="Evening">
+                    Evening
+                  </option>
+
+                </select>
+
+              </Field>
+
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-[#529027]/30 bg-[#529027]/10 p-4">
+
+              <p className="text-sm font-bold text-[#9bd76c]">
+                Collection date required
+              </p>
+
+              <p className="mt-1 text-sm text-[#9aa79c]">
+                Drivers will see this date
+                when deciding whether to bid.
+              </p>
+
+            </div>
+
+          </section>
+
+          {/* ================================================= */}
+          {/* STEP 04                                           */}
+          {/* ================================================= */}
+
+          <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+
+            <div className="flex items-center gap-4">
+
+              <StepNumber number="04" />
+
+              <div>
+
+                <h2 className="text-xl font-black sm:text-2xl">
+                  Help the driver understand
+                  the job
+                </h2>
+
+                <p className="mt-1 text-sm text-[#8f9d91]">
+                  Give us your best estimate.
+                </p>
+
+              </div>
+
+            </div>
+
+            <div className="mt-6">
+
+              <Field
+                label="Roughly how much waste is there?"
+                required
+              >
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+
+                  {loadSizes.map(
+                    (size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() =>
+                          setLoadSize(
+                            size
+                          )
+                        }
+                        className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
+                          loadSize ===
+                          size
+                            ? "border-[#529027] bg-[#529027] text-white"
+                            : "border-white/10 bg-[#07100b] text-[#d7ded8] hover:border-[#529027]/60"
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    )
+                  )}
+
+                </div>
+
+              </Field>
+
+              <div className="mt-6">
+
+                <Field
+                  label="Where is the waste?"
+                  required
+                >
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+                    {locations.map(
+                      (item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() =>
+                            setLocation(
+                              item
+                            )
+                          }
+                          className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
+                            location ===
+                            item
+                              ? "border-[#529027] bg-[#529027] text-white"
+                              : "border-white/10 bg-[#07100b] text-[#d7ded8] hover:border-[#529027]/60"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      )
+                    )}
+
+                  </div>
+
+                </Field>
+
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* ================================================= */}
+          {/* STEP 05                                           */}
+          {/* ================================================= */}
+
+          <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+
+            <div className="flex items-center gap-4">
+
+              <StepNumber number="05" />
+
+              <div>
+
+                <h2 className="text-xl font-black sm:text-2xl">
+                  Show us what needs taking
+                </h2>
+
+                <p className="mt-1 text-sm text-[#8f9d91]">
+                  Photos help drivers price
+                  your job accurately.
+                </p>
+
+              </div>
+
+            </div>
+
+            <label className="mt-6 flex min-h-[150px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/15 bg-[#07100b] p-6 text-center transition hover:border-[#529027]">
+
+              <span className="text-lg font-black">
                 Add photos
-              </p>
+              </span>
 
-              <p className="mt-1 text-sm text-gray-400">
-                Click to choose photos from your device
-              </p>
+              <span className="mt-2 text-sm text-[#89968b]">
+                Take photos on your phone or
+                choose them from your device.
+              </span>
 
-              <p className="mt-3 text-xs text-gray-500">
-                JPG, PNG or other image files · Max 10MB each · Up to 10
-                photos
-              </p>
+              <span className="mt-4 rounded-xl bg-[#529027] px-5 py-3 text-sm font-black text-white">
+                Choose photos
+              </span>
 
               <input
-                id="job-photos"
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={handlePhotoChange}
-                disabled={photos.length >= MAX_PHOTOS || submitting}
+                onChange={handlePhotos}
                 className="hidden"
               />
+
             </label>
 
+            <p className="mt-3 text-center text-xs text-[#758177]">
+              You can upload up to 10 photos.
+              Each photo must be under 10MB.
+            </p>
+
             {photos.length > 0 && (
-              <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                {photos.map((photo) => (
-                  <div
-                    key={photo.id}
-                    className="group relative aspect-square overflow-hidden rounded-xl border border-[#29483a] bg-[#081710]"
-                  >
-                    <img
-                      src={photo.preview}
-                      alt="Waste preview"
-                      className="h-full w-full object-cover"
-                    />
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
 
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(photo.id)}
-                      disabled={submitting}
-                      className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed"
-                      aria-label="Remove photo"
+                {photos.map(
+                  (photo, index) => (
+                    <div
+                      key={`${photo.name}-${index}`}
+                      className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#07100b] p-2"
                     >
-                      ×
-                    </button>
 
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-6">
-                      <p className="truncate text-xs text-white">
-                        {photo.file.name}
-                      </p>
+                      <div className="truncate px-1 py-2 text-xs text-[#aeb9af]">
+                        {photo.name}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removePhoto(
+                            index
+                          )
+                        }
+                        className="absolute right-2 top-2 rounded-lg bg-black/80 px-2 py-1 text-xs font-bold text-white"
+                      >
+                        Remove
+                      </button>
+
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
+
               </div>
             )}
 
-            {photos.length === 0 && (
-              <div className="mt-4 rounded-xl border border-[#17382b] bg-[#081710] px-4 py-3">
-                <p className="text-sm text-gray-400">
-                  <span className="font-medium text-white">
-                    Tip:
-                  </span>{" "}
-                  Take photos from different angles so drivers can judge the
-                  amount of waste and access.
+          </section>
+
+          {/* ================================================= */}
+          {/* STEP 06                                           */}
+          {/* ================================================= */}
+
+          <section className="rounded-3xl border border-white/10 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+
+            <div className="flex items-center gap-4">
+
+              <StepNumber number="06" />
+
+              <div>
+
+                <h2 className="text-xl font-black sm:text-2xl">
+                  Tell us more about the job
+                </h2>
+
+                <p className="mt-1 text-sm text-[#8f9d91]">
+                  Anything else the driver
+                  should know?
                 </p>
-              </div>
-            )}
-          </section>
 
-          <section className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-6">
-            <div className="mb-5">
-              <h3 className="text-lg font-semibold">
-                Collection address
-              </h3>
+              </div>
+
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Postcode *
-                </label>
+            <div className="mt-6 space-y-5">
 
-                <input
-                  value={postcode}
-                  onChange={(e) => setPostcode(e.target.value)}
-                  placeholder="B1 1AA"
-                  required
-                  className="w-full rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 uppercase text-white outline-none placeholder:text-gray-600 focus:border-[#1BBB8C]"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Full address *
-                </label>
-
-                <input
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="123 Example Street, Birmingham"
-                  required
-                  className="w-full rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none placeholder:text-gray-600 focus:border-[#1BBB8C]"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-6">
-            <div className="mb-5">
-              <h3 className="text-lg font-semibold">
-                Access & collection
-              </h3>
-            </div>
-
-            <div className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Floor
-                </label>
-
-                <input
-                  value={floor}
-                  onChange={(e) => setFloor(e.target.value)}
-                  placeholder="Ground floor / 1st floor / 2nd floor"
-                  className="w-full rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none placeholder:text-gray-600 focus:border-[#1BBB8C]"
-                />
-              </div>
-
-              <label className="flex cursor-pointer items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={stairs}
-                  onChange={(e) => setStairs(e.target.checked)}
-                  className="h-5 w-5 rounded border-[#29483a] bg-[#081710] text-[#1BBB8C] focus:ring-[#1BBB8C]"
-                />
-
-                <span className="text-sm font-medium text-gray-300">
-                  There are stairs involved
-                </span>
-              </label>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Access notes
-                </label>
+              <Field
+                label="Describe what needs removing"
+                required
+              >
 
                 <textarea
-                  value={accessNotes}
-                  onChange={(e) => setAccessNotes(e.target.value)}
-                  rows={4}
-                  placeholder="Example: Driveway available, side gate, parking outside property..."
-                  className="w-full resize-none rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none placeholder:text-gray-600 focus:border-[#1BBB8C]"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-6">
-            <div className="mb-5">
-              <h3 className="text-lg font-semibold">
-                Preferred collection
-              </h3>
-
-              <p className="mt-1 text-sm text-gray-400">
-                Choose the time window that works best for you.
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Preferred date
-                </label>
-
-                <input
-                  type="date"
-                  value={preferredDate}
-                  onChange={(e) => setPreferredDate(e.target.value)}
-                  className="w-full rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none focus:border-[#1BBB8C]"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
-                  Preferred time *
-                </label>
-
-                <select
-                  value={preferredTime}
+                  value={
+                    description
+                  }
                   onChange={(e) =>
-                    setPreferredTime(
-                      e.target.value === ""
-                        ? ""
-                        : Number(e.target.value),
+                    setDescription(
+                      e.target.value
                     )
                   }
-                  required
-                  className="w-full rounded-xl border border-[#29483a] bg-[#081710] px-4 py-3 text-white outline-none focus:border-[#1BBB8C]"
-                >
-                  <option value="">
-                    Select a time window
-                  </option>
+                  rows={5}
+                  placeholder="For example: old sofa, wardrobe and several bags of household rubbish..."
+                  className={`${inputClass} resize-none`}
+                />
 
-                  <option value="8">
-                    Morning — 8:00 AM to 12:00 PM
-                  </option>
+              </Field>
 
-                  <option value="13">
-                    Afternoon — 1:00 PM to 5:00 PM
-                  </option>
+              <Field label="Access notes">
 
-                  <option value="18">
-                    Evening — 6:00 PM to 8:00 PM
-                  </option>
-                </select>
-              </div>
+                <textarea
+                  value={
+                    accessNotes
+                  }
+                  onChange={(e) =>
+                    setAccessNotes(
+                      e.target.value
+                    )
+                  }
+                  rows={4}
+                  placeholder="Parking information, narrow access, gates, stairs, keys, or anything else the driver should know."
+                  className={`${inputClass} resize-none`}
+                />
+
+              </Field>
+
             </div>
+
           </section>
 
-          <div className="rounded-2xl border border-[#1BBB8C]/30 bg-[#0b1b14] p-6">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="font-semibold">
-                  Ready to get quotes?
-                </h3>
+          {/* ================================================= */}
+          {/* STEP 07 - ACCOUNT                                 */}
+          {/* ================================================= */}
 
-                <p className="mt-1 text-sm text-gray-400">
-                  Drivers will be able to review your job and photos before
-                  submitting their prices.
+          <section className="rounded-3xl border border-[#1BBB8C]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+
+            <div className="flex items-center gap-4">
+
+              <StepNumber number="07" />
+
+              <div>
+
+                <h2 className="text-xl font-black sm:text-2xl">
+                  Create your RCS customer account
+                </h2>
+
+                <p className="mt-1 text-sm text-[#8f9d91]">
+                  Your account lets you track your
+                  job, view driver quotes and manage
+                  your collection.
                 </p>
+
               </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="rounded-xl bg-[#1BBB8C] px-7 py-3 font-bold text-[#06100c] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {submitting
-                  ? photos.length > 0
-                    ? "Uploading..."
-                    : "Posting..."
-                  : "Post Job"}
-              </button>
             </div>
-          </div>
+
+            <div className="mt-6 rounded-2xl border border-[#1BBB8C]/20 bg-[#1BBB8C]/5 p-4">
+
+              <p className="text-sm font-bold text-[#b8f1dc]">
+                No account needed to start your quote
+              </p>
+
+              <p className="mt-1 text-sm leading-6 text-[#8f9d91]">
+                We only ask for these details at the
+                end so we can create your account and
+                keep your job and driver quotes
+                together.
+              </p>
+
+            </div>
+
+            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+
+              <Field
+                label="Full name"
+                required
+              >
+
+                <input
+                  type="text"
+                  value={
+                    fullName
+                  }
+                  onChange={(e) =>
+                    setFullName(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Your full name"
+                  autoComplete="name"
+                  className={inputClass}
+                />
+
+              </Field>
+
+              <Field
+                label="Phone number"
+                required
+              >
+
+                <input
+                  type="tel"
+                  value={
+                    phone
+                  }
+                  onChange={(e) =>
+                    setPhone(
+                      e.target.value
+                    )
+                  }
+                  placeholder="e.g. 07123 456789"
+                  autoComplete="tel"
+                  className={inputClass}
+                />
+
+              </Field>
+
+            </div>
+
+            <div className="mt-5">
+
+              <Field
+                label="Email address"
+                required
+              >
+
+                <input
+                  type="email"
+                  value={
+                    email
+                  }
+                  onChange={(e) =>
+                    setEmail(
+                      e.target.value
+                    )
+                  }
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  className={inputClass}
+                />
+
+              </Field>
+
+            </div>
+
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
+
+              <Field
+                label="Create a password"
+                required
+              >
+
+                <input
+                  type="password"
+                  value={
+                    password
+                  }
+                  onChange={(e) =>
+                    setPassword(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Minimum 6 characters"
+                  autoComplete="new-password"
+                  className={inputClass}
+                />
+
+              </Field>
+
+              <Field
+                label="Confirm password"
+                required
+              >
+
+                <input
+                  type="password"
+                  value={
+                    confirmPassword
+                  }
+                  onChange={(e) =>
+                    setConfirmPassword(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Enter your password again"
+                  autoComplete="new-password"
+                  className={inputClass}
+                />
+
+              </Field>
+
+            </div>
+
+            <p className="mt-4 text-xs leading-5 text-[#758177]">
+              After your job is posted, we'll
+              send a confirmation email to your
+              email address. You'll then be able to
+              log in and view your job and driver
+              quotes.
+            </p>
+
+          </section>
+
+          {/* ================================================= */}
+          {/* SUBMIT                                             */}
+          {/* ================================================= */}
+
+          <section className="rounded-3xl border border-[#529027]/40 bg-[#0d1810] p-5 shadow-2xl sm:p-8">
+
+            <h2 className="text-2xl font-black">
+              Ready to get quotes?
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-[#9aa79c]">
+              Your job will be sent to approved
+              RCS drivers. They can review the
+              details and submit their price.
+            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+
+              <SummaryItem
+                label="Collection"
+                value={
+                  collectionDate
+                    ? new Date(
+                        `${collectionDate}T12:00:00`
+                      ).toLocaleDateString(
+                        "en-GB"
+                      )
+                    : "Not selected"
+                }
+              />
+
+              <SummaryItem
+                label="Location"
+                value={
+                  postcode ||
+                  "Not entered"
+                }
+              />
+
+              <SummaryItem
+                label="Waste"
+                value={
+                  wasteType ||
+                  "Not selected"
+                }
+              />
+
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-7 w-full rounded-2xl bg-[#529027] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:bg-[#6aad3a] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading
+                ? "POSTING YOUR JOB..."
+                : "POST JOB & GET DRIVER QUOTES"}
+            </button>
+
+            <p className="mt-4 text-center text-xs text-[#758177]">
+              By posting your job, you agree
+              that approved RCS drivers can review
+              the information you've provided to
+              submit a quote.
+            </p>
+
+          </section>
+
         </form>
+
       </div>
+
     </main>
   );
 }
+
+/* ========================================================= */
+/* STEP NUMBER                                               */
+/* ========================================================= */
+
+function StepNumber({
+  number,
+}: {
+  number: string;
+}) {
+  return (
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#529027] text-sm font-black text-white">
+      {number}
+    </div>
+  );
+}
+
+/* ========================================================= */
+/* FIELD                                                     */
+/* ========================================================= */
+
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+
+      <label className="mb-2 block text-sm font-black text-[#dfe7e0]">
+
+        {label}
+
+        {required && (
+          <span className="ml-1 text-[#71b33d]">
+            *
+          </span>
+        )}
+
+      </label>
+
+      {children}
+
+    </div>
+  );
+}
+
+/* ========================================================= */
+/* SUMMARY ITEM                                              */
+/* ========================================================= */
+
+function SummaryItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#07100b] p-4">
+
+      <p className="text-xs font-bold uppercase tracking-wide text-[#758177]">
+        {label}
+      </p>
+
+      <p className="mt-1 truncate font-black text-white">
+        {value}
+      </p>
+
+    </div>
+  );
+}
+
+/* ========================================================= */
+/* INPUT STYLE                                                */
+/* ========================================================= */
+
+const inputClass =
+  "w-full rounded-2xl border border-white/10 bg-[#07100b] px-4 py-4 text-base font-semibold text-white outline-none placeholder:text-[#657066] focus:border-[#529027] focus:ring-2 focus:ring-[#529027]/20";
