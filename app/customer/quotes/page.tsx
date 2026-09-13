@@ -18,8 +18,8 @@ type Bid = {
   id: number;
   job_id: number;
   driver_id: string;
-  amount: number;
-  price?: number;
+  amount: number | null;
+  price?: number | null;
   notes: string | null;
   status: string | null;
   created_at: string;
@@ -36,6 +36,15 @@ type Quote = {
   bid: Bid;
   driver: Driver | null;
 };
+
+const WHATSAPP_NUMBER = "447555980651";
+
+const WHATSAPP_MESSAGE =
+  "Hi Rapid Clear Solutions, I need help with my customer account";
+
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+  WHATSAPP_MESSAGE
+)}`;
 
 export default function CustomerQuotesPage() {
   const router = useRouter();
@@ -111,7 +120,7 @@ export default function CustomerQuotesPage() {
         return;
       }
 
-      const customerJobs = jobsData || [];
+      const customerJobs = (jobsData || []) as Job[];
 
       setJobs(customerJobs);
 
@@ -140,7 +149,7 @@ export default function CustomerQuotesPage() {
         return;
       }
 
-      const bids = bidsData || [];
+      const bids = (bidsData || []) as Bid[];
 
       const driverIds = [
         ...new Set(
@@ -174,7 +183,7 @@ export default function CustomerQuotesPage() {
             driversError
           );
         } else {
-          drivers = driversData || [];
+          drivers = (driversData || []) as Driver[];
         }
       }
 
@@ -363,7 +372,7 @@ export default function CustomerQuotesPage() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <a
-              href="https://wa.me/447555980651?text=Hi%20Rapid%20Clear%20Solutions%2C%20I%20need%20help%20with%20my%20customer%20account."
+              href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden rounded-xl border border-white/10 px-4 py-2 text-xs font-black text-white/65 transition hover:border-[#79c51c] hover:text-[#79c51c] sm:inline-flex"
@@ -445,7 +454,7 @@ export default function CustomerQuotesPage() {
 
         {/* NO JOBS */}
 
-        {!loading && jobs.length === 0 && (
+        {jobs.length === 0 && (
           <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-[#0a0e0a]">
             <div className="border-b border-white/10 px-5 py-4">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-white/35">
@@ -479,7 +488,7 @@ export default function CustomerQuotesPage() {
 
         {/* JOBS */}
 
-        {!loading && jobs.length > 0 && (
+        {jobs.length > 0 && (
           <div className="mt-8 space-y-6">
             {jobs.map((job) => {
               const jobQuotes =
@@ -708,7 +717,7 @@ export default function CustomerQuotesPage() {
       {/* MOBILE WHATSAPP SUPPORT */}
 
       <a
-        href="https://wa.me/447555980651?text=Hi%20Rapid%20Clear%20Solutions%2C%20I%20need%20help%20with%20my%20customer%20account."
+        href={WHATSAPP_URL}
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-[82px] right-4 z-40 flex h-12 items-center gap-2 rounded-full border border-[#79c51c]/20 bg-[#0a0e0a]/95 px-4 text-xs font-black text-[#79c51c] shadow-xl shadow-black/30 backdrop-blur-xl sm:hidden"
