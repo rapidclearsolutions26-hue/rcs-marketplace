@@ -40,61 +40,345 @@ const locations = [
   "Multiple areas",
 ];
 
-const WHATSAPP_NUMBER = "447555980651";
+const WHATSAPP_NUMBER =
+  "447555980651";
+
+const PHOTO_BUCKET =
+  "customer-job-photos";
+
+const MAX_PHOTOS = 10;
+
+type SelectedPhoto = {
+  file: File;
+  id: string;
+};
+
+type UploadItem = {
+  path: string;
+  token: string;
+};
+
+async function readResponse(
+  response: Response,
+) {
+  const text =
+    await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      error:
+        response.status === 413
+          ? "The upload was too large. Please choose fewer or smaller photos and try again."
+          : "RCS returned an unexpected response. Please try again.",
+    };
+  }
+}
+
+async function compressImage(
+  file: File,
+) {
+  /*
+   * Keep smaller files as they are.
+   */
+
+  if (
+    file.size <=
+      1.8 * 1024 * 1024 &&
+    !file.type.includes(
+      "heic",
+    ) &&
+    !file.type.includes(
+      "heif",
+    )
+  ) {
+    return file;
+  }
+
+  try {
+    const bitmap =
+      await createImageBitmap(
+        file,
+      );
+
+    const maxDimension =
+      1920;
+
+    let width =
+      bitmap.width;
+
+    let height =
+      bitmap.height;
+
+    if (
+      width >
+        maxDimension ||
+      height >
+        maxDimension
+    ) {
+      const scale =
+        Math.min(
+          maxDimension /
+            width,
+          maxDimension /
+            height,
+        );
+
+      width = Math.round(
+        width * scale,
+      );
+
+      height = Math.round(
+        height * scale,
+      );
+    }
+
+    const canvas =
+      document.createElement(
+        "canvas",
+      );
+
+    canvas.width =
+      width;
+
+    canvas.height =
+      height;
+
+    const context =
+      canvas.getContext(
+        "2d",
+      );
+
+    if (!context) {
+      bitmap.close();
+
+      return file;
+    }
+
+    context.drawImage(
+      bitmap,
+      0,
+      0,
+      width,
+      height,
+    );
+
+    bitmap.close();
+
+    const blob =
+      await new Promise<Blob | null>(
+        (resolve) =>
+          canvas.toBlob(
+            resolve,
+            "image/jpeg",
+            0.82,
+          ),
+      );
+
+    if (!blob) {
+      return file;
+    }
+
+    const originalName =
+      file.name.replace(
+        /\.[^/.]+$/,
+        "",
+      );
+
+    return new File(
+      [
+        blob,
+      ],
+      `${originalName}.jpg`,
+      {
+        type: "image/jpeg",
+        lastModified:
+          Date.now(),
+      },
+    );
+  } catch (error) {
+    console.warn(
+      "Image compression failed, using original file:",
+      error,
+    );
+
+    return file;
+  }
+}
 
 export default function PostJobPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase =
+    useMemo(
+      () => createClient(),
+      [],
+    );
 
-  const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const [customerEmail, setCustomerEmail] = useState("");
-
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
-  const [jobPosted, setJobPosted] = useState(false);
-  const [jobReference, setJobReference] = useState("");
-  const [jobId, setJobId] = useState<number | null>(null);
-  const [confirmationRequired, setConfirmationRequired] =
+  const [loading, setLoading] =
     useState(false);
 
-  const [wasteType, setWasteType] = useState("");
-  const [loadSize, setLoadSize] = useState("");
-  const [location, setLocation] = useState("");
-  const [postcode, setPostcode] = useState("");
-  const [address, setAddress] = useState("");
-  const [collectionDate, setCollectionDate] = useState("");
-  const [preferredTime, setPreferredTime] = useState("");
-  const [description, setDescription] = useState("");
-  const [accessNotes, setAccessNotes] = useState("");
-  const [photos, setPhotos] = useState<File[]>([]);
+  const [
+    checkingSession,
+    setCheckingSession,
+  ] = useState(true);
 
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [
+    isLoggedIn,
+    setIsLoggedIn,
+  ] = useState(false);
+
+  const [
+    customerEmail,
+    setCustomerEmail,
+  ] = useState("");
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
+
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState("");
+
+  const [
+    uploadStatus,
+    setUploadStatus,
+  ] = useState("");
+
+  const [
+    jobPosted,
+    setJobPosted,
+  ] = useState(false);
+
+  const [
+    jobReference,
+    setJobReference,
+  ] = useState("");
+
+  const [
+    jobId,
+    setJobId,
+  ] = useState<number | null>(
+    null,
+  );
+
+  const [
+    confirmationRequired,
+    setConfirmationRequired,
+  ] = useState(false);
+
+  const [
+    wasteType,
+    setWasteType,
+  ] = useState("");
+
+  const [
+    loadSize,
+    setLoadSize,
+  ] = useState("");
+
+  const [
+    location,
+    setLocation,
+  ] = useState("");
+
+  const [
+    postcode,
+    setPostcode,
+  ] = useState("");
+
+  const [
+    address,
+    setAddress,
+  ] = useState("");
+
+  const [
+    collectionDate,
+    setCollectionDate,
+  ] = useState("");
+
+  const [
+    preferredTime,
+    setPreferredTime,
+  ] = useState("");
+
+  const [
+    description,
+    setDescription,
+  ] = useState("");
+
+  const [
+    accessNotes,
+    setAccessNotes,
+  ] = useState("");
+
+  const [
+    photos,
+    setPhotos,
+  ] = useState<
+    SelectedPhoto[]
+  >([]);
+
+  const [
+    fullName,
+    setFullName,
+  ] = useState("");
+
+  const [
+    email,
+    setEmail,
+  ] = useState("");
+
+  const [
+    phone,
+    setPhone,
+  ] = useState("");
+
+  const [
+    password,
+    setPassword,
+  ] = useState("");
+
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
 
   const today = useMemo(() => {
-    const date = new Date();
+    const date =
+      new Date();
 
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+    const year =
+      date.getFullYear();
+
+    const month =
+      String(
+        date.getMonth() + 1,
+      ).padStart(2, "0");
+
+    const day =
+      String(
+        date.getDate(),
+      ).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
   }, []);
 
-  const whatsappHref = useMemo(() => {
-    const message =
-      "Hi RCS, I need some help with posting a waste removal job.";
+  const whatsappHref =
+    useMemo(() => {
+      const message =
+        "Hi RCS, I need some help with posting a waste removal job.";
 
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-      message,
-    )}`;
-  }, []);
+      return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+        message,
+      )}`;
+    }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -102,53 +386,97 @@ export default function PostJobPage() {
     async function checkCustomerSession() {
       try {
         const {
-          data: { user },
+          data: {
+            user,
+          },
           error,
-        } = await supabase.auth.getUser();
+        } =
+          await supabase.auth.getUser();
 
         if (!mounted) {
           return;
         }
 
         if (error) {
-          console.error("Customer session error:", error);
+          console.error(
+            "Customer session error:",
+            error,
+          );
 
-          setIsLoggedIn(false);
-          setCustomerEmail("");
+          setIsLoggedIn(
+            false,
+          );
+
+          setCustomerEmail(
+            "",
+          );
 
           return;
         }
 
         if (user) {
-          setIsLoggedIn(true);
+          setIsLoggedIn(
+            true,
+          );
 
-          setCustomerEmail(user.email || "");
+          setCustomerEmail(
+            user.email || "",
+          );
 
-          setEmail(user.email || "");
+          setEmail(
+            user.email || "",
+          );
 
-          const metadata = user.user_metadata || {};
+          const metadata =
+            user.user_metadata ||
+            {};
 
-          if (typeof metadata.full_name === "string") {
-            setFullName(metadata.full_name);
+          if (
+            typeof metadata.full_name ===
+            "string"
+          ) {
+            setFullName(
+              metadata.full_name,
+            );
           }
 
-          if (typeof metadata.phone === "string") {
-            setPhone(metadata.phone);
+          if (
+            typeof metadata.phone ===
+            "string"
+          ) {
+            setPhone(
+              metadata.phone,
+            );
           }
         } else {
-          setIsLoggedIn(false);
-          setCustomerEmail("");
+          setIsLoggedIn(
+            false,
+          );
+
+          setCustomerEmail(
+            "",
+          );
         }
       } catch (error) {
-        console.error("Customer session check failed:", error);
+        console.error(
+          "Customer session check failed:",
+          error,
+        );
 
         if (mounted) {
-          setIsLoggedIn(false);
-          setCustomerEmail("");
+          setIsLoggedIn(
+            false,
+          );
+
+          setCustomerEmail(
+            "",
+          );
         }
       } finally {
         if (mounted) {
-          setCheckingSession(false);
+          setCheckingSession(
+            false,
+          );
         }
       }
     }
@@ -163,44 +491,99 @@ export default function PostJobPage() {
   function handlePhotos(
     event: React.ChangeEvent<HTMLInputElement>,
   ) {
-    const selectedFiles = Array.from(
-      event.target.files || [],
-    );
+    const selectedFiles =
+      Array.from(
+        event.target.files ||
+          [],
+      );
 
-    if (!selectedFiles.length) {
+    if (
+      !selectedFiles.length
+    ) {
       return;
     }
 
-    const invalidFile = selectedFiles.find(
-      (file) =>
-        !file.type.startsWith("image/") ||
-        file.size > 10 * 1024 * 1024,
-    );
+    const invalidFile =
+      selectedFiles.find(
+        (file) =>
+          !file.type.startsWith(
+            "image/",
+          ) ||
+          file.size >
+            10 *
+              1024 *
+              1024,
+      );
 
     if (invalidFile) {
       setErrorMessage(
         "Only image files under 10MB can be uploaded.",
       );
     } else {
-      setErrorMessage("");
+      setErrorMessage(
+        "",
+      );
     }
 
-    const validFiles = selectedFiles.filter(
-      (file) =>
-        file.type.startsWith("image/") &&
-        file.size <= 10 * 1024 * 1024,
+    const validFiles =
+      selectedFiles.filter(
+        (file) =>
+          file.type.startsWith(
+            "image/",
+          ) &&
+          file.size <=
+            10 *
+              1024 *
+              1024,
+      );
+
+    const availableSlots =
+      Math.max(
+        0,
+        MAX_PHOTOS -
+          photos.length,
+      );
+
+    const filesToAdd =
+      validFiles.slice(
+        0,
+        availableSlots,
+      );
+
+    if (
+      validFiles.length >
+      availableSlots
+    ) {
+      setErrorMessage(
+        `You can upload a maximum of ${MAX_PHOTOS} photos.`,
+      );
+    }
+
+    setPhotos(
+      (current) => [
+        ...current,
+        ...filesToAdd.map(
+          (file) => ({
+            file,
+            id: `${file.name}-${file.lastModified}-${Math.random()}`,
+          }),
+        ),
+      ],
     );
 
-    setPhotos((current) =>
-      [...current, ...validFiles].slice(0, 10),
-    );
-
-    event.target.value = "";
+    event.target.value =
+      "";
   }
 
-  function removePhoto(index: number) {
-    setPhotos((current) =>
-      current.filter((_, i) => i !== index),
+  function removePhoto(
+    id: string,
+  ) {
+    setPhotos(
+      (current) =>
+        current.filter(
+          (photo) =>
+            photo.id !== id,
+        ),
     );
   }
 
@@ -221,7 +604,10 @@ export default function PostJobPage() {
       return "Please choose a collection date.";
     }
 
-    if (collectionDate < today) {
+    if (
+      collectionDate <
+      today
+    ) {
       return "Please choose today or a future collection date.";
     }
 
@@ -263,20 +649,79 @@ export default function PostJobPage() {
         return "Please create a password.";
       }
 
-      if (password.length < 6) {
+      if (
+        password.length <
+        6
+      ) {
         return "Your password must be at least 6 characters.";
       }
 
-      if (!confirmPassword) {
+      if (
+        !confirmPassword
+      ) {
         return "Please confirm your password.";
       }
 
-      if (password !== confirmPassword) {
+      if (
+        password !==
+        confirmPassword
+      ) {
         return "Your passwords do not match.";
       }
     }
 
     return "";
+  }
+
+  async function postJson(
+    body: unknown,
+    accessToken?: string,
+  ) {
+    const response =
+      await fetch(
+        "/api/customer/post-job",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+            ...(accessToken
+              ? {
+                  Authorization: `Bearer ${accessToken}`,
+                }
+              : {}),
+          },
+          body: JSON.stringify(
+            body,
+          ),
+        },
+      );
+
+    const result =
+      await readResponse(
+        response,
+      );
+
+    return {
+      response,
+      result,
+    };
+  }
+
+  async function cancelPreparedJob(
+    uploadSessionToken: string,
+  ) {
+    try {
+      await postJson({
+        action: "cancel",
+        uploadSessionToken,
+      });
+    } catch (error) {
+      console.error(
+        "Unable to cancel prepared job:",
+        error,
+      );
+    }
   }
 
   async function submitJob(
@@ -286,40 +731,15 @@ export default function PostJobPage() {
 
     setErrorMessage("");
     setSuccessMessage("");
+    setUploadStatus("");
 
-    let currentUserId: string | null = null;
-    let currentAccessToken = "";
-
-    try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error("Session error:", sessionError);
-      }
-
-      if (session?.user) {
-        currentUserId = session.user.id;
-        currentAccessToken = session.access_token;
-
-        setIsLoggedIn(true);
-        setCustomerEmail(session.user.email || "");
-      } else {
-        setIsLoggedIn(false);
-      }
-    } catch (error) {
-      console.error(
-        "Unable to read customer session:",
-        error,
-      );
-    }
-
-    const validationError = validateForm();
+    const validationError =
+      validateForm();
 
     if (validationError) {
-      setErrorMessage(validationError);
+      setErrorMessage(
+        validationError,
+      );
 
       window.scrollTo({
         top: 0,
@@ -329,7 +749,53 @@ export default function PostJobPage() {
       return;
     }
 
-    if (isLoggedIn && !currentUserId) {
+    let currentAccessToken =
+      "";
+
+    try {
+      const {
+        data: {
+          session,
+        },
+        error: sessionError,
+      } =
+        await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error(
+          "Session error:",
+          sessionError,
+        );
+      }
+
+      if (session?.user) {
+        currentAccessToken =
+          session.access_token;
+
+        setIsLoggedIn(
+          true,
+        );
+
+        setCustomerEmail(
+          session.user.email ||
+            "",
+        );
+      } else {
+        setIsLoggedIn(
+          false,
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Unable to read customer session:",
+        error,
+      );
+    }
+
+    if (
+      isLoggedIn &&
+      !currentAccessToken
+    ) {
       setErrorMessage(
         "Your customer session has expired. Please log in again before posting a new job.",
       );
@@ -344,96 +810,125 @@ export default function PostJobPage() {
 
     setLoading(true);
 
+    let uploadSessionToken =
+      "";
+
     try {
-      const formData = new FormData();
+      /*
+       * -------------------------------------------------------
+       * PREPARE JOB
+       * -------------------------------------------------------
+       *
+       * Only small JSON metadata is sent to Vercel.
+       * No photo binary data is included.
+       */
 
-      if (!isLoggedIn) {
-        formData.append("fullName", fullName.trim());
+      setUploadStatus(
+        "Preparing your RCS job...",
+      );
 
-        formData.append(
-          "email",
-          email.trim().toLowerCase(),
+      const photoMetadata =
+        photos.map(
+          ({
+            file,
+          }) => ({
+            name:
+              file.name,
+            type:
+              file.type,
+            size:
+              file.size,
+          }),
         );
 
-        formData.append("phone", phone.trim());
+      const combinedAccessNotes =
+        [
+          location
+            ? `Waste location: ${location}`
+            : "",
+          accessNotes.trim()
+            ? `Access notes: ${accessNotes.trim()}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
 
-        formData.append("password", password);
-      }
+      const prepareResult =
+        await postJson(
+          {
+            action:
+              "prepare",
 
-      formData.append("jobType", wasteType);
+            fullName:
+              !isLoggedIn
+                ? fullName.trim()
+                : "",
 
-      formData.append(
-        "description",
-        description.trim(),
-      );
+            email:
+              !isLoggedIn
+                ? email
+                    .trim()
+                    .toLowerCase()
+                : "",
 
-      formData.append(
-        "postcode",
-        postcode.trim().toUpperCase(),
-      );
+            phone:
+              !isLoggedIn
+                ? phone.trim()
+                : "",
 
-      formData.append(
-        "address",
-        address.trim(),
-      );
+            password:
+              !isLoggedIn
+                ? password
+                : "",
 
-      formData.append("loadSize", loadSize);
+            jobType:
+              wasteType,
 
-      formData.append("floor", "");
+            description:
+              description.trim(),
 
-      formData.append(
-        "stairs",
-        location === "Upstairs" ? "true" : "false",
-      );
+            postcode:
+              postcode
+                .trim()
+                .toUpperCase(),
 
-      const combinedAccessNotes = [
-        location
-          ? `Waste location: ${location}`
-          : "",
-        accessNotes.trim()
-          ? `Access notes: ${accessNotes.trim()}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
+            address:
+              address.trim(),
 
-      formData.append(
-        "accessNotes",
-        combinedAccessNotes,
-      );
+            loadSize,
 
-      formData.append(
-        "preferredDate",
-        collectionDate,
-      );
+            floor: "",
 
-      formData.append(
-        "preferredTime",
-        preferredTime,
-      );
+            stairs:
+              location ===
+              "Upstairs",
 
-      photos.forEach((photo) => {
-        formData.append("photos", photo);
-      });
+            accessNotes:
+              combinedAccessNotes,
 
-      const response = await fetch(
-        "/api/customer/post-job",
-        {
-          method: "POST",
-          headers: currentAccessToken
-            ? {
-                Authorization: `Bearer ${currentAccessToken}`,
-              }
-            : undefined,
-          body: formData,
-        },
-      );
+            preferredDate:
+              collectionDate,
 
-      const result = await response.json();
+            preferredTime:
+              preferredTime ||
+              "Any time",
+
+            photos:
+              photoMetadata,
+          },
+          currentAccessToken,
+        );
+
+      const {
+        response,
+        result,
+      } = prepareResult;
 
       if (
-        response.status === 409 &&
-        result.code === "ACCOUNT_EXISTS"
+        response.status ===
+          409 &&
+        result.code ===
+          "ACCOUNT_EXISTS"
       ) {
         setErrorMessage(
           "An RCS customer account already exists with this email address. Please log in to your existing account before posting a new job.",
@@ -447,7 +942,10 @@ export default function PostJobPage() {
         return;
       }
 
-      if (response.status === 401) {
+      if (
+        response.status ===
+        401
+      ) {
         setErrorMessage(
           "Your customer session has expired. Please log in again.",
         );
@@ -460,26 +958,201 @@ export default function PostJobPage() {
         return;
       }
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
         throw new Error(
           result.error ||
-            "We couldn't post your job. Please try again.",
+            "We couldn't prepare your job. Please try again.",
         );
       }
 
-      const reference = result.reference || "";
+      uploadSessionToken =
+        result.uploadSessionToken ||
+        "";
 
-      setJobReference(reference);
+      if (
+        !uploadSessionToken
+      ) {
+        throw new Error(
+          "RCS could not create the secure upload session.",
+        );
+      }
+
+      const uploads: UploadItem[] =
+        Array.isArray(
+          result.uploads,
+        )
+          ? result.uploads
+          : [];
+
+      /*
+       * -------------------------------------------------------
+       * UPLOAD PHOTOS DIRECTLY TO SUPABASE
+       * -------------------------------------------------------
+       */
+
+      const uploadedPaths: string[] =
+        [];
+
+      if (
+        photos.length >
+        0
+      ) {
+        if (
+          uploads.length !==
+          photos.length
+        ) {
+          throw new Error(
+            "RCS could not prepare all of your photo uploads.",
+          );
+        }
+
+        for (
+          let index = 0;
+          index <
+          photos.length;
+          index += 1
+        ) {
+          const originalFile =
+            photos[index].file;
+
+          setUploadStatus(
+            `Preparing photo ${index + 1} of ${photos.length}...`,
+          );
+
+          const uploadFile =
+            await compressImage(
+              originalFile,
+            );
+
+          const upload =
+            uploads[index];
+
+          setUploadStatus(
+            `Uploading photo ${index + 1} of ${photos.length}...`,
+          );
+
+          const {
+            error:
+              uploadError,
+          } =
+            await supabase.storage
+              .from(
+                PHOTO_BUCKET,
+              )
+              .uploadToSignedUrl(
+                upload.path,
+                upload.token,
+                uploadFile,
+                {
+                  cacheControl:
+                    "3600",
+                  contentType:
+                    uploadFile.type ||
+                    "image/jpeg",
+                },
+              );
+
+          if (
+            uploadError
+          ) {
+            console.error(
+              "Direct photo upload error:",
+              uploadError,
+            );
+
+            throw new Error(
+              `We couldn't upload photo ${index + 1}. Please try again.`,
+            );
+          }
+
+          uploadedPaths.push(
+            upload.path,
+          );
+        }
+      }
+
+      /*
+       * -------------------------------------------------------
+       * COMPLETE JOB
+       * -------------------------------------------------------
+       */
+
+      setUploadStatus(
+        "Finishing your RCS job...",
+      );
+
+      let completeResult =
+        await postJson({
+          action:
+            "complete",
+
+          uploadSessionToken,
+
+          uploadedPaths,
+        });
+
+      /*
+       * Retry once if the network drops after
+       * the server may already have completed the job.
+       */
+
+      if (
+        !completeResult.response.ok
+      ) {
+        const retry =
+          await postJson({
+            action:
+              "complete",
+
+            uploadSessionToken,
+
+            uploadedPaths,
+          });
+
+        completeResult =
+          retry;
+      }
+
+      if (
+        !completeResult.response.ok
+      ) {
+        throw new Error(
+          completeResult.result
+            ?.error ||
+            "We couldn't finish posting your job.",
+        );
+      }
+
+      const result =
+        completeResult.result;
+
+      setJobReference(
+        result.reference ||
+          prepareResult.result
+            .reference ||
+          "",
+      );
 
       setJobId(
         result.jobId
-          ? Number(result.jobId)
-          : null,
+          ? Number(
+              result.jobId,
+            )
+          : prepareResult.result
+              .jobId
+            ? Number(
+                prepareResult.result
+                  .jobId,
+              )
+            : null,
       );
 
       setConfirmationRequired(
         Boolean(
-          result.emailConfirmationRequired,
+          prepareResult.result
+            .emailConfirmationRequired,
         ),
       );
 
@@ -487,14 +1160,36 @@ export default function PostJobPage() {
         "Your job has been posted successfully.",
       );
 
-      setJobPosted(true);
+      setUploadStatus("");
+
+      setJobPosted(
+        true,
+      );
 
       window.scrollTo({
         top: 0,
         behavior: "smooth",
       });
     } catch (error) {
-      console.error("POST JOB ERROR:", error);
+      console.error(
+        "POST JOB ERROR:",
+        error,
+      );
+
+      /*
+       * If a job was prepared and photo upload failed,
+       * remove the prepared job and newly created account.
+       */
+
+      if (
+        uploadSessionToken
+      ) {
+        await cancelPreparedJob(
+          uploadSessionToken,
+        );
+      }
+
+      setUploadStatus("");
 
       setErrorMessage(
         error instanceof Error
@@ -505,9 +1200,11 @@ export default function PostJobPage() {
       window.scrollTo({
         top: 0,
         behavior: "smooth",
-      });
+      );
     } finally {
-      setLoading(false);
+      setLoading(
+        false,
+      );
     }
   }
 
@@ -597,7 +1294,9 @@ export default function PostJobPage() {
                     </p>
 
                     <p className="mt-2 break-all font-black text-white">
-                      {email.trim().toLowerCase()}
+                      {email
+                        .trim()
+                        .toLowerCase()}
                     </p>
 
                     <p className="mt-3 text-sm leading-6 text-white/55">
@@ -666,7 +1365,8 @@ export default function PostJobPage() {
 
             <Link
               href={
-                isLoggedIn && jobId
+                isLoggedIn &&
+                jobId
                   ? `/customer/jobs/${jobId}`
                   : "/customer/login"
               }
@@ -678,7 +1378,9 @@ export default function PostJobPage() {
             </Link>
 
             <a
-              href={whatsappHref}
+              href={
+                whatsappHref
+              }
               target="_blank"
               rel="noreferrer"
               className="mt-4 flex w-full items-center justify-center rounded-2xl border border-[#79c51c]/30 bg-[#79c51c]/5 px-6 py-4 text-sm font-black text-[#9de450] transition hover:bg-[#79c51c]/10"
@@ -718,7 +1420,9 @@ export default function PostJobPage() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <a
-              href={whatsappHref}
+              href={
+                whatsappHref
+              }
               target="_blank"
               rel="noreferrer"
               className="hidden rounded-xl border border-[#79c51c]/30 bg-[#79c51c]/5 px-4 py-2.5 text-sm font-black text-[#9de450] transition hover:bg-[#79c51c]/10 sm:inline-flex"
@@ -773,33 +1477,32 @@ export default function PostJobPage() {
           </div>
         )}
 
-        {!checkingSession && isLoggedIn && (
-          <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-5">
-            <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#79c51c]/10 text-lg text-[#79c51c]">
-                ✓
-              </div>
+        {!checkingSession &&
+          isLoggedIn && (
+            <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-5">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#79c51c]/10 text-lg text-[#79c51c]">
+                  ✓
+                </div>
 
-              <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
-                  You&apos;re signed in
-                </p>
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+                    You&apos;re signed in
+                  </p>
 
-                <p className="mt-1 break-all text-base font-black text-white">
-                  {customerEmail}
-                </p>
+                  <p className="mt-1 break-all text-base font-black text-white">
+                    {customerEmail}
+                  </p>
 
-                <p className="mt-2 text-sm leading-6 text-white/50">
-                  This new job will automatically
-                  be added to your existing RCS
-                  customer account. You don&apos;t
-                  need to enter your account
-                  details again.
-                </p>
+                  <p className="mt-2 text-sm leading-6 text-white/50">
+                    This new job will automatically
+                    be added to your existing RCS
+                    customer account.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {errorMessage && (
           <div className="mt-8 rounded-2xl border border-red-400/20 bg-red-500/10 p-5">
@@ -832,7 +1535,9 @@ export default function PostJobPage() {
         )}
 
         <form
-          onSubmit={submitJob}
+          onSubmit={
+            submitJob
+          }
           className="mt-8 space-y-6"
         >
           <section className="rounded-[2rem] border border-white/10 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
@@ -843,22 +1548,27 @@ export default function PostJobPage() {
             />
 
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {wasteTypes.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() =>
-                    setWasteType(type)
-                  }
-                  className={`min-h-[62px] rounded-2xl border px-3 py-3 text-sm font-bold transition ${
-                    wasteType === type
-                      ? "border-[#79c51c] bg-[#79c51c] text-[#050705] shadow-lg shadow-[#79c51c]/10"
-                      : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
+              {wasteTypes.map(
+                (type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() =>
+                      setWasteType(
+                        type,
+                      )
+                    }
+                    className={`min-h-[62px] rounded-2xl border px-3 py-3 text-sm font-bold transition ${
+                      wasteType ===
+                      type
+                        ? "border-[#79c51c] bg-[#79c51c] text-[#050705] shadow-lg shadow-[#79c51c]/10"
+                        : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ),
+              )}
             </div>
           </section>
 
@@ -875,14 +1585,21 @@ export default function PostJobPage() {
                 required
               >
                 <input
-                  value={postcode}
-                  onChange={(e) =>
+                  value={
+                    postcode
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setPostcode(
-                      e.target.value,
+                      event.target
+                        .value,
                     )
                   }
                   placeholder="e.g. B1 1AA"
-                  className={inputClass}
+                  className={
+                    inputClass
+                  }
                   autoComplete="postal-code"
                 />
               </Field>
@@ -892,14 +1609,21 @@ export default function PostJobPage() {
                 required
               >
                 <input
-                  value={address}
-                  onChange={(e) =>
+                  value={
+                    address
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setAddress(
-                      e.target.value,
+                      event.target
+                        .value,
                     )
                   }
                   placeholder="House number and street"
-                  className={inputClass}
+                  className={
+                    inputClass
+                  }
                   autoComplete="street-address"
                 />
               </Field>
@@ -921,10 +1645,15 @@ export default function PostJobPage() {
                 <input
                   type="date"
                   min={today}
-                  value={collectionDate}
-                  onChange={(e) =>
+                  value={
+                    collectionDate
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setCollectionDate(
-                      e.target.value,
+                      event.target
+                        .value,
                     )
                   }
                   className={`${inputClass} [color-scheme:dark]`}
@@ -934,13 +1663,20 @@ export default function PostJobPage() {
 
               <Field label="Preferred time">
                 <select
-                  value={preferredTime}
-                  onChange={(e) =>
+                  value={
+                    preferredTime
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setPreferredTime(
-                      e.target.value,
+                      event.target
+                        .value,
                     )
                   }
-                  className={inputClass}
+                  className={
+                    inputClass
+                  }
                 >
                   <option value="">
                     Any time
@@ -986,22 +1722,27 @@ export default function PostJobPage() {
                 required
               >
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                  {loadSizes.map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() =>
-                        setLoadSize(size)
-                      }
-                      className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
-                        loadSize === size
-                          ? "border-[#79c51c] bg-[#79c51c] text-[#050705]"
-                          : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {loadSizes.map(
+                    (size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() =>
+                          setLoadSize(
+                            size,
+                          )
+                        }
+                        className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
+                          loadSize ===
+                          size
+                            ? "border-[#79c51c] bg-[#79c51c] text-[#050705]"
+                            : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ),
+                  )}
                 </div>
               </Field>
 
@@ -1011,22 +1752,27 @@ export default function PostJobPage() {
                   required
                 >
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {locations.map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() =>
-                          setLocation(item)
-                        }
-                        className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
-                          location === item
-                            ? "border-[#79c51c] bg-[#79c51c] text-[#050705]"
-                            : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
-                        }`}
-                      >
-                        {item}
-                      </button>
-                    ))}
+                    {locations.map(
+                      (item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() =>
+                            setLocation(
+                              item,
+                            )
+                          }
+                          className={`rounded-2xl border px-3 py-4 text-sm font-bold transition ${
+                            location ===
+                            item
+                              ? "border-[#79c51c] bg-[#79c51c] text-[#050705]"
+                              : "border-white/10 bg-[#050705] text-white/75 hover:border-[#79c51c]/50 hover:bg-[#79c51c]/5 hover:text-white"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      ),
+                    )}
                   </div>
                 </Field>
               </div>
@@ -1062,7 +1808,9 @@ export default function PostJobPage() {
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={handlePhotos}
+                onChange={
+                  handlePhotos
+                }
                 className="hidden"
               />
             </label>
@@ -1070,24 +1818,37 @@ export default function PostJobPage() {
             <p className="mt-3 text-center text-xs text-white/35">
               You can upload up to 10 photos.
               Each photo must be under 10MB.
+              RCS securely uploads them directly
+              to storage.
             </p>
 
-            {photos.length > 0 && (
+            {photos.length >
+              0 && (
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {photos.map(
-                  (photo, index) => (
+                  (
+                    photo,
+                  ) => (
                     <div
-                      key={`${photo.name}-${index}`}
+                      key={
+                        photo.id
+                      }
                       className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#050705] p-2"
                     >
                       <div className="truncate px-1 py-2 text-xs text-white/55">
-                        {photo.name}
+                        {
+                          photo
+                            .file
+                            .name
+                        }
                       </div>
 
                       <button
                         type="button"
                         onClick={() =>
-                          removePhoto(index)
+                          removePhoto(
+                            photo.id,
+                          )
                         }
                         className="absolute right-2 top-2 rounded-lg border border-white/10 bg-black/80 px-2 py-1 text-xs font-bold text-white transition hover:border-red-400/40 hover:text-red-300"
                       >
@@ -1113,10 +1874,15 @@ export default function PostJobPage() {
                 required
               >
                 <textarea
-                  value={description}
-                  onChange={(e) =>
+                  value={
+                    description
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setDescription(
-                      e.target.value,
+                      event.target
+                        .value,
                     )
                   }
                   rows={5}
@@ -1127,10 +1893,15 @@ export default function PostJobPage() {
 
               <Field label="Access notes">
                 <textarea
-                  value={accessNotes}
-                  onChange={(e) =>
+                  value={
+                    accessNotes
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setAccessNotes(
-                      e.target.value,
+                      event.target
+                        .value,
                     )
                   }
                   rows={4}
@@ -1141,166 +1912,200 @@ export default function PostJobPage() {
             </div>
           </section>
 
-          {!checkingSession && !isLoggedIn && (
-            <section className="rounded-[2rem] border border-[#79c51c]/20 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
-              <SectionHeading
-                number="07"
-                title="Create your RCS customer account"
-                description="Your account lets you track your job, view driver quotes and manage your collection."
-              />
+          {!checkingSession &&
+            !isLoggedIn && (
+              <section className="rounded-[2rem] border border-[#79c51c]/20 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
+                <SectionHeading
+                  number="07"
+                  title="Create your RCS customer account"
+                  description="Your account lets you track your job, view driver quotes and manage your collection."
+                />
 
-              <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-4">
-                <p className="text-sm font-black text-[#bff58a]">
-                  No account needed to start your quote
+                <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-4">
+                  <p className="text-sm font-black text-[#bff58a]">
+                    No account needed to start your quote
+                  </p>
+
+                  <p className="mt-1 text-sm leading-6 text-white/50">
+                    We only ask for these details at
+                    the end so we can create your
+                    account and keep your job and
+                    driver quotes together.
+                  </p>
+                </div>
+
+                <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                  <Field
+                    label="Full name"
+                    required
+                  >
+                    <input
+                      type="text"
+                      value={
+                        fullName
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setFullName(
+                          event.target
+                            .value,
+                        )
+                      }
+                      placeholder="Your full name"
+                      autoComplete="name"
+                      className={
+                        inputClass
+                      }
+                    />
+                  </Field>
+
+                  <Field
+                    label="Phone number"
+                    required
+                  >
+                    <input
+                      type="tel"
+                      value={
+                        phone
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setPhone(
+                          event.target
+                            .value,
+                        )
+                      }
+                      placeholder="e.g. 07123 456789"
+                      autoComplete="tel"
+                      className={
+                        inputClass
+                      }
+                    />
+                  </Field>
+                </div>
+
+                <div className="mt-5">
+                  <Field
+                    label="Email address"
+                    required
+                  >
+                    <input
+                      type="email"
+                      value={
+                        email
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setEmail(
+                          event.target
+                            .value,
+                        )
+                      }
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      className={
+                        inputClass
+                      }
+                    />
+                  </Field>
+                </div>
+
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <Field
+                    label="Create a password"
+                    required
+                  >
+                    <input
+                      type="password"
+                      value={
+                        password
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setPassword(
+                          event.target
+                            .value,
+                        )
+                      }
+                      placeholder="Minimum 6 characters"
+                      autoComplete="new-password"
+                      className={
+                        inputClass
+                      }
+                    />
+                  </Field>
+
+                  <Field
+                    label="Confirm password"
+                    required
+                  >
+                    <input
+                      type="password"
+                      value={
+                        confirmPassword
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setConfirmPassword(
+                          event.target
+                            .value,
+                        )
+                      }
+                      placeholder="Enter your password again"
+                      autoComplete="new-password"
+                      className={
+                        inputClass
+                      }
+                    />
+                  </Field>
+                </div>
+
+                <p className="mt-4 text-xs leading-5 text-white/35">
+                  After your job is posted, we&apos;ll
+                  send a confirmation email to your
+                  email address.
                 </p>
+              </section>
+            )}
 
-                <p className="mt-1 text-sm leading-6 text-white/50">
-                  We only ask for these details at
-                  the end so we can create your
-                  account and keep your job and
-                  driver quotes together.
-                </p>
-              </div>
+          {!checkingSession &&
+            isLoggedIn && (
+              <section className="rounded-[2rem] border border-[#79c51c]/20 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
+                <SectionHeading
+                  number="07"
+                  title="Your RCS customer account"
+                  description="This job will be added to your existing account."
+                />
 
-              <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                <Field
-                  label="Full name"
-                  required
-                >
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) =>
-                      setFullName(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="Your full name"
-                    autoComplete="name"
-                    className={inputClass}
-                  />
-                </Field>
+                <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#79c51c]/10 text-lg font-black text-[#79c51c]">
+                      ✓
+                    </div>
 
-                <Field
-                  label="Phone number"
-                  required
-                >
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) =>
-                      setPhone(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="e.g. 07123 456789"
-                    autoComplete="tel"
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+                        Signed in
+                      </p>
 
-              <div className="mt-5">
-                <Field
-                  label="Email address"
-                  required
-                >
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) =>
-                      setEmail(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
+                      <p className="mt-2 break-all text-lg font-black text-white">
+                        {customerEmail}
+                      </p>
 
-              <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                <Field
-                  label="Create a password"
-                  required
-                >
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) =>
-                      setPassword(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="Minimum 6 characters"
-                    autoComplete="new-password"
-                    className={inputClass}
-                  />
-                </Field>
-
-                <Field
-                  label="Confirm password"
-                  required
-                >
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) =>
-                      setConfirmPassword(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="Enter your password again"
-                    autoComplete="new-password"
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
-
-              <p className="mt-4 text-xs leading-5 text-white/35">
-                After your job is posted, we&apos;ll
-                send a confirmation email to your
-                email address.
-              </p>
-            </section>
-          )}
-
-          {!checkingSession && isLoggedIn && (
-            <section className="rounded-[2rem] border border-[#79c51c]/20 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
-              <SectionHeading
-                number="07"
-                title="Your RCS customer account"
-                description="This job will be added to your existing account."
-              />
-
-              <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#79c51c]/10 text-lg font-black text-[#79c51c]">
-                    ✓
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
-                      Signed in
-                    </p>
-
-                    <p className="mt-2 break-all text-lg font-black text-white">
-                      {customerEmail}
-                    </p>
-
-                    <p className="mt-3 text-sm leading-6 text-white/50">
-                      Your existing RCS account will
-                      be used automatically. You do
-                      not need to enter your name,
-                      phone number, email address or
-                      password again.
-                    </p>
+                      <p className="mt-3 text-sm leading-6 text-white/50">
+                        Your existing RCS account will
+                        be used automatically.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
+            )}
 
           <section className="rounded-[2rem] border border-[#79c51c]/20 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
             <div className="flex items-start gap-4">
@@ -1352,6 +2157,19 @@ export default function PostJobPage() {
               />
             </div>
 
+            {loading && (
+              <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#79c51c]/20 border-t-[#79c51c]" />
+
+                  <p className="text-sm font-black text-[#bff58a]">
+                    {uploadStatus ||
+                      "Posting your job..."}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={
@@ -1374,7 +2192,9 @@ export default function PostJobPage() {
           </section>
 
           <a
-            href={whatsappHref}
+            href={
+              whatsappHref
+            }
             target="_blank"
             rel="noreferrer"
             className="flex items-center justify-center gap-3 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 px-5 py-4 text-sm font-black text-[#a9eb68] transition hover:bg-[#79c51c]/10"
@@ -1382,6 +2202,7 @@ export default function PostJobPage() {
             <span className="text-lg">
               WhatsApp
             </span>
+
             <span>
               NEED HELP? MESSAGE RCS SUPPORT
             </span>
