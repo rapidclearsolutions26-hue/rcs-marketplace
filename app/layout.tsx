@@ -5,18 +5,16 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Rapid Clear Solutions",
-  description:
-    "Fast and reliable waste removal services.",
-  applicationName:
-    "Rapid Clear Solutions",
-  manifest:
-    "/manifest.webmanifest",
+  description: "Fast and reliable waste removal services.",
+  applicationName: "Rapid Clear Solutions",
+  manifest: "/manifest.webmanifest",
+
   appleWebApp: {
     capable: true,
-    statusBarStyle:
-      "black-translucent",
+    statusBarStyle: "black-translucent",
     title: "Rapid Clear",
   },
+
   icons: {
     icon: [
       {
@@ -30,6 +28,7 @@ export const metadata: Metadata = {
         type: "image/png",
       },
     ],
+
     apple: [
       {
         url: "/icons/apple-touch-icon.png",

@@ -19,8 +19,72 @@
   }
 }
 
+html {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  background: var(--background);
+}
+
 body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ========================================================= */
+/* MOBILE / PWA SAFE AREA                                    */
+/* ========================================================= */
+
+/*
+  When RCS is opened from the phone Home Screen, iOS can place
+  the website underneath the status bar.
+
+  These helpers allow headers/navigation to safely account
+  for the phone's notch and status-bar area.
+*/
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-top-bottom {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Prevent buttons and links from being hidden behind
+   the iPhone's bottom Home Indicator. */
+
+@supports (padding: max(0px)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ========================================================= */
+/* MOBILE TOUCH                                             */
+/* ========================================================= */
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Make sure mobile menus/buttons remain easy to tap */
+
+@media (max-width: 1023px) {
+  button,
+  a {
+    touch-action: manipulation;
+  }
 }
