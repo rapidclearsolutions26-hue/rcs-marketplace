@@ -17,7 +17,7 @@ export default function Home() {
       {/* HEADER */}
       {/* ========================================================= */}
 
-      <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl">
+      <header className="pwa-header sticky top-0 z-50 border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:h-[76px] sm:px-6 lg:px-8">
           {/* LOGO */}
 
@@ -93,15 +93,17 @@ export default function Home() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileMenuOpen}
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.03] text-white transition hover:border-[#79c51c]/50 hover:text-[#79c51c] lg:hidden"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/[0.14] bg-white/[0.04] text-white transition hover:border-[#79c51c]/50 hover:text-[#79c51c] lg:hidden"
           >
             {mobileMenuOpen ? (
-              <span className="text-2xl leading-none">×</span>
+              <span className="text-3xl font-light leading-none">
+                ×
+              </span>
             ) : (
               <div className="flex flex-col gap-1.5">
-                <span className="block h-0.5 w-5 bg-current" />
-                <span className="block h-0.5 w-5 bg-current" />
-                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-6 bg-current" />
+                <span className="block h-0.5 w-6 bg-current" />
+                <span className="block h-0.5 w-6 bg-current" />
               </div>
             )}
           </button>
@@ -119,67 +121,71 @@ export default function Home() {
           }`}
         >
           <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-            {/* Main customer action */}
+            {/* GET A QUOTE */}
 
             <Link
               href="/customer/post-job"
               onClick={closeMobileMenu}
-              className="mb-3 flex w-full items-center justify-between rounded-xl bg-[#79c51c] px-5 py-4 text-sm font-black text-black"
+              className="mb-3 flex min-h-[54px] w-full items-center justify-between rounded-xl bg-[#79c51c] px-5 py-4 text-sm font-black text-black"
             >
               <span>GET A QUOTE</span>
               <span className="text-lg">→</span>
             </Link>
 
-            {/* Customer Login */}
+            {/* CUSTOMER LOGIN */}
 
             <Link
               href="/customer/login"
               onClick={closeMobileMenu}
-              className="mb-2 flex w-full items-center justify-between rounded-xl border border-white/[0.12] bg-white/[0.025] px-5 py-4 text-sm font-bold text-white"
+              className="mb-2 flex min-h-[54px] w-full items-center justify-between rounded-xl border border-white/[0.12] bg-white/[0.025] px-5 py-4 text-sm font-bold text-white"
             >
               <span>CUSTOMER LOGIN</span>
               <span className="text-gray-500">→</span>
             </Link>
 
-            {/* Driver Login */}
+            {/* DRIVER LOGIN */}
 
             <Link
               href="/driver/login"
               onClick={closeMobileMenu}
-              className="mb-2 flex w-full items-center justify-between rounded-xl border border-[#79c51c]/30 bg-[#79c51c]/[0.05] px-5 py-4 text-sm font-bold text-[#79c51c]"
+              className="mb-2 flex min-h-[54px] w-full items-center justify-between rounded-xl border border-[#79c51c]/30 bg-[#79c51c]/[0.05] px-5 py-4 text-sm font-bold text-[#79c51c]"
             >
               <span>DRIVER LOGIN</span>
               <span>→</span>
             </Link>
 
-            {/* Divider */}
+            {/* DIVIDER */}
 
             <div className="my-3 h-px bg-white/[0.07]" />
 
-            {/* Other navigation */}
+            {/* FOR DRIVERS */}
 
             <Link
               href="/driver/register"
               onClick={closeMobileMenu}
-              className="flex w-full items-center justify-between border-b border-white/[0.06] px-2 py-4 text-sm font-semibold text-gray-300"
+              className="flex min-h-[52px] w-full items-center justify-between border-b border-white/[0.06] px-2 py-4 text-sm font-semibold text-gray-300"
             >
               <span>FOR DRIVERS</span>
               <span className="text-gray-600">→</span>
             </Link>
 
+            {/* HOW IT WORKS */}
+
             <Link
               href="#how-it-works"
               onClick={closeMobileMenu}
-              className="flex w-full items-center justify-between border-b border-white/[0.06] px-2 py-4 text-sm font-semibold text-gray-300"
+              className="flex min-h-[52px] w-full items-center justify-between border-b border-white/[0.06] px-2 py-4 text-sm font-semibold text-gray-300"
             >
               <span>HOW IT WORKS</span>
               <span className="text-gray-600">→</span>
             </Link>
 
+            {/* CONTACT */}
+
             <Link
               href="/contact"
               onClick={closeMobileMenu}
-              className="flex w-full items-center justify-between px-2 py-4 text-sm font-semibold text-gray-300"
+              className="flex min-h-[52px] w-full items-center justify-between px-2 py-4 text-sm font-semibold text-gray-300"
             >
               <span>CONTACT</span>
               <span className="text-gray-600">→</span>
@@ -248,15 +254,9 @@ export default function Home() {
           {/* RIGHT — TRUCK */}
 
           <div className="relative flex min-h-[340px] items-center justify-center sm:min-h-[400px] lg:min-h-[590px]">
-            {/* Glow */}
-
             <div className="absolute right-[10%] top-1/2 h-[300px] w-[300px] -translate-y-1/2 rounded-full bg-[#79c51c]/10 blur-[90px] sm:h-[380px] sm:w-[380px] sm:blur-[110px]" />
 
-            {/* Frame */}
-
             <div className="absolute right-0 top-1/2 h-[330px] w-[92%] -translate-y-1/2 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] sm:h-[470px] lg:h-[510px]" />
-
-            {/* Green accent */}
 
             <div className="absolute bottom-[7%] right-[7%] h-px w-[35%] bg-gradient-to-r from-transparent to-[#79c51c]" />
 
@@ -270,8 +270,6 @@ export default function Home() {
               priority
               className="relative z-10 w-[112%] max-w-[760px] object-contain drop-shadow-[0_35px_60px_rgba(0,0,0,0.8)]"
             />
-
-            {/* Information panel */}
 
             <div className="absolute bottom-[5%] left-0 z-20 max-w-[88%] rounded-xl border border-white/[0.1] bg-[#0b100b]/95 px-4 py-3 shadow-2xl backdrop-blur-xl sm:bottom-[8%] sm:left-[2%] sm:px-5 sm:py-4">
               <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-500 sm:text-[10px]">

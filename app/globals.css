@@ -42,11 +42,12 @@ body {
 /* ========================================================= */
 
 /*
-  When RCS is opened from the phone Home Screen, iOS can place
-  the website underneath the status bar.
+  Normal Safari/Chrome:
+  No extra top spacing is added.
 
-  These helpers allow headers/navigation to safely account
-  for the phone's notch and status-bar area.
+  Home Screen / standalone RCS app:
+  The header is moved below the iPhone status bar so the
+  RCS logo and menu button remain completely clickable.
 */
 
 .safe-area-top {
@@ -62,12 +63,46 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Prevent buttons and links from being hidden behind
-   the iPhone's bottom Home Indicator. */
+/* ========================================================= */
+/* RCS HOME SCREEN / PWA HEADER                              */
+/* ========================================================= */
 
-@supports (padding: max(0px)) {
-  body {
-    padding-bottom: env(safe-area-inset-bottom);
+.pwa-header {
+  padding-top: 0;
+}
+
+/*
+  Standalone Home Screen app.
+
+  The 44px minimum provides a fallback for iPhones where
+  safe-area-inset-top is reported as 0.
+*/
+
+@media (display-mode: standalone) {
+  .pwa-header {
+    padding-top: max(env(safe-area-inset-top), 44px);
+  }
+}
+
+/*
+  Fullscreen PWA mode.
+*/
+
+@media (display-mode: fullscreen) {
+  .pwa-header {
+    padding-top: max(env(safe-area-inset-top), 44px);
+  }
+}
+
+/*
+  iOS standalone fallback.
+*/
+
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    .pwa-header {
+      padding-top: max(env(safe-area-inset-top), 44px);
+    }
   }
 }
 
@@ -80,11 +115,19 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Make sure mobile menus/buttons remain easy to tap */
-
 @media (max-width: 1023px) {
   button,
   a {
     touch-action: manipulation;
+  }
+}
+
+/* ========================================================= */
+/* BOTTOM SAFE AREA                                          */
+/* ========================================================= */
+
+@supports (padding: max(0px)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
