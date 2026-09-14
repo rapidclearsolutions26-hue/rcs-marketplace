@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import DriverBottomNav from "@/app/components/driver/DriverBottomNav";
 
 type PaymentDetails = {
   id: number;
@@ -14,6 +15,12 @@ type PaymentDetails = {
   created_at: string;
   updated_at: string;
 };
+
+const GREEN = "#79c51c";
+const GREEN_HOVER = "#91db32";
+const BG = "#050705";
+const SECTION = "#080b08";
+const CARD = "#0a0e0a";
 
 export default function DriverPaymentDetailsPage() {
   const supabase = createClient();
@@ -178,11 +185,13 @@ export default function DriverPaymentDetailsPage() {
 
     if (saveError) {
       console.error(saveError);
+
       setError(
         saveError.code === "23505"
           ? "Payment details already exist for this account."
           : "We couldn't save your payment details.",
       );
+
       setSaving(false);
       return;
     }
@@ -202,7 +211,7 @@ export default function DriverPaymentDetailsPage() {
       return "••••";
     }
 
-    return `••••${numbers.slice(-4)}`;
+    return `•••• ${numbers.slice(-4)}`;
   }
 
   function maskSortCode(value: string) {
@@ -217,11 +226,21 @@ export default function DriverPaymentDetailsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#06100c] text-white">
+      <main
+        className="min-h-screen text-white"
+        style={{ background: BG }}
+      >
         <div className="flex min-h-screen items-center justify-center">
           <div className="text-center">
-            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#17382b] border-t-[#1BBB8C]" />
-            <p className="text-sm text-[#9fb5aa]">
+            <div
+              className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4"
+              style={{
+                borderColor: "rgba(255,255,255,0.10)",
+                borderTopColor: GREEN,
+              }}
+            />
+
+            <p className="text-sm text-white/50">
               Loading payment details...
             </p>
           </div>
@@ -231,20 +250,39 @@ export default function DriverPaymentDetailsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#06100c] pb-10 text-white">
-      <header className="sticky top-0 z-40 border-b border-[#17382b] bg-[#081710]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+    <main
+      className="min-h-screen pb-28 text-white"
+      style={{ background: BG }}
+    >
+      {/* HEADER */}
+      <header
+        className="sticky top-0 z-40 border-b backdrop-blur-xl"
+        style={{
+          borderColor: "rgba(255,255,255,0.08)",
+          background: "rgba(5,7,5,0.94)",
+        }}
+      >
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
           <Link
             href="/driver/wallet"
             className="flex items-center gap-3"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1BBB8C] text-xs font-black text-[#06100c]">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black"
+              style={{
+                background: GREEN,
+                color: BG,
+              }}
+            >
               RCS
             </div>
 
             <div>
-              <p className="text-sm font-black">Payment Details</p>
-              <p className="text-xs text-[#829b90]">
+              <p className="text-sm font-black">
+                Payment Details
+              </p>
+
+              <p className="text-xs text-white/45">
                 {driverName}
               </p>
             </div>
@@ -252,39 +290,90 @@ export default function DriverPaymentDetailsPage() {
 
           <Link
             href="/driver/wallet"
-            className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold text-[#dce9e3] transition hover:bg-[#10251b]"
+            className="rounded-xl border px-4 py-2 text-sm font-bold transition"
+            style={{
+              borderColor: "rgba(255,255,255,0.12)",
+              background: CARD,
+              color: "rgba(255,255,255,0.78)",
+            }}
           >
             Back
           </Link>
         </div>
       </header>
 
-      <div className="mx-auto max-w-3xl px-4 py-6">
+      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+        {/* PAGE INTRO */}
+        <div className="mb-6">
+          <p
+            className="text-xs font-black uppercase tracking-[0.18em]"
+            style={{ color: GREEN }}
+          >
+            Driver wallet
+          </p>
+
+          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+            Payment details
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">
+            Manage the bank account used for your RCS driver payouts.
+          </p>
+        </div>
+
         {details && !editing ? (
           <div className="space-y-5">
-            <section className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1BBB8C]/15 text-xl text-[#1BBB8C]">
-                    £
+            {/* SAVED DETAILS */}
+            <section
+              className="overflow-hidden rounded-3xl border"
+              style={{
+                borderColor: "rgba(255,255,255,0.08)",
+                background: CARD,
+              }}
+            >
+              <div
+                className="border-b p-6"
+                style={{
+                  borderColor: "rgba(255,255,255,0.07)",
+                  background: SECTION,
+                }}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl font-black"
+                      style={{
+                        background: `${GREEN}15`,
+                        color: GREEN,
+                      }}
+                    >
+                      £
+                    </div>
+
+                    <div>
+                      <h2 className="text-xl font-black">
+                        Bank account
+                      </h2>
+
+                      <p className="mt-1 text-sm text-white/45">
+                        Your current payout details
+                      </p>
+                    </div>
                   </div>
 
-                  <h1 className="text-2xl font-black">
-                    Payment details
-                  </h1>
-
-                  <p className="mt-2 text-sm leading-6 text-[#829b90]">
-                    These details are used by RCS when processing your
-                    driver payouts.
-                  </p>
-                </div>
-
-                <div className="shrink-0 rounded-full bg-[#1BBB8C]/15 px-3 py-1.5 text-xs font-black text-[#1BBB8C]">
-                  ✓ ADDED
+                  <div
+                    className="rounded-full px-3 py-1.5 text-[10px] font-black tracking-wide"
+                    style={{
+                      background: `${GREEN}15`,
+                      color: GREEN,
+                    }}
+                  >
+                    ✓ VERIFIED
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="space-y-3 p-5 sm:p-6">
                 <DetailRow
                   label="Account holder"
                   value={details.account_holder_name}
@@ -307,53 +396,80 @@ export default function DriverPaymentDetailsPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-[#17382b] bg-[#081710] p-5">
-              <p className="text-sm font-bold">
-                Need to change your bank details?
-              </p>
+            {/* EDIT CTA */}
+            <section
+              className="rounded-3xl border p-5 sm:p-6"
+              style={{
+                borderColor: "rgba(255,255,255,0.08)",
+                background: SECTION,
+              }}
+            >
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-base font-black">
+                    Need to change your bank details?
+                  </p>
 
-              <p className="mt-1 text-xs leading-5 text-[#829b90]">
-                Make sure your details are correct before requesting
-                a payout.
-              </p>
+                  <p className="mt-1 max-w-xl text-sm leading-6 text-white/40">
+                    Make sure your details are correct before requesting
+                    a payout.
+                  </p>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setSuccess("");
-                  setError("");
-                  setEditing(true);
-                }}
-                className="mt-4 w-full rounded-2xl border border-[#29483a] bg-[#0b1b14] px-5 py-3.5 text-sm font-black text-white transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
-              >
-                EDIT PAYMENT DETAILS
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuccess("");
+                    setError("");
+                    setEditing(true);
+                  }}
+                  className="w-full rounded-2xl px-5 py-3.5 text-sm font-black transition sm:w-auto"
+                  style={{
+                    background: GREEN,
+                    color: BG,
+                  }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.background = GREEN_HOVER;
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.background = GREEN;
+                  }}
+                >
+                  EDIT DETAILS
+                </button>
+              </div>
             </section>
 
-            {success && (
-              <div className="rounded-2xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/10 p-4 text-sm font-bold text-[#8ff0ce]">
-                {success}
-              </div>
-            )}
+            {success && <SuccessMessage message={success} />}
           </div>
         ) : (
-          <form
-            onSubmit={saveDetails}
-            className="space-y-5"
-          >
-            <section className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6">
-              <div className="mb-6">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1BBB8C]/15 text-xl text-[#1BBB8C]">
+          <form onSubmit={saveDetails} className="space-y-5">
+            {/* FORM */}
+            <section
+              className="rounded-3xl border p-5 sm:p-7"
+              style={{
+                borderColor: "rgba(255,255,255,0.08)",
+                background: CARD,
+              }}
+            >
+              <div className="mb-7">
+                <div
+                  className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl text-xl font-black"
+                  style={{
+                    background: `${GREEN}15`,
+                    color: GREEN,
+                  }}
+                >
                   £
                 </div>
 
-                <h1 className="text-2xl font-black">
+                <h2 className="text-2xl font-black">
                   {details
                     ? "Update payment details"
                     : "Add payment details"}
-                </h1>
+                </h2>
 
-                <p className="mt-2 text-sm leading-6 text-[#829b90]">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">
                   Enter the bank account where you want RCS to send
                   your driver payouts.
                 </p>
@@ -399,25 +515,25 @@ export default function DriverPaymentDetailsPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
-              <p className="text-xs leading-5 text-[#d7c98b]">
+            {/* WARNING */}
+            <section
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: "rgba(234,179,8,0.20)",
+                background: "rgba(234,179,8,0.05)",
+              }}
+            >
+              <p className="text-xs leading-5 text-yellow-200/75">
                 Please check your bank details carefully. Incorrect
                 details could delay your payout.
               </p>
             </section>
 
-            {error && (
-              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
-                {error}
-              </div>
-            )}
+            {error && <ErrorMessage message={error} />}
 
-            {success && (
-              <div className="rounded-2xl border border-[#1BBB8C]/30 bg-[#1BBB8C]/10 p-4 text-sm font-bold text-[#8ff0ce]">
-                {success}
-              </div>
-            )}
+            {success && <SuccessMessage message={success} />}
 
+            {/* ACTIONS */}
             <div className="grid grid-cols-2 gap-3">
               {details && (
                 <button
@@ -428,7 +544,12 @@ export default function DriverPaymentDetailsPage() {
                     setSuccess("");
                   }}
                   disabled={saving}
-                  className="rounded-2xl border border-[#29483a] px-4 py-4 text-sm font-black text-[#dce9e3] transition hover:bg-[#10251b] disabled:opacity-50"
+                  className="rounded-2xl border px-4 py-4 text-sm font-black transition disabled:opacity-50"
+                  style={{
+                    borderColor: "rgba(255,255,255,0.12)",
+                    background: CARD,
+                    color: "rgba(255,255,255,0.75)",
+                  }}
                 >
                   CANCEL
                 </button>
@@ -437,9 +558,21 @@ export default function DriverPaymentDetailsPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className={`rounded-2xl bg-[#1BBB8C] px-4 py-4 text-sm font-black text-[#06100c] transition hover:bg-[#22d3a0] disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`rounded-2xl px-4 py-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${
                   details ? "" : "col-span-2"
                 }`}
+                style={{
+                  background: GREEN,
+                  color: BG,
+                }}
+                onMouseEnter={(event) => {
+                  if (!saving) {
+                    event.currentTarget.style.background = GREEN_HOVER;
+                  }
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.background = GREEN;
+                }}
               >
                 {saving
                   ? "SAVING..."
@@ -451,6 +584,8 @@ export default function DriverPaymentDetailsPage() {
           </form>
         )}
       </div>
+
+      <DriverBottomNav />
     </main>
   );
 }
@@ -476,10 +611,13 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-bold text-[#dce9e3]">
+      <span className="mb-2 block text-sm font-bold text-white/80">
         {label}
+
         {required && (
-          <span className="ml-1 text-[#1BBB8C]">*</span>
+          <span className="ml-1" style={{ color: GREEN }}>
+            *
+          </span>
         )}
       </span>
 
@@ -492,7 +630,20 @@ function Field({
         maxLength={maxLength}
         autoComplete={autoComplete}
         required={required}
-        className="w-full rounded-2xl border border-[#29483a] bg-[#080d09] px-4 py-4 text-sm font-semibold text-white outline-none placeholder:text-[#53665d] transition focus:border-[#1BBB8C] focus:ring-2 focus:ring-[#1BBB8C]/15"
+        className="w-full rounded-2xl border px-4 py-4 text-sm font-semibold text-white outline-none transition placeholder:text-white/20"
+        style={{
+          borderColor: "rgba(255,255,255,0.10)",
+          background: "#070907",
+        }}
+        onFocus={(event) => {
+          event.currentTarget.style.borderColor = GREEN;
+          event.currentTarget.style.boxShadow = `0 0 0 3px ${GREEN}12`;
+        }}
+        onBlur={(event) => {
+          event.currentTarget.style.borderColor =
+            "rgba(255,255,255,0.10)";
+          event.currentTarget.style.boxShadow = "none";
+        }}
       />
     </label>
   );
@@ -506,14 +657,43 @@ function DetailRow({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[#17382b] bg-[#081710] px-4 py-4">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-[#829b90]">
+    <div
+      className="rounded-2xl border px-4 py-4"
+      style={{
+        borderColor: "rgba(255,255,255,0.07)",
+        background: SECTION,
+      }}
+    >
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/35">
         {label}
       </p>
 
       <p className="mt-1 text-sm font-black text-white">
         {value}
       </p>
+    </div>
+  );
+}
+
+function SuccessMessage({ message }: { message: string }) {
+  return (
+    <div
+      className="rounded-2xl border p-4 text-sm font-bold"
+      style={{
+        borderColor: `${GREEN}30`,
+        background: `${GREEN}0d`,
+        color: GREEN_HOVER,
+      }}
+    >
+      {message}
+    </div>
+  );
+}
+
+function ErrorMessage({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
+      {message}
     </div>
   );
 }
