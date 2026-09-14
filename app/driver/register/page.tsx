@@ -5,13 +5,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+const GREEN = "#79c51c";
+const GREEN_HOVER = "#91db32";
+const BG = "#050705";
+const SECTION = "#080b08";
+const CARD = "#0a0e0a";
+
 export default function DriverRegister() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [success, setSuccess] = useState(false);
-  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] =
+    useState(false);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -19,36 +26,32 @@ export default function DriverRegister() {
   const [address, setAddress] = useState("");
   const [postcode, setPostcode] = useState("");
 
-  const [companyName, setCompanyName] = useState("");
-  const [tradingName, setTradingName] = useState("");
-  const [companyNumber, setCompanyNumber] = useState("");
-  const [yearsTrading, setYearsTrading] = useState("");
-
-  const [wasteCarrierNumber, setWasteCarrierNumber] = useState("");
-  const [wasteCarrierType, setWasteCarrierType] = useState("");
-  const [wasteCarrierExpiry, setWasteCarrierExpiry] = useState("");
-
-  const [insuranceProvider, setInsuranceProvider] = useState("");
-  const [insurancePolicyNumber, setInsurancePolicyNumber] =
+  const [wasteCarrierNumber, setWasteCarrierNumber] =
     useState("");
-  const [insuranceExpiry, setInsuranceExpiry] = useState("");
+  const [wasteCarrierType, setWasteCarrierType] =
+    useState("");
+  const [wasteCarrierExpiry, setWasteCarrierExpiry] =
+    useState("");
 
-  const [vehicleType, setVehicleType] = useState("");
+  const [vehicleType, setVehicleType] =
+    useState("");
   const [vehicleRegistration, setVehicleRegistration] =
     useState("");
-  const [vehicleMake, setVehicleMake] = useState("");
-  const [vehicleModel, setVehicleModel] = useState("");
-  const [vehicleCapacity, setVehicleCapacity] = useState("");
+  const [vehicleMake, setVehicleMake] =
+    useState("");
+  const [vehicleModel, setVehicleModel] =
+    useState("");
+  const [vehicleCapacity, setVehicleCapacity] =
+    useState("");
 
-  const [password, setPassword] = useState("");
+  const [password, setPassword] =
+    useState("");
 
   const [wasteLicenceFile, setWasteLicenceFile] =
     useState<File | null>(null);
 
-  const [insuranceFile, setInsuranceFile] =
+  const [vanPhoto, setVanPhoto] =
     useState<File | null>(null);
-
-  const [vanPhoto, setVanPhoto] = useState<File | null>(null);
 
   async function handleRegister(
     event: React.FormEvent<HTMLFormElement>
@@ -58,23 +61,27 @@ export default function DriverRegister() {
     setLoading(true);
     setErrorMessage("");
 
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanName = fullName.trim();
-    const cleanPhone = phone.trim();
-    const cleanPostcode = postcode.trim().toUpperCase();
+    const cleanEmail =
+      email.trim().toLowerCase();
+
+    const cleanName =
+      fullName.trim();
+
+    const cleanPhone =
+      phone.trim();
+
+    const cleanPostcode =
+      postcode.trim().toUpperCase();
+
     const cleanRegistration =
-      vehicleRegistration.trim().toUpperCase();
+      vehicleRegistration
+        .trim()
+        .toUpperCase();
 
     try {
       if (!wasteLicenceFile) {
         throw new Error(
           "Please upload your Waste Carrier Licence."
-        );
-      }
-
-      if (!insuranceFile) {
-        throw new Error(
-          "Please upload your insurance certificate."
         );
       }
 
@@ -92,86 +99,79 @@ export default function DriverRegister() {
 
       const formData = new FormData();
 
-      formData.append("fullName", cleanName);
-      formData.append("email", cleanEmail);
-      formData.append("phone", cleanPhone);
-      formData.append("address", address.trim());
-      formData.append("postcode", cleanPostcode);
+      formData.append(
+        "fullName",
+        cleanName
+      );
 
       formData.append(
-        "companyName",
-        companyName.trim()
+        "email",
+        cleanEmail
       );
+
       formData.append(
-        "tradingName",
-        tradingName.trim()
+        "phone",
+        cleanPhone
       );
+
       formData.append(
-        "companyNumber",
-        companyNumber.trim()
+        "address",
+        address.trim()
       );
+
       formData.append(
-        "yearsTrading",
-        yearsTrading
+        "postcode",
+        cleanPostcode
       );
 
       formData.append(
         "wasteCarrierNumber",
         wasteCarrierNumber.trim()
       );
+
       formData.append(
         "wasteCarrierType",
         wasteCarrierType
       );
+
       formData.append(
         "wasteCarrierExpiry",
         wasteCarrierExpiry
       );
 
       formData.append(
-        "insuranceProvider",
-        insuranceProvider.trim()
-      );
-      formData.append(
-        "insurancePolicyNumber",
-        insurancePolicyNumber.trim()
-      );
-      formData.append(
-        "insuranceExpiry",
-        insuranceExpiry
-      );
-
-      formData.append(
         "vehicleType",
         vehicleType
       );
+
       formData.append(
         "vehicleRegistration",
         cleanRegistration
       );
+
       formData.append(
         "vehicleMake",
         vehicleMake.trim()
       );
+
       formData.append(
         "vehicleModel",
         vehicleModel.trim()
       );
+
       formData.append(
         "vehicleCapacity",
         vehicleCapacity.trim()
       );
 
-      formData.append("password", password);
+      formData.append(
+        "password",
+        password
+      );
 
       formData.append(
         "wasteLicenceFile",
         wasteLicenceFile
-      );
-
-      formData.append(
-        "insuranceFile",
-        insuranceFile
       );
 
       formData.append(
@@ -196,7 +196,9 @@ export default function DriverRegister() {
         );
       }
 
-      if (result.emailConfirmationRequired) {
+      if (
+        result.emailConfirmationRequired
+      ) {
         setNeedsConfirmation(true);
       } else {
         setSuccess(true);
@@ -217,34 +219,42 @@ export default function DriverRegister() {
     }
   }
 
-  if (success || needsConfirmation) {
+  if (
+    success ||
+    needsConfirmation
+  ) {
     return (
-      <main className="min-h-screen bg-[#070907] text-white">
-        <header className="border-b border-[#1d251b] bg-[#070907]">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-            <Link href="/">
-              <Image
-                src="/rapid-clear-logo.png"
-                alt="Rapid Clear Solutions"
-                width={220}
-                height={90}
-                className="h-14 w-auto object-contain"
-              />
-            </Link>
-          </div>
-        </header>
+      <main
+        className="min-h-screen text-white"
+        style={{ background: BG }}
+      >
+        <Header />
 
         <div className="mx-auto flex min-h-[80vh] max-w-2xl items-center px-4 py-10 sm:px-6">
-          <div className="w-full rounded-3xl border border-[#283326] bg-[#0d120d] p-7 text-center shadow-2xl sm:p-10">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#79c51c] text-4xl font-black text-black">
-              {needsConfirmation ? "✉" : "✓"}
+          <div
+            className="w-full rounded-3xl border p-7 text-center shadow-2xl sm:p-10"
+            style={{
+              background: CARD,
+              borderColor: "#283326",
+            }}
+          >
+            <div
+              className="mx-auto flex h-20 w-20 items-center justify-center rounded-full text-3xl font-black text-black"
+              style={{ background: GREEN }}
+            >
+              {needsConfirmation
+                ? "✉"
+                : "✓"}
             </div>
 
-            <p className="mt-7 text-sm font-bold uppercase tracking-[0.2em] text-[#79c51c]">
+            <p
+              className="mt-7 text-sm font-bold uppercase tracking-[0.2em]"
+              style={{ color: GREEN }}
+            >
               RCS Driver Network
             </p>
 
-            <h1 className="mt-3 text-3xl font-black text-white">
+            <h1 className="mt-3 text-3xl font-black sm:text-4xl">
               {needsConfirmation
                 ? "Check your email"
                 : "Application submitted"}
@@ -252,54 +262,80 @@ export default function DriverRegister() {
 
             <p className="mx-auto mt-4 max-w-lg leading-7 text-gray-400">
               {needsConfirmation
-                ? `Your account and driver application have been created. Please confirm your email address at ${email
+                ? `Your RCS driver account has been created. Please confirm your email address at ${email
                     .trim()
                     .toLowerCase()} before logging in.`
                 : "Thanks for applying to join the RCS Driver Network. Your details and documents have been submitted for review."}
             </p>
 
-            <div className="mt-7 rounded-2xl border border-[#283326] bg-[#0b0f0b] p-6 text-left">
-              <h2 className="font-bold text-white">
+            <div
+              className="mt-7 rounded-2xl border p-6 text-left"
+              style={{
+                background: SECTION,
+                borderColor: "#283326",
+              }}
+            >
+              <h2 className="font-bold">
                 What happens next?
               </h2>
 
-              <div className="mt-4 space-y-3 text-sm leading-6 text-gray-400">
+              <div className="mt-4 space-y-4 text-sm leading-6 text-gray-400">
                 <p>
-                  <span className="text-[#79c51c]">
+                  <span
+                    className="font-black"
+                    style={{ color: GREEN }}
+                  >
                     ✓
                   </span>{" "}
-                  Your driver details have been saved.
+                  Confirm your email address.
                 </p>
 
                 <p>
-                  <span className="text-[#79c51c]">
+                  <span
+                    className="font-black"
+                    style={{ color: GREEN }}
+                  >
                     ✓
                   </span>{" "}
-                  Your licence and insurance have been
-                  uploaded.
+                  RCS reviews your driver details.
                 </p>
 
                 <p>
-                  <span className="text-[#79c51c]">
+                  <span
+                    className="font-black"
+                    style={{ color: GREEN }}
+                  >
                     ✓
                   </span>{" "}
-                  Your vehicle has been added.
+                  Your Waste Carrier Licence is checked.
                 </p>
 
                 <p>
-                  <span className="text-[#79c51c]">
+                  <span
+                    className="font-black"
+                    style={{ color: GREEN }}
+                  >
                     ✓
                   </span>{" "}
-                  RCS can now review your application.
+                  Once approved, you can access marketplace jobs.
                 </p>
               </div>
 
-              <div className="mt-5 rounded-xl border border-[#294126] bg-[#101610] p-4">
+              <div
+                className="mt-5 rounded-xl border p-4"
+                style={{
+                  background: "#101610",
+                  borderColor: "#294126",
+                }}
+              >
                 <p className="text-sm text-gray-500">
                   Application status
                 </p>
 
-                <p className="mt-1 font-bold text-[#79c51c]">
+                <p
+                  className="mt-1 font-bold"
+                  style={{ color: GREEN }}
+                >
                   Pending Admin Approval
                 </p>
               </div>
@@ -310,14 +346,25 @@ export default function DriverRegister() {
               onClick={() =>
                 router.push("/driver/login")
               }
-              className="mt-7 w-full rounded-xl bg-[#79c51c] px-5 py-4 font-black text-black transition hover:bg-[#91db32]"
+              className="mt-7 w-full rounded-xl px-5 py-4 font-black text-black transition"
+              style={{
+                background: GREEN,
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background =
+                  GREEN_HOVER)
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background =
+                  GREEN)
+              }
             >
               Go to Driver Login
             </button>
 
             <Link
               href="/"
-              className="mt-4 block text-sm font-semibold text-gray-500 transition hover:text-white"
+              className="mt-5 block text-sm font-semibold text-gray-500 transition hover:text-white"
             >
               ← Back to RCS Marketplace
             </Link>
@@ -328,68 +375,69 @@ export default function DriverRegister() {
   }
 
   return (
-    <main className="min-h-screen bg-[#070907] text-white">
-      {/* HEADER */}
+    <main
+      className="min-h-screen text-white"
+      style={{ background: BG }}
+    >
+      <Header />
 
-      <header className="border-b border-[#1d251b] bg-[#070907]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-          <Link href="/">
-            <Image
-              src="/rapid-clear-logo.png"
-              alt="Rapid Clear Solutions"
-              width={220}
-              height={90}
-              priority
-              className="h-14 w-auto object-contain sm:h-16"
-            />
-          </Link>
+      {/* HERO */}
 
-          <Link
-            href="/driver/login"
-            className="rounded-lg border border-[#394635] px-4 py-2.5 text-sm font-bold text-white transition hover:border-[#79c51c] hover:text-[#79c51c]"
-          >
-            Driver Login
-          </Link>
-        </div>
-      </header>
+      <section
+        className="border-b"
+        style={{
+          background: BG,
+          borderColor: "#1d251b",
+        }}
+      >
+        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
+          <div className="max-w-3xl">
+            <div
+              className="inline-flex rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.18em]"
+              style={{
+                color: GREEN,
+                background: "#101a0d",
+                borderColor: "#294126",
+              }}
+            >
+              RCS Driver Network
+            </div>
 
-      {/* PAGE HEADER */}
+            <h1 className="mt-5 text-4xl font-black leading-tight tracking-tight sm:text-6xl">
+              Get access to
+              <span
+                className="block"
+                style={{ color: GREEN }}
+              >
+                RCS jobs.
+              </span>
+            </h1>
 
-      <section className="border-b border-[#1d251b] bg-[#070907]">
-        <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-          <div className="inline-flex rounded-full border border-[#294126] bg-[#101a0d] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
-            RCS Driver Network
-          </div>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-gray-400 sm:text-lg">
+              Join the RCS Marketplace and find waste
+              removal jobs in your area. Register in a few
+              simple steps and start bidding once approved.
+            </p>
 
-          <h1 className="mt-5 text-4xl font-black uppercase leading-tight sm:text-5xl">
-            Become an
-            <span className="text-[#79c51c]">
-              {" "}
-              RCS Driver.
-            </span>
-          </h1>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <Feature
+                number="01"
+                title="Sign up"
+                text="Create your free driver account."
+              />
 
-          <p className="mt-4 max-w-2xl text-base leading-7 text-gray-400 sm:text-lg">
-            Apply to join the RCS Marketplace. Submit your
-            details, licence, insurance and vehicle
-            information for review.
-          </p>
+              <Feature
+                number="02"
+                title="Get verified"
+                text="RCS checks your details and licence."
+              />
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">
-            <Feature
-              number="01"
-              text="Complete application"
-            />
-
-            <Feature
-              number="02"
-              text="RCS reviews your documents"
-            />
-
-            <Feature
-              number="03"
-              text="Get approved and start bidding"
-            />
+              <Feature
+                number="03"
+                title="Get jobs"
+                text="Access marketplace jobs and bid."
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -399,14 +447,14 @@ export default function DriverRegister() {
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         <form
           onSubmit={handleRegister}
-          className="space-y-6"
+          className="space-y-5"
         >
           {/* PERSONAL */}
 
           <FormSection
             number="01"
-            title="Personal details"
-            description="Tell us who will be carrying out the work."
+            title="Your details"
+            description="Just the basics so we know who you are."
           >
             <div className="grid gap-5 sm:grid-cols-2">
               <Input
@@ -422,6 +470,7 @@ export default function DriverRegister() {
                 value={phone}
                 onChange={setPhone}
                 placeholder="07xxx xxxxxx"
+                type="tel"
                 required
               />
 
@@ -438,10 +487,10 @@ export default function DriverRegister() {
 
               <div className="sm:col-span-2">
                 <Input
-                  label="Home / business address"
+                  label="Address"
                   value={address}
                   onChange={setAddress}
-                  placeholder="Full address"
+                  placeholder="Your home or business address"
                   required
                 />
               </div>
@@ -449,65 +498,43 @@ export default function DriverRegister() {
               <Input
                 label="Postcode"
                 value={postcode}
-                onChange={setPostcode}
-                placeholder="e.g. B1 1AA"
+                onChange={(value) =>
+                  setPostcode(
+                    value.toUpperCase()
+                  )
+                }
+                placeholder="B1 1AA"
                 required
               />
             </div>
           </FormSection>
 
-          {/* BUSINESS */}
+          {/* WASTE LICENCE */}
 
           <FormSection
             number="02"
-            title="Business details"
-            description="Business information, if applicable."
-          >
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Input
-                label="Business name"
-                value={companyName}
-                onChange={setCompanyName}
-                placeholder="Your business name"
-              />
-
-              <Input
-                label="Trading name"
-                value={tradingName}
-                onChange={setTradingName}
-                placeholder="Optional"
-              />
-
-              <Input
-                label="Company number"
-                value={companyNumber}
-                onChange={setCompanyNumber}
-                placeholder="Optional"
-              />
-
-              <Input
-                label="Years trading"
-                value={yearsTrading}
-                onChange={setYearsTrading}
-                placeholder="e.g. 5"
-                type="number"
-              />
-            </div>
-          </FormSection>
-
-          {/* LICENCE */}
-
-          <FormSection
-            number="03"
             title="Waste Carrier Licence"
-            description="Your waste carrier information must be supplied before your application can be approved."
+            description="This is the main document RCS requires before you can be approved."
           >
+            <div
+              className="mb-6 rounded-2xl border p-4"
+              style={{
+                background: "#101610",
+                borderColor: "#294126",
+              }}
+            >
+              <p className="text-sm leading-6 text-gray-400">
+                You must have a valid Waste Carrier Licence
+                to carry waste for RCS marketplace jobs.
+              </p>
+            </div>
+
             <div className="grid gap-5 sm:grid-cols-2">
               <Input
-                label="Waste Carrier Licence number"
+                label="Licence number"
                 value={wasteCarrierNumber}
                 onChange={setWasteCarrierNumber}
-                placeholder="Enter licence number"
+                placeholder="Enter your licence number"
                 required
               />
 
@@ -515,15 +542,15 @@ export default function DriverRegister() {
                 label="Licence type"
                 value={wasteCarrierType}
                 onChange={setWasteCarrierType}
-                required
                 options={[
                   "Upper Tier",
                   "Lower Tier",
                 ]}
+                required
               />
 
               <DateInput
-                label="Licence expiry date"
+                label="Expiry date"
                 value={wasteCarrierExpiry}
                 onChange={setWasteCarrierExpiry}
                 required
@@ -531,50 +558,9 @@ export default function DriverRegister() {
             </div>
 
             <FileUpload
-              label="Upload Waste Carrier Licence"
+              label="Upload your Waste Carrier Licence"
               file={wasteLicenceFile}
               onChange={setWasteLicenceFile}
-              accept=".pdf,.jpg,.jpeg,.png"
-              required
-            />
-          </FormSection>
-
-          {/* INSURANCE */}
-
-          <FormSection
-            number="04"
-            title="Insurance"
-            description="Provide your current insurance details."
-          >
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Input
-                label="Insurance provider"
-                value={insuranceProvider}
-                onChange={setInsuranceProvider}
-                placeholder="e.g. Aviva"
-                required
-              />
-
-              <Input
-                label="Policy number"
-                value={insurancePolicyNumber}
-                onChange={setInsurancePolicyNumber}
-                placeholder="Policy number"
-                required
-              />
-
-              <DateInput
-                label="Insurance expiry date"
-                value={insuranceExpiry}
-                onChange={setInsuranceExpiry}
-                required
-              />
-            </div>
-
-            <FileUpload
-              label="Upload Insurance Certificate"
-              file={insuranceFile}
-              onChange={setInsuranceFile}
               accept=".pdf,.jpg,.jpeg,.png"
               required
             />
@@ -583,8 +569,8 @@ export default function DriverRegister() {
           {/* VEHICLE */}
 
           <FormSection
-            number="05"
-            title="Vehicle details"
+            number="03"
+            title="Your vehicle"
             description="Tell us about the vehicle you will use for RCS jobs."
           >
             <div className="grid gap-5 sm:grid-cols-2">
@@ -592,7 +578,6 @@ export default function DriverRegister() {
                 label="Vehicle type"
                 value={vehicleType}
                 onChange={setVehicleType}
-                required
                 options={[
                   "Small Van",
                   "Large Van",
@@ -601,38 +586,39 @@ export default function DriverRegister() {
                   "Van and Trailer",
                   "Other",
                 ]}
+                required
               />
 
               <Input
-                label="Registration number"
+                label="Registration"
                 value={vehicleRegistration}
                 onChange={(value) =>
                   setVehicleRegistration(
                     value.toUpperCase()
                   )
                 }
-                placeholder="e.g. AB12 CDE"
+                placeholder="AB12 CDE"
                 required
               />
 
               <Input
-                label="Vehicle make"
+                label="Make"
                 value={vehicleMake}
                 onChange={setVehicleMake}
-                placeholder="e.g. Ford"
+                placeholder="Ford"
                 required
               />
 
               <Input
-                label="Vehicle model"
+                label="Model"
                 value={vehicleModel}
                 onChange={setVehicleModel}
-                placeholder="e.g. Transit"
+                placeholder="Transit"
                 required
               />
 
               <Input
-                label="Vehicle capacity"
+                label="Capacity"
                 value={vehicleCapacity}
                 onChange={setVehicleCapacity}
                 placeholder="e.g. 3.5 tonne"
@@ -641,7 +627,7 @@ export default function DriverRegister() {
             </div>
 
             <FileUpload
-              label="Upload a photo of your van"
+              label="Vehicle photo"
               file={vanPhoto}
               onChange={setVanPhoto}
               accept=".jpg,.jpeg,.png,.webp"
@@ -653,9 +639,9 @@ export default function DriverRegister() {
           {/* ACCOUNT */}
 
           <FormSection
-            number="06"
+            number="04"
             title="Create your account"
-            description="Create the password you will use to access the driver portal."
+            description="Choose a password for your RCS Driver Portal."
           >
             <Input
               label="Password"
@@ -665,6 +651,11 @@ export default function DriverRegister() {
               type="password"
               required
             />
+
+            <p className="mt-3 text-sm text-gray-600">
+              You will use this password to log into the
+              RCS Driver Portal.
+            </p>
           </FormSection>
 
           {/* ERROR */}
@@ -679,35 +670,60 @@ export default function DriverRegister() {
 
           {/* SUBMIT */}
 
-          <section className="rounded-3xl border border-[#294126] bg-[#0d120d] p-5 shadow-2xl sm:p-7">
-            <div className="rounded-2xl border border-[#283326] bg-[#0b0f0b] p-5">
-              <p className="font-bold text-white">
-                Before you submit
+          <section
+            className="rounded-3xl border p-5 shadow-2xl sm:p-7"
+            style={{
+              background: CARD,
+              borderColor: "#294126",
+            }}
+          >
+            <div
+              className="rounded-2xl border p-5"
+              style={{
+                background: SECTION,
+                borderColor: "#283326",
+              }}
+            >
+              <p className="font-bold">
+                Ready to join RCS?
               </p>
 
               <p className="mt-2 text-sm leading-6 text-gray-400">
-                Your application will be reviewed by RCS.
-                You will not be able to bid on marketplace
-                jobs until your driver account has been
-                approved.
+                Submit your application and RCS will review
+                your details. Once approved, you can access
+                available marketplace jobs.
               </p>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 w-full rounded-xl bg-[#79c51c] px-6 py-4 text-lg font-black text-black transition hover:bg-[#91db32] disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-5 w-full rounded-xl px-6 py-4 text-lg font-black text-black transition disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                background: GREEN,
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.background =
+                    GREEN_HOVER;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background =
+                  GREEN;
+              }}
             >
               {loading
-                ? "Submitting application..."
-                : "Submit Driver Application"}
+                ? "Creating your account..."
+                : "Join RCS Driver Network"}
             </button>
 
-            <p className="mt-4 text-center text-sm text-gray-600">
-              Already have a driver account?{" "}
+            <p className="mt-5 text-center text-sm text-gray-600">
+              Already registered?{" "}
               <Link
                 href="/driver/login"
-                className="font-bold text-[#79c51c] hover:underline"
+                className="font-bold"
+                style={{ color: GREEN }}
               >
                 Driver Login
               </Link>
@@ -716,6 +732,41 @@ export default function DriverRegister() {
         </form>
       </div>
     </main>
+  );
+}
+
+function Header() {
+  return (
+    <header
+      className="border-b"
+      style={{
+        background: BG,
+        borderColor: "#1d251b",
+      }}
+    >
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+        <Link href="/">
+          <Image
+            src="/rapid-clear-logo.png"
+            alt="Rapid Clear Solutions"
+            width={220}
+            height={90}
+            priority
+            className="h-12 w-auto object-contain sm:h-14"
+          />
+        </Link>
+
+        <Link
+          href="/driver/login"
+          className="rounded-xl border px-4 py-2.5 text-sm font-bold transition"
+          style={{
+            borderColor: "#394635",
+          }}
+        >
+          Driver Login
+        </Link>
+      </div>
+    </header>
   );
 }
 
@@ -731,14 +782,23 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-[#283326] bg-[#0d120d] p-5 shadow-xl sm:p-7">
+    <section
+      className="rounded-3xl border p-5 shadow-xl sm:p-7"
+      style={{
+        background: CARD,
+        borderColor: "#283326",
+      }}
+    >
       <div className="flex items-start gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#79c51c] text-sm font-black text-black">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-black"
+          style={{ background: GREEN }}
+        >
           {number}
         </div>
 
         <div>
-          <h2 className="text-xl font-black text-white">
+          <h2 className="text-xl font-black">
             {title}
           </h2>
 
@@ -748,25 +808,42 @@ function FormSection({
         </div>
       </div>
 
-      <div className="mt-7">{children}</div>
+      <div className="mt-7">
+        {children}
+      </div>
     </section>
   );
 }
 
 function Feature({
   number,
+  title,
   text,
 }: {
   number: string;
+  title: string;
   text: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[#283326] bg-[#0d120d] p-4">
-      <p className="text-xs font-black text-[#79c51c]">
+    <div
+      className="rounded-2xl border p-4"
+      style={{
+        background: CARD,
+        borderColor: "#283326",
+      }}
+    >
+      <p
+        className="text-xs font-black"
+        style={{ color: GREEN }}
+      >
         {number}
       </p>
 
-      <p className="mt-2 text-sm font-bold text-white">
+      <p className="mt-2 font-bold">
+        {title}
+      </p>
+
+      <p className="mt-1 text-sm leading-5 text-gray-500">
         {text}
       </p>
     </div>
@@ -794,7 +871,10 @@ function Input({
         {label}
 
         {required && (
-          <span className="ml-1 text-[#79c51c]">
+          <span
+            className="ml-1"
+            style={{ color: GREEN }}
+          >
             *
           </span>
         )}
@@ -818,7 +898,18 @@ function Input({
           onChange(e.target.value)
         }
         placeholder={placeholder}
-        className="mt-2 w-full rounded-xl border border-[#354433] bg-[#080d09] px-4 py-3 text-white placeholder:text-gray-600 outline-none transition focus:border-[#79c51c] focus:ring-2 focus:ring-[#79c51c]/20"
+        className="mt-2 w-full rounded-xl border bg-[#080d09] px-4 py-3 text-white outline-none transition placeholder:text-gray-600"
+        style={{
+          borderColor: "#354433",
+        }}
+        onFocus={(e) =>
+          (e.currentTarget.style.borderColor =
+            GREEN)
+        }
+        onBlur={(e) =>
+          (e.currentTarget.style.borderColor =
+            "#354433")
+        }
       />
     </div>
   );
@@ -843,7 +934,10 @@ function Select({
         {label}
 
         {required && (
-          <span className="ml-1 text-[#79c51c]">
+          <span
+            className="ml-1"
+            style={{ color: GREEN }}
+          >
             *
           </span>
         )}
@@ -855,7 +949,10 @@ function Select({
         onChange={(e) =>
           onChange(e.target.value)
         }
-        className="mt-2 w-full rounded-xl border border-[#354433] bg-[#080d09] px-4 py-3 text-white outline-none transition focus:border-[#79c51c] focus:ring-2 focus:ring-[#79c51c]/20"
+        className="mt-2 w-full rounded-xl border bg-[#080d09] px-4 py-3 text-white outline-none transition"
+        style={{
+          borderColor: "#354433",
+        }}
       >
         <option
           value=""
@@ -896,7 +993,10 @@ function DateInput({
         {label}
 
         {required && (
-          <span className="ml-1 text-[#79c51c]">
+          <span
+            className="ml-1"
+            style={{ color: GREEN }}
+          >
             *
           </span>
         )}
@@ -909,7 +1009,10 @@ function DateInput({
         onChange={(e) =>
           onChange(e.target.value)
         }
-        className="mt-2 w-full rounded-xl border border-[#354433] bg-[#080d09] px-4 py-3 text-white outline-none transition focus:border-[#79c51c] focus:ring-2 focus:ring-[#79c51c]/20"
+        className="mt-2 w-full rounded-xl border bg-[#080d09] px-4 py-3 text-white outline-none transition"
+        style={{
+          borderColor: "#354433",
+        }}
       />
     </div>
   );
@@ -936,13 +1039,30 @@ function FileUpload({
         {label}
 
         {required && (
-          <span className="ml-1 text-[#79c51c]">
+          <span
+            className="ml-1"
+            style={{ color: GREEN }}
+          >
             *
           </span>
         )}
       </label>
 
-      <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#354433] bg-[#080d09] px-6 py-8 text-center transition hover:border-[#79c51c] hover:bg-[#0b110c]">
+      <label
+        className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition"
+        style={{
+          background: "#080d09",
+          borderColor: "#354433",
+        }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.borderColor =
+            GREEN)
+        }
+        onMouseLeave={(e) =>
+          (e.currentTarget.style.borderColor =
+            "#354433")
+        }
+      >
         <span className="text-3xl">
           {image ? "🚐" : "📄"}
         </span>
@@ -955,7 +1075,7 @@ function FileUpload({
 
         <span className="mt-1 text-sm text-gray-600">
           {image
-            ? "Upload a clear photo of the vehicle"
+            ? "Upload a clear photo of your vehicle"
             : "PDF, JPG or PNG"}
         </span>
 
@@ -976,7 +1096,10 @@ function FileUpload({
       </label>
 
       {file && (
-        <p className="mt-2 text-sm font-medium text-[#79c51c]">
+        <p
+          className="mt-2 text-sm font-medium"
+          style={{ color: GREEN }}
+        >
           ✓ File selected
         </p>
       )}

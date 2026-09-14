@@ -114,7 +114,10 @@ async function uploadFile(
 
   if (error) {
     throw new Error(
-      `Could not upload ${folder.replace(/-/g, " ")}: ${error.message}`
+      `Could not upload ${folder.replace(
+        /-/g,
+        " "
+      )}: ${error.message}`
     );
   }
 
@@ -151,9 +154,9 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
 
-    /*
-     * PERSONAL DETAILS
-     */
+    // --------------------------------------------------
+    // PERSONAL DETAILS
+    // --------------------------------------------------
 
     const fullName = cleanText(
       formData.get("fullName")
@@ -175,33 +178,9 @@ export async function POST(request: Request) {
       formData.get("postcode")
     ).toUpperCase();
 
-    /*
-     * BUSINESS DETAILS
-     */
-
-    const companyName = cleanText(
-      formData.get("companyName")
-    );
-
-    const tradingName = cleanText(
-      formData.get("tradingName")
-    );
-
-    const companyNumber = cleanText(
-      formData.get("companyNumber")
-    );
-
-    const yearsTradingValue = cleanText(
-      formData.get("yearsTrading")
-    );
-
-    const yearsTrading = yearsTradingValue
-      ? Number(yearsTradingValue)
-      : null;
-
-    /*
-     * WASTE LICENCE
-     */
+    // --------------------------------------------------
+    // WASTE CARRIER LICENCE
+    // --------------------------------------------------
 
     const wasteCarrierNumber = cleanText(
       formData.get("wasteCarrierNumber")
@@ -215,25 +194,9 @@ export async function POST(request: Request) {
       formData.get("wasteCarrierExpiry")
     );
 
-    /*
-     * INSURANCE
-     */
-
-    const insuranceProvider = cleanText(
-      formData.get("insuranceProvider")
-    );
-
-    const insurancePolicyNumber = cleanText(
-      formData.get("insurancePolicyNumber")
-    );
-
-    const insuranceExpiry = cleanText(
-      formData.get("insuranceExpiry")
-    );
-
-    /*
-     * VEHICLE
-     */
+    // --------------------------------------------------
+    // VEHICLE
+    // --------------------------------------------------
 
     const vehicleType = cleanText(
       formData.get("vehicleType")
@@ -255,15 +218,15 @@ export async function POST(request: Request) {
       formData.get("vehicleCapacity")
     );
 
-    /*
-     * PASSWORD
-     */
+    // --------------------------------------------------
+    // PASSWORD
+    // --------------------------------------------------
 
     const password = formData.get("password");
 
-    /*
-     * FILES
-     */
+    // --------------------------------------------------
+    // FILES
+    // --------------------------------------------------
 
     const wasteLicenceFile =
       formData.get("wasteLicenceFile") instanceof File
@@ -272,21 +235,14 @@ export async function POST(request: Request) {
           ) as File)
         : null;
 
-    const insuranceFile =
-      formData.get("insuranceFile") instanceof File
-        ? (formData.get(
-            "insuranceFile"
-          ) as File)
-        : null;
-
     const vanPhoto =
       formData.get("vanPhoto") instanceof File
         ? (formData.get("vanPhoto") as File)
         : null;
 
-    /*
-     * VALIDATION
-     */
+    // --------------------------------------------------
+    // VALIDATION
+    // --------------------------------------------------
 
     if (!fullName) {
       throw new Error(
@@ -301,7 +257,9 @@ export async function POST(request: Request) {
     }
 
     if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        email
+      )
     ) {
       throw new Error(
         "Please enter a valid email address."
@@ -353,24 +311,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!insuranceProvider) {
-      throw new Error(
-        "Please enter your insurance provider."
-      );
-    }
-
-    if (!insurancePolicyNumber) {
-      throw new Error(
-        "Please enter your insurance policy number."
-      );
-    }
-
-    if (!insuranceExpiry) {
-      throw new Error(
-        "Please enter your insurance expiry date."
-      );
-    }
-
     if (!vehicleType) {
       throw new Error(
         "Please select your vehicle type."
@@ -407,36 +347,21 @@ export async function POST(request: Request) {
     );
 
     validateFile(
-      insuranceFile,
-      "insurance certificate"
-    );
-
-    validateFile(
       vanPhoto,
       "vehicle photo"
     );
 
-    if (
-      yearsTrading !== null &&
-      (Number.isNaN(yearsTrading) ||
-        yearsTrading < 0)
-    ) {
-      throw new Error(
-        "Please enter a valid number of years trading."
-      );
-    }
-
-    /*
-     * CREATE CLIENTS
-     */
+    // --------------------------------------------------
+    // CLIENTS
+    // --------------------------------------------------
 
     admin = getAdminClient();
 
     const publicClient = getPublicClient();
 
-    /*
-     * CHECK EXISTING ACCOUNT
-     */
+    // --------------------------------------------------
+    // CHECK EXISTING ACCOUNT
+    // --------------------------------------------------
 
     let page = 1;
     let existingUser = null;
@@ -489,13 +414,9 @@ export async function POST(request: Request) {
       );
     }
 
-    /*
-     * CREATE ACCOUNT
-     *
-     * We use the normal Supabase signup here so that
-     * Supabase sends the normal confirmation email using
-     * your configured SMTP/Resend setup.
-     */
+    // --------------------------------------------------
+    // CREATE ACCOUNT
+    // --------------------------------------------------
 
     const emailRedirectTo =
       `${SITE_URL}/auth/confirm?next=/driver/login`;
@@ -539,12 +460,9 @@ export async function POST(request: Request) {
 
     createdUserId = user.id;
 
-    /*
-     * UPLOAD DOCUMENTS
-     *
-     * These uploads happen using the service-role
-     * client, so Storage RLS does not block them.
-     */
+    // --------------------------------------------------
+    // UPLOAD WASTE CARRIER LICENCE
+    // --------------------------------------------------
 
     const wasteLicencePath =
       await uploadFile(
@@ -558,17 +476,9 @@ export async function POST(request: Request) {
       wasteLicencePath
     );
 
-    const insurancePath =
-      await uploadFile(
-        admin,
-        insuranceFile!,
-        user.id,
-        "insurance"
-      );
-
-    uploadedPaths.push(
-      insurancePath
-    );
+    // --------------------------------------------------
+    // UPLOAD VEHICLE PHOTO
+    // --------------------------------------------------
 
     const vanPhotoPath =
       await uploadFile(
@@ -582,9 +492,9 @@ export async function POST(request: Request) {
       vanPhotoPath
     );
 
-    /*
-     * CREATE DRIVER RECORD
-     */
+    // --------------------------------------------------
+    // CREATE DRIVER RECORD
+    // --------------------------------------------------
 
     const {
       error: driverError,
@@ -599,17 +509,12 @@ export async function POST(request: Request) {
         address,
         postcode,
 
-        company_name:
-          companyName || null,
-
-        trading_name:
-          tradingName || null,
-
-        company_number:
-          companyNumber || null,
-
-        years_trading:
-          yearsTrading,
+        // These remain NULL because they are
+        // no longer collected during signup.
+        company_name: null,
+        trading_name: null,
+        company_number: null,
+        years_trading: null,
 
         waste_carrier_number:
           wasteCarrierNumber,
@@ -623,17 +528,10 @@ export async function POST(request: Request) {
         waste_licence_url:
           wasteLicencePath,
 
-        insurance_provider:
-          insuranceProvider,
-
-        insurance_policy_number:
-          insurancePolicyNumber,
-
-        insurance_expiry:
-          insuranceExpiry,
-
-        insurance_certificate_url:
-          insurancePath,
+        insurance_provider: null,
+        insurance_policy_number: null,
+        insurance_expiry: null,
+        insurance_certificate_url: null,
 
         vehicle_type:
           vehicleType,
@@ -670,12 +568,9 @@ export async function POST(request: Request) {
       );
     }
 
-    /*
-     * SUCCESS
-     *
-     * When email confirmation is enabled, Supabase normally
-     * returns no session. That is expected.
-     */
+    // --------------------------------------------------
+    // SUCCESS
+    // --------------------------------------------------
 
     return NextResponse.json(
       {
@@ -693,9 +588,9 @@ export async function POST(request: Request) {
       error
     );
 
-    /*
-     * CLEANUP UPLOADED FILES
-     */
+    // --------------------------------------------------
+    // CLEANUP FILES
+    // --------------------------------------------------
 
     if (
       admin &&
@@ -713,9 +608,9 @@ export async function POST(request: Request) {
       }
     }
 
-    /*
-     * CLEANUP CREATED USER
-     */
+    // --------------------------------------------------
+    // CLEANUP ACCOUNT
+    // --------------------------------------------------
 
     if (
       admin &&
