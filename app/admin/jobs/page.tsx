@@ -196,6 +196,7 @@ export default function AdminJobsPage() {
 
     return jobs.filter((job) => {
       const status = normalise(job.status);
+
       const journey = normalise(
         job.journey_status,
       );
@@ -243,30 +244,40 @@ export default function AdminJobsPage() {
 
   return (
     <main
-      className="min-h-screen text-white"
+      className="min-h-screen overflow-x-hidden text-white"
       style={{ background: BG }}
     >
+      {/* ========================================================= */}
       {/* HEADER */}
+      {/* ========================================================= */}
+
       <header
         className="sticky top-0 z-40 border-b backdrop-blur-xl"
         style={{
           borderColor:
             "rgba(255,255,255,0.08)",
           background:
-            "rgba(5,7,5,0.94)",
+            "rgba(5,7,5,0.96)",
         }}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div
+          className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8"
+          style={{
+            paddingTop:
+              "max(0.75rem, env(safe-area-inset-top))",
+          }}
+        >
+          {/* LOGO */}
           <Link
             href="/admin/dashboard"
-            className="flex items-center gap-3"
+            className="flex min-w-0 items-center gap-3"
           >
             <Image
               src="/rcs-logo.jpg"
               alt="Rapid Clear Solutions"
               width={180}
               height={70}
-              className="h-10 w-auto object-contain sm:h-12"
+              className="h-9 w-auto object-contain sm:h-12"
               priority
             />
 
@@ -281,14 +292,15 @@ export default function AdminJobsPage() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
+          {/* HEADER ACTIONS */}
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() =>
                 void loadJobs(true)
               }
               disabled={refreshing}
-              className="rounded-xl border px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-[44px] rounded-xl border px-3.5 text-xs font-black transition sm:px-4 sm:text-sm"
               style={{
                 borderColor:
                   "rgba(255,255,255,0.12)",
@@ -304,7 +316,7 @@ export default function AdminJobsPage() {
 
             <Link
               href="/admin/dashboard"
-              className="hidden rounded-xl border px-4 py-2 text-sm font-bold transition sm:block"
+              className="hidden min-h-[44px] items-center rounded-xl border px-4 text-sm font-black transition sm:flex"
               style={{
                 borderColor:
                   "rgba(255,255,255,0.12)",
@@ -319,19 +331,59 @@ export default function AdminJobsPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      {/* ========================================================= */}
+      {/* MOBILE BACK BUTTON */}
+      {/* ========================================================= */}
+
+      <div
+        className="border-b px-4 py-3 sm:hidden"
+        style={{
+          borderColor:
+            "rgba(255,255,255,0.07)",
+          background: SECTION,
+        }}
+      >
+        <Link
+          href="/admin/dashboard"
+          className="flex min-h-[48px] w-full items-center justify-center rounded-xl border px-4 text-sm font-black transition active:scale-[0.99]"
+          style={{
+            borderColor:
+              "rgba(255,255,255,0.10)",
+            background: CARD,
+            color:
+              "rgba(255,255,255,0.80)",
+          }}
+        >
+          ← BACK TO DASHBOARD
+        </Link>
+      </div>
+
+      {/* ========================================================= */}
+      {/* MAIN CONTENT */}
+      {/* ========================================================= */}
+
+      <div
+        className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8"
+        style={{
+          paddingBottom:
+            "calc(2rem + env(safe-area-inset-bottom))",
+        }}
+      >
+        {/* ======================================================= */}
         {/* HERO */}
-        <section className="mb-7">
+        {/* ======================================================= */}
+
+        <section className="mb-6 sm:mb-8">
           <p
-            className="text-xs font-black uppercase tracking-[0.2em]"
+            className="text-[10px] font-black uppercase tracking-[0.2em] sm:text-xs"
             style={{ color: GREEN }}
           >
             RCS Marketplace
           </p>
 
-          <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+              <h1 className="text-2xl font-black tracking-tight sm:text-4xl">
                 Job Management
               </h1>
 
@@ -343,7 +395,7 @@ export default function AdminJobsPage() {
             </div>
 
             <div
-              className="flex items-center gap-2 self-start rounded-full border px-3 py-2 text-xs font-bold lg:self-auto"
+              className="flex w-fit items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold"
               style={{
                 borderColor: `${GREEN}25`,
                 background: `${GREEN}0d`,
@@ -363,15 +415,21 @@ export default function AdminJobsPage() {
           </div>
         </section>
 
+        {/* ======================================================= */}
         {/* ERROR */}
+        {/* ======================================================= */}
+
         {errorMessage && (
-          <div className="mb-6 rounded-2xl border border-red-500/25 bg-red-500/10 p-5 text-sm text-red-200">
+          <div className="mb-5 rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm leading-6 text-red-200 sm:p-5">
             {errorMessage}
           </div>
         )}
 
+        {/* ======================================================= */}
         {/* STATS */}
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {/* ======================================================= */}
+
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <StatCard
             title="Total Jobs"
             value={stats.total}
@@ -404,9 +462,12 @@ export default function AdminJobsPage() {
           />
         </section>
 
+        {/* ======================================================= */}
         {/* SEARCH + VALUE */}
+        {/* ======================================================= */}
+
         <section
-          className="mt-5 rounded-3xl border p-5 sm:p-6"
+          className="mt-4 rounded-2xl border p-4 sm:mt-5 sm:rounded-3xl sm:p-6"
           style={{
             borderColor:
               "rgba(255,255,255,0.08)",
@@ -422,7 +483,7 @@ export default function AdminJobsPage() {
                 Accepted / Assigned Value
               </p>
 
-              <p className="mt-2 text-3xl font-black">
+              <p className="mt-2 text-2xl font-black sm:text-3xl">
                 £{formatMoney(stats.totalValue)}
               </p>
             </div>
@@ -439,7 +500,7 @@ export default function AdminJobsPage() {
                   setSearch(event.target.value)
                 }
                 placeholder="Reference, customer, postcode, job ID..."
-                className="w-full rounded-2xl border px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-white/20"
+                className="min-h-[48px] w-full rounded-xl border px-4 py-3 text-base text-white outline-none transition placeholder:text-white/20 sm:rounded-2xl sm:text-sm"
                 style={{
                   borderColor:
                     "rgba(255,255,255,0.10)",
@@ -458,9 +519,18 @@ export default function AdminJobsPage() {
           </div>
         </section>
 
+        {/* ======================================================= */}
         {/* FILTERS */}
+        {/* ======================================================= */}
+
         <section className="mt-4">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div
+            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0"
+            style={{
+              scrollbarWidth: "none",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
             <FilterButton
               active={filter === "all"}
               onClick={() => setFilter("all")}
@@ -502,19 +572,20 @@ export default function AdminJobsPage() {
           </div>
         </section>
 
+        {/* ======================================================= */}
         {/* JOBS */}
-        <section className="mt-7">
-          <div className="mb-4 flex items-end justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-black">
-                Marketplace Jobs
-              </h2>
+        {/* ======================================================= */}
 
-              <p className="mt-1 text-sm text-white/35">
-                Showing {filteredJobs.length} of{" "}
-                {jobs.length} jobs
-              </p>
-            </div>
+        <section className="mt-6 sm:mt-7">
+          <div className="mb-4">
+            <h2 className="text-xl font-black sm:text-2xl">
+              Marketplace Jobs
+            </h2>
+
+            <p className="mt-1 text-xs text-white/35 sm:text-sm">
+              Showing {filteredJobs.length} of{" "}
+              {jobs.length} jobs
+            </p>
           </div>
 
           {loading ? (
@@ -522,7 +593,7 @@ export default function AdminJobsPage() {
           ) : filteredJobs.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {filteredJobs.map((job) => (
                 <JobCard
                   key={job.id}
@@ -536,6 +607,10 @@ export default function AdminJobsPage() {
           )}
         </section>
       </div>
+
+      {/* ========================================================= */}
+      {/* JOB MODAL */}
+      {/* ========================================================= */}
 
       {selectedJob && (
         <JobModal
@@ -572,19 +647,19 @@ function JobCard({
 
   return (
     <div
-      className="overflow-hidden rounded-3xl border transition hover:border-white/15"
+      className="overflow-hidden rounded-2xl border transition sm:rounded-3xl hover:border-white/15"
       style={{
         borderColor:
           "rgba(255,255,255,0.08)",
         background: CARD,
       }}
     >
-      <div className="p-5 sm:p-6">
+      <div className="p-4 sm:p-6">
         {/* TOP */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-xl font-black">
+              <h3 className="break-all text-lg font-black sm:text-xl">
                 {job.reference ||
                   `Job #${job.id}`}
               </h3>
@@ -603,7 +678,7 @@ function JobCard({
                 "Waste removal"}
             </p>
 
-            <p className="mt-1 text-sm text-white/35">
+            <p className="mt-1 break-words text-sm leading-5 text-white/35">
               {job.postcode ||
                 "No postcode"}
 
@@ -613,7 +688,7 @@ function JobCard({
             </p>
           </div>
 
-          <div className="shrink-0">
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 lg:min-w-[150px] lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/25">
               Accepted Value
             </p>
@@ -629,7 +704,7 @@ function JobCard({
 
         {/* DETAILS */}
         <div
-          className="mt-5 grid gap-3 border-t pt-5 sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-5 grid grid-cols-2 gap-4 border-t pt-5 sm:grid-cols-2 lg:grid-cols-4"
           style={{
             borderColor:
               "rgba(255,255,255,0.07)",
@@ -677,7 +752,7 @@ function JobCard({
             />
 
             {driverName ? (
-              <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/55">
+              <span className="max-w-full truncate rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/55">
                 Driver: {driverName}
               </span>
             ) : (
@@ -690,7 +765,7 @@ function JobCard({
           <button
             type="button"
             onClick={onView}
-            className="w-full rounded-2xl px-5 py-3.5 text-sm font-black transition sm:w-auto"
+            className="min-h-[50px] w-full rounded-xl px-5 text-sm font-black transition active:scale-[0.99] sm:min-h-[46px] sm:w-auto sm:rounded-2xl"
             style={{
               background: GREEN,
               color: BG,
@@ -720,12 +795,12 @@ function JobMeta({
   value: string;
 }) {
   return (
-    <div>
-      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/25">
+    <div className="min-w-0">
+      <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/25 sm:text-[10px]">
         {label}
       </p>
 
-      <p className="mt-1 text-sm font-bold text-white/70">
+      <p className="mt-1 break-words text-sm font-bold text-white/70">
         {value}
       </p>
     </div>
@@ -747,7 +822,7 @@ function JobModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/85 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -755,7 +830,7 @@ function JobModal({
       }}
     >
       <div
-        className="my-8 w-full max-w-5xl overflow-hidden rounded-3xl border shadow-2xl"
+        className="min-h-screen w-full overflow-hidden border shadow-2xl sm:my-8 sm:min-h-0 sm:max-w-5xl sm:rounded-3xl"
         style={{
           borderColor:
             "rgba(255,255,255,0.10)",
@@ -764,22 +839,24 @@ function JobModal({
       >
         {/* MODAL HEADER */}
         <div
-          className="flex items-center justify-between border-b p-5 sm:p-6"
+          className="sticky top-0 z-10 flex items-center justify-between border-b p-4 sm:static sm:p-6"
           style={{
             borderColor:
               "rgba(255,255,255,0.07)",
             background: SECTION,
+            paddingTop:
+              "max(1rem, env(safe-area-inset-top))",
           }}
         >
-          <div className="min-w-0">
+          <div className="min-w-0 pr-3">
             <p
-              className="text-xs font-black uppercase tracking-[0.2em]"
+              className="text-[10px] font-black uppercase tracking-[0.2em] sm:text-xs"
               style={{ color: GREEN }}
             >
               Marketplace Job
             </p>
 
-            <h2 className="mt-1 truncate text-2xl font-black">
+            <h2 className="mt-1 break-all text-xl font-black sm:text-2xl">
               {job.reference}
             </h2>
           </div>
@@ -787,30 +864,37 @@ function JobModal({
           <button
             type="button"
             onClick={onClose}
-            className="ml-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl transition"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-2xl transition active:scale-95"
             style={{
               borderColor:
                 "rgba(255,255,255,0.10)",
               color:
-                "rgba(255,255,255,0.45)",
+                "rgba(255,255,255,0.65)",
+              background: CARD,
             }}
-            aria-label="Close"
+            aria-label="Close job"
           >
             ×
           </button>
         </div>
 
-        <div className="max-h-[78vh] overflow-y-auto p-5 sm:p-7">
+        <div
+          className="max-h-[calc(100vh-76px)] overflow-y-auto p-4 sm:max-h-[78vh] sm:p-7"
+          style={{
+            paddingBottom:
+              "calc(2rem + env(safe-area-inset-bottom))",
+          }}
+        >
           {/* STATUS */}
           <section
-            className="rounded-2xl border p-5"
+            className="rounded-2xl border p-4 sm:p-5"
             style={{
               borderColor:
                 "rgba(255,255,255,0.08)",
               background: SECTION,
             }}
           >
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-5 sm:grid-cols-2 lg:grid-cols-4">
               <Info
                 label="Job status"
                 value={
@@ -920,13 +1004,13 @@ function JobModal({
           </DetailSection>
 
           {/* DESCRIPTION */}
-          <section className="mt-8">
+          <section className="mt-7 sm:mt-8">
             <h3 className="text-lg font-black">
               Description
             </h3>
 
             <div
-              className="mt-4 rounded-2xl border p-5"
+              className="mt-3 rounded-2xl border p-4 sm:mt-4 sm:p-5"
               style={{
                 borderColor:
                   "rgba(255,255,255,0.08)",
@@ -949,20 +1033,20 @@ function JobModal({
           </DetailSection>
 
           {/* DRIVER */}
-          <section className="mt-8">
+          <section className="mt-7 sm:mt-8">
             <h3 className="text-lg font-black">
               Driver Assignment
             </h3>
 
             <div
-              className="mt-4 rounded-2xl border p-5"
+              className="mt-3 rounded-2xl border p-4 sm:mt-4 sm:p-5"
               style={{
                 borderColor:
                   "rgba(255,255,255,0.08)",
                 background: SECTION,
               }}
             >
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
                 <Detail
                   label="Driver"
                   value={driverName}
@@ -992,7 +1076,7 @@ function JobModal({
 
               {job.assignedDriver && (
                 <div
-                  className="mt-5 grid gap-5 border-t pt-5 sm:grid-cols-2 lg:grid-cols-4"
+                  className="mt-5 grid grid-cols-2 gap-5 border-t pt-5"
                   style={{
                     borderColor:
                       "rgba(255,255,255,0.07)",
@@ -1035,13 +1119,13 @@ function JobModal({
           </section>
 
           {/* ACCEPTED BID */}
-          <section className="mt-8">
+          <section className="mt-7 sm:mt-8">
             <h3 className="text-lg font-black">
               Accepted Bid
             </h3>
 
             <div
-              className="mt-4 rounded-2xl border p-5"
+              className="mt-3 rounded-2xl border p-4 sm:mt-4 sm:p-5"
               style={{
                 borderColor:
                   "rgba(255,255,255,0.08)",
@@ -1050,7 +1134,7 @@ function JobModal({
             >
               {job.winningBid ? (
                 <>
-                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
                     <Detail
                       label="Bid amount"
                       value={
@@ -1167,13 +1251,13 @@ function JobModal({
           </section>
 
           {/* STRIPE */}
-          <section className="mt-8">
+          <section className="mt-7 sm:mt-8">
             <h3 className="text-lg font-black">
               Stripe Payment
             </h3>
 
             <div
-              className="mt-4 grid gap-5 rounded-2xl border p-5 sm:grid-cols-2"
+              className="mt-3 grid gap-5 rounded-2xl border p-4 sm:mt-4 sm:grid-cols-2 sm:p-5"
               style={{
                 borderColor:
                   "rgba(255,255,255,0.08)",
@@ -1219,7 +1303,7 @@ function StatCard({
 }) {
   return (
     <div
-      className="rounded-2xl border p-5"
+      className="min-w-0 rounded-2xl border p-4 sm:p-5"
       style={{
         borderColor: accent
           ? `${GREEN}25`
@@ -1228,7 +1312,7 @@ function StatCard({
       }}
     >
       <p
-        className="text-[10px] font-black uppercase tracking-[0.16em]"
+        className="truncate text-[9px] font-black uppercase tracking-[0.14em] sm:text-[10px]"
         style={{
           color: accent
             ? GREEN
@@ -1238,11 +1322,11 @@ function StatCard({
         {title}
       </p>
 
-      <p className="mt-3 text-3xl font-black">
+      <p className="mt-2 text-2xl font-black sm:mt-3 sm:text-3xl">
         {value}
       </p>
 
-      <p className="mt-1 text-xs text-white/30">
+      <p className="mt-1 text-[10px] leading-4 text-white/30 sm:text-xs">
         {description}
       </p>
     </div>
@@ -1262,7 +1346,7 @@ function FilterButton({
     <button
       type="button"
       onClick={onClick}
-      className="shrink-0 rounded-xl border px-4 py-2.5 text-sm font-bold transition"
+      className="min-h-[44px] shrink-0 rounded-xl border px-4 text-xs font-black transition active:scale-[0.98] sm:text-sm"
       style={{
         borderColor: active
           ? `${GREEN}60`
@@ -1336,7 +1420,7 @@ function StatusBadge({
 
   return (
     <span
-      className="inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase"
+      className="inline-flex max-w-full rounded-full border px-2.5 py-1 text-[9px] font-black uppercase sm:px-3 sm:text-[10px]"
       style={{
         background,
         color,
@@ -1401,7 +1485,7 @@ function JourneyBadge({
 
   return (
     <span
-      className="inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase"
+      className="inline-flex max-w-full rounded-full border px-2.5 py-1 text-[9px] font-black uppercase sm:px-3 sm:text-[10px]"
       style={{
         background,
         color,
@@ -1428,7 +1512,7 @@ function PaymentStatus({
 
   return (
     <span
-      className="inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase"
+      className="inline-flex max-w-full rounded-full border px-2.5 py-1 text-[9px] font-black uppercase sm:px-3 sm:text-[10px]"
       style={{
         background: paid
           ? `${GREEN}12`
@@ -1454,12 +1538,12 @@ function Info({
   value: React.ReactNode;
 }) {
   return (
-    <div>
-      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/25">
+    <div className="min-w-0">
+      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/25 sm:text-[10px]">
         {label}
       </p>
 
-      <div className="mt-2">
+      <div className="mt-2 min-w-0">
         {value}
       </div>
     </div>
@@ -1474,13 +1558,13 @@ function DetailSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-8">
+    <section className="mt-7 sm:mt-8">
       <h3 className="text-lg font-black">
         {title}
       </h3>
 
       <div
-        className="mt-4 grid gap-5 rounded-2xl border p-5 sm:grid-cols-2"
+        className="mt-3 grid grid-cols-2 gap-5 rounded-2xl border p-4 sm:mt-4 sm:grid-cols-2 sm:p-5"
         style={{
           borderColor:
             "rgba(255,255,255,0.08)",
@@ -1505,12 +1589,12 @@ function Detail({
     | undefined;
 }) {
   return (
-    <div>
-      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/25">
+    <div className="min-w-0">
+      <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/25 sm:text-[10px]">
         {label}
       </p>
 
-      <p className="mt-1 break-words text-sm font-bold text-white/65">
+      <p className="mt-1 break-all text-sm font-bold leading-5 text-white/65">
         {value === null ||
         value === undefined ||
         value === ""
@@ -1524,7 +1608,7 @@ function Detail({
 function LoadingState() {
   return (
     <div
-      className="rounded-3xl border p-12 text-center"
+      className="rounded-2xl border p-10 text-center sm:rounded-3xl sm:p-12"
       style={{
         borderColor:
           "rgba(255,255,255,0.08)",
@@ -1550,7 +1634,7 @@ function LoadingState() {
 function EmptyState() {
   return (
     <div
-      className="rounded-3xl border p-12 text-center"
+      className="rounded-2xl border p-10 text-center sm:rounded-3xl sm:p-12"
       style={{
         borderColor:
           "rgba(255,255,255,0.08)",
