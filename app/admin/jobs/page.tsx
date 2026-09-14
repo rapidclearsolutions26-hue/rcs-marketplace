@@ -76,10 +76,17 @@ type Filter =
   | "completed"
   | "paid";
 
+const GREEN = "#79c51c";
+const GREEN_HOVER = "#91db32";
+const BG = "#050705";
+const SECTION = "#080b08";
+const CARD = "#0a0e0a";
+
 export default function AdminJobsPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const [jobs, setJobs] = useState<Job[]>([]);
+
   const [stats, setStats] = useState<Stats>({
     total: 0,
     open: 0,
@@ -89,8 +96,12 @@ export default function AdminJobsPage() {
     totalValue: 0,
   });
 
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [selectedJob, setSelectedJob] =
+    useState<Job | null>(null);
+
+  const [filter, setFilter] =
+    useState<Filter>("all");
+
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -115,13 +126,16 @@ export default function AdminJobsPage() {
           );
         }
 
-        const response = await fetch("/api/admin/jobs", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
+        const response = await fetch(
+          "/api/admin/jobs",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            cache: "no-store",
           },
-          cache: "no-store",
-        });
+        );
 
         const data = await response.json();
 
@@ -144,7 +158,10 @@ export default function AdminJobsPage() {
           },
         );
       } catch (error) {
-        console.error("Admin jobs loading error:", error);
+        console.error(
+          "Admin jobs loading error:",
+          error,
+        );
 
         setErrorMessage(
           error instanceof Error
@@ -174,20 +191,25 @@ export default function AdminJobsPage() {
   }, [loadJobs]);
 
   const filteredJobs = useMemo(() => {
-    const searchValue = search.trim().toLowerCase();
+    const searchValue =
+      search.trim().toLowerCase();
 
     return jobs.filter((job) => {
       const status = normalise(job.status);
-      const journey = normalise(job.journey_status);
+      const journey = normalise(
+        job.journey_status,
+      );
 
       const matchesFilter =
         filter === "all" ||
         (filter === "open" &&
           ["open", "bidding"].includes(status)) ||
         (filter === "assigned" &&
-          (status === "assigned" || journey === "assigned")) ||
+          (status === "assigned" ||
+            journey === "assigned")) ||
         (filter === "completed" &&
-          (status === "completed" || journey === "completed")) ||
+          (status === "completed" ||
+            journey === "completed")) ||
         (filter === "paid" &&
           normalise(job.payment_status) === "paid");
 
@@ -220,36 +242,76 @@ export default function AdminJobsPage() {
   }, [jobs, filter, search]);
 
   return (
-    <main className="min-h-screen bg-[#06100c] text-white">
-      <header className="border-b border-[#17382b] bg-[#081710]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
+    <main
+      className="min-h-screen text-white"
+      style={{ background: BG }}
+    >
+      {/* HEADER */}
+      <header
+        className="sticky top-0 z-40 border-b backdrop-blur-xl"
+        style={{
+          borderColor:
+            "rgba(255,255,255,0.08)",
+          background:
+            "rgba(5,7,5,0.94)",
+        }}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link
             href="/admin/dashboard"
-            className="flex items-center"
+            className="flex items-center gap-3"
           >
             <Image
               src="/rcs-logo.jpg"
               alt="Rapid Clear Solutions"
               width={180}
               height={70}
-              className="h-12 w-auto object-contain"
+              className="h-10 w-auto object-contain sm:h-12"
               priority
             />
+
+            <div className="hidden border-l border-white/10 pl-3 sm:block">
+              <p className="text-sm font-black">
+                Admin
+              </p>
+
+              <p className="text-xs text-white/35">
+                Job Management
+              </p>
+            </div>
           </Link>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => void loadJobs(true)}
+              onClick={() =>
+                void loadJobs(true)
+              }
               disabled={refreshing}
-              className="rounded-xl border border-[#29483a] bg-[#0b1b14] px-4 py-2 text-sm font-bold text-white transition hover:border-[#79c51c] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
+              style={{
+                borderColor:
+                  "rgba(255,255,255,0.12)",
+                background: CARD,
+                color:
+                  "rgba(255,255,255,0.78)",
+              }}
             >
-              {refreshing ? "Refreshing..." : "Refresh"}
+              {refreshing
+                ? "Refreshing..."
+                : "Refresh"}
             </button>
 
             <Link
               href="/admin/dashboard"
-              className="hidden rounded-xl border border-[#29483a] bg-[#0b1b14] px-4 py-2 text-sm font-bold text-gray-200 transition hover:border-[#79c51c] hover:text-white sm:block"
+              className="hidden rounded-xl border px-4 py-2 text-sm font-bold transition sm:block"
+              style={{
+                borderColor:
+                  "rgba(255,255,255,0.12)",
+                background: CARD,
+                color:
+                  "rgba(255,255,255,0.78)",
+              }}
             >
               Dashboard
             </Link>
@@ -257,45 +319,76 @@ export default function AdminJobsPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-        <div className="mb-8">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-[#79c51c]">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        {/* HERO */}
+        <section className="mb-7">
+          <p
+            className="text-xs font-black uppercase tracking-[0.2em]"
+            style={{ color: GREEN }}
+          >
             RCS Marketplace
           </p>
 
-          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-            Job Management
-          </h1>
+          <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+            <div>
+              <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+                Job Management
+              </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-400">
-            View and manage every marketplace job,
-            assignment and payment.
-          </p>
-        </div>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
+                Manage marketplace jobs, drivers,
+                bids, assignments and payments from
+                one place.
+              </p>
+            </div>
 
+            <div
+              className="flex items-center gap-2 self-start rounded-full border px-3 py-2 text-xs font-bold lg:self-auto"
+              style={{
+                borderColor: `${GREEN}25`,
+                background: `${GREEN}0d`,
+                color: GREEN,
+              }}
+            >
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{
+                  background: GREEN,
+                  boxShadow: `0 0 10px ${GREEN}`,
+                }}
+              />
+
+              Live marketplace
+            </div>
+          </div>
+        </section>
+
+        {/* ERROR */}
         {errorMessage && (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-200">
+          <div className="mb-6 rounded-2xl border border-red-500/25 bg-red-500/10 p-5 text-sm text-red-200">
             {errorMessage}
           </div>
         )}
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {/* STATS */}
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard
             title="Total Jobs"
             value={stats.total}
             description="All marketplace jobs"
+            accent
           />
 
           <StatCard
-            title="Open / Bidding"
+            title="Open"
             value={stats.open}
-            description="Waiting for a driver"
+            description="Waiting for drivers"
           />
 
           <StatCard
             title="Assigned"
             value={stats.assigned}
-            description="Jobs with a driver"
+            description="Driver assigned"
           />
 
           <StatCard
@@ -311,10 +404,21 @@ export default function AdminJobsPage() {
           />
         </section>
 
-        <section className="mt-5 rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        {/* SEARCH + VALUE */}
+        <section
+          className="mt-5 rounded-3xl border p-5 sm:p-6"
+          style={{
+            borderColor:
+              "rgba(255,255,255,0.08)",
+            background: CARD,
+          }}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+              <p
+                className="text-[10px] font-black uppercase tracking-[0.16em]"
+                style={{ color: GREEN }}
+              >
                 Accepted / Assigned Value
               </p>
 
@@ -323,20 +427,40 @@ export default function AdminJobsPage() {
               </p>
             </div>
 
-            <div className="w-full lg:max-w-md">
+            <div className="w-full lg:max-w-lg">
+              <label className="mb-2 block text-xs font-bold text-white/40">
+                Search jobs
+              </label>
+
               <input
                 type="text"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search reference, customer, postcode..."
-                className="w-full rounded-xl border border-[#29483a] bg-[#06100c] px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-[#79c51c]"
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+                placeholder="Reference, customer, postcode, job ID..."
+                className="w-full rounded-2xl border px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-white/20"
+                style={{
+                  borderColor:
+                    "rgba(255,255,255,0.10)",
+                  background: "#070907",
+                }}
+                onFocus={(event) => {
+                  event.currentTarget.style.borderColor =
+                    GREEN;
+                }}
+                onBlur={(event) => {
+                  event.currentTarget.style.borderColor =
+                    "rgba(255,255,255,0.10)";
+                }}
               />
             </div>
           </div>
         </section>
 
-        <section className="mt-5 rounded-2xl border border-[#17382b] bg-[#0b1b14] p-4">
-          <div className="flex flex-wrap gap-2">
+        {/* FILTERS */}
+        <section className="mt-4">
+          <div className="flex gap-2 overflow-x-auto pb-1">
             <FilterButton
               active={filter === "all"}
               onClick={() => setFilter("all")}
@@ -353,14 +477,18 @@ export default function AdminJobsPage() {
 
             <FilterButton
               active={filter === "assigned"}
-              onClick={() => setFilter("assigned")}
+              onClick={() =>
+                setFilter("assigned")
+              }
             >
               Assigned ({stats.assigned})
             </FilterButton>
 
             <FilterButton
               active={filter === "completed"}
-              onClick={() => setFilter("completed")}
+              onClick={() =>
+                setFilter("completed")
+              }
             >
               Completed ({stats.completed})
             </FilterButton>
@@ -374,42 +502,34 @@ export default function AdminJobsPage() {
           </div>
         </section>
 
-        <section className="mt-6">
-          <div className="mb-4">
-            <h2 className="text-2xl font-black">
-              Marketplace Jobs
-            </h2>
+        {/* JOBS */}
+        <section className="mt-7">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black">
+                Marketplace Jobs
+              </h2>
 
-            <p className="mt-1 text-sm text-gray-500">
-              Showing {filteredJobs.length} of {jobs.length} jobs
-            </p>
+              <p className="mt-1 text-sm text-white/35">
+                Showing {filteredJobs.length} of{" "}
+                {jobs.length} jobs
+              </p>
+            </div>
           </div>
 
           {loading ? (
-            <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-12 text-center text-gray-400">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-[#17382b] border-t-[#79c51c]" />
-
-              <p className="mt-4 font-semibold">
-                Loading jobs...
-              </p>
-            </div>
+            <LoadingState />
           ) : filteredJobs.length === 0 ? (
-            <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-12 text-center">
-              <h3 className="text-xl font-black">
-                No jobs found
-              </h3>
-
-              <p className="mt-2 text-sm text-gray-500">
-                Try changing your filter or search.
-              </p>
-            </div>
+            <EmptyState />
           ) : (
             <div className="space-y-4">
               {filteredJobs.map((job) => (
                 <JobCard
                   key={job.id}
                   job={job}
-                  onView={() => setSelectedJob(job)}
+                  onView={() =>
+                    setSelectedJob(job)
+                  }
                 />
               ))}
             </div>
@@ -420,7 +540,9 @@ export default function AdminJobsPage() {
       {selectedJob && (
         <JobModal
           job={selectedJob}
-          onClose={() => setSelectedJob(null)}
+          onClose={() =>
+            setSelectedJob(null)
+          }
         />
       )}
     </main>
@@ -440,104 +562,127 @@ function JobCard({
     job.assignedDriver?.full_name ||
     null;
 
-  return (
-    <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5 transition hover:border-[#29483a]">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-xl font-black">
-              {job.reference || `Job #${job.id}`}
-            </h3>
+  const amount =
+    job.winningBid?.amount !== null &&
+    job.winningBid?.amount !== undefined
+      ? `£${formatMoney(
+          job.winningBid.amount,
+        )}`
+      : "—";
 
-            <StatusBadge status={job.status} />
+  return (
+    <div
+      className="overflow-hidden rounded-3xl border transition hover:border-white/15"
+      style={{
+        borderColor:
+          "rgba(255,255,255,0.08)",
+        background: CARD,
+      }}
+    >
+      <div className="p-5 sm:p-6">
+        {/* TOP */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-xl font-black">
+                {job.reference ||
+                  `Job #${job.id}`}
+              </h3>
+
+              <StatusBadge
+                status={job.status}
+              />
+
+              <JourneyBadge
+                status={job.journey_status}
+              />
+            </div>
+
+            <p className="mt-2 text-sm font-bold text-white/75">
+              {job.job_type ||
+                "Waste removal"}
+            </p>
+
+            <p className="mt-1 text-sm text-white/35">
+              {job.postcode ||
+                "No postcode"}
+
+              {job.address
+                ? ` • ${job.address}`
+                : ""}
+            </p>
           </div>
 
-          <p className="mt-2 text-sm font-bold text-gray-300">
-            {job.job_type || "Waste removal"}
-          </p>
-
-          <p className="mt-1 text-sm text-gray-500">
-            {job.postcode || "No postcode"}
-            {job.address ? ` • ${job.address}` : ""}
-          </p>
-
-          <div className="mt-4 grid gap-2 text-sm text-gray-400 sm:grid-cols-2">
-            <p>
-              <span className="text-gray-600">
-                Collection:
-              </span>{" "}
-              <span className="font-bold text-gray-300">
-                {formatDate(job.preferred_date)}
-              </span>
+          <div className="shrink-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/25">
+              Accepted Value
             </p>
 
-            <p>
-              <span className="text-gray-600">
-                Time:
-              </span>{" "}
-              <span className="font-bold text-gray-300">
-                {formatTime(job.preferred_time)}
-              </span>
-            </p>
-
-            <p>
-              <span className="text-gray-600">
-                Load:
-              </span>{" "}
-              <span className="font-bold text-gray-300">
-                {job.load_size || "Not specified"}
-              </span>
-            </p>
-
-            <p>
-              <span className="text-gray-600">
-                Bids:
-              </span>{" "}
-              <span className="font-bold text-gray-300">
-                {job.bidCount}
-              </span>
+            <p
+              className="mt-1 text-2xl font-black"
+              style={{ color: GREEN }}
+            >
+              {amount}
             </p>
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-3 border-t border-[#17382b] pt-4 lg:min-w-[300px] lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-          <div className="flex items-end justify-between gap-6">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-600">
-                Accepted Value
-              </p>
+        {/* DETAILS */}
+        <div
+          className="mt-5 grid gap-3 border-t pt-5 sm:grid-cols-2 lg:grid-cols-4"
+          style={{
+            borderColor:
+              "rgba(255,255,255,0.07)",
+          }}
+        >
+          <JobMeta
+            label="Collection"
+            value={formatDate(
+              job.preferred_date,
+            )}
+          />
 
-              <p className="mt-1 text-2xl font-black">
-                {job.winningBid?.amount !== null &&
-                job.winningBid?.amount !== undefined
-                  ? `£${formatMoney(job.winningBid.amount)}`
-                  : "—"}
-              </p>
-            </div>
+          <JobMeta
+            label="Time"
+            value={formatTime(
+              job.preferred_time,
+            )}
+          />
 
-            <div className="text-right">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-600">
-                Payment
-              </p>
+          <JobMeta
+            label="Load"
+            value={
+              job.load_size ||
+              "Not specified"
+            }
+          />
 
-              <p
-                className={`mt-1 text-sm font-black uppercase ${
-                  normalise(job.payment_status) === "paid"
-                    ? "text-[#79c51c]"
-                    : "text-yellow-300"
-                }`}
-              >
-                {formatStatus(job.payment_status)}
-              </p>
-            </div>
-          </div>
+          <JobMeta
+            label="Bids"
+            value={String(job.bidCount)}
+          />
+        </div>
 
-          <div className="flex flex-wrap gap-2">
-            <JourneyBadge status={job.journey_status} />
+        {/* BOTTOM */}
+        <div
+          className="mt-5 flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between"
+          style={{
+            borderColor:
+              "rgba(255,255,255,0.07)",
+          }}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <PaymentStatus
+              status={job.payment_status}
+            />
 
-            {driverName && (
-              <span className="rounded-full border border-[#29483a] bg-[#06100c] px-3 py-1.5 text-xs font-bold text-gray-300">
-                {driverName}
+            {driverName ? (
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/55">
+                Driver: {driverName}
+              </span>
+            ) : (
+              <span className="rounded-full border border-yellow-500/20 bg-yellow-500/5 px-3 py-1.5 text-xs font-bold text-yellow-200/70">
+                No driver assigned
               </span>
             )}
           </div>
@@ -545,12 +690,44 @@ function JobCard({
           <button
             type="button"
             onClick={onView}
-            className="w-full rounded-xl bg-[#79c51c] px-5 py-3 text-sm font-black text-[#06100c] transition hover:bg-[#91df31]"
+            className="w-full rounded-2xl px-5 py-3.5 text-sm font-black transition sm:w-auto"
+            style={{
+              background: GREEN,
+              color: BG,
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.background =
+                GREEN_HOVER;
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.background =
+                GREEN;
+            }}
           >
-            View Job
+            VIEW JOB
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function JobMeta({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/25">
+        {label}
+      </p>
+
+      <p className="mt-1 text-sm font-bold text-white/70">
+        {value}
+      </p>
     </div>
   );
 }
@@ -577,10 +754,28 @@ function JobModal({
         }
       }}
     >
-      <div className="my-8 w-full max-w-5xl overflow-hidden rounded-3xl border border-[#29483a] bg-[#0b1b14] shadow-2xl">
-        <div className="flex items-center justify-between border-b border-[#17382b] bg-[#081710] p-5 sm:p-6">
+      <div
+        className="my-8 w-full max-w-5xl overflow-hidden rounded-3xl border shadow-2xl"
+        style={{
+          borderColor:
+            "rgba(255,255,255,0.10)",
+          background: CARD,
+        }}
+      >
+        {/* MODAL HEADER */}
+        <div
+          className="flex items-center justify-between border-b p-5 sm:p-6"
+          style={{
+            borderColor:
+              "rgba(255,255,255,0.07)",
+            background: SECTION,
+          }}
+        >
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
+            <p
+              className="text-xs font-black uppercase tracking-[0.2em]"
+              style={{ color: GREEN }}
+            >
               Marketplace Job
             </p>
 
@@ -592,7 +787,13 @@ function JobModal({
           <button
             type="button"
             onClick={onClose}
-            className="ml-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#29483a] text-xl text-gray-400 transition hover:border-[#79c51c] hover:text-white"
+            className="ml-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl transition"
+            style={{
+              borderColor:
+                "rgba(255,255,255,0.10)",
+              color:
+                "rgba(255,255,255,0.45)",
+            }}
             aria-label="Close"
           >
             ×
@@ -600,18 +801,32 @@ function JobModal({
         </div>
 
         <div className="max-h-[78vh] overflow-y-auto p-5 sm:p-7">
-          <section className="rounded-2xl border border-[#17382b] bg-[#06100c] p-5">
+          {/* STATUS */}
+          <section
+            className="rounded-2xl border p-5"
+            style={{
+              borderColor:
+                "rgba(255,255,255,0.08)",
+              background: SECTION,
+            }}
+          >
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               <Info
                 label="Job status"
-                value={<StatusBadge status={job.status} />}
+                value={
+                  <StatusBadge
+                    status={job.status}
+                  />
+                }
               />
 
               <Info
                 label="Journey status"
                 value={
                   <JourneyBadge
-                    status={job.journey_status}
+                    status={
+                      job.journey_status
+                    }
                   />
                 }
               />
@@ -620,34 +835,73 @@ function JobModal({
                 label="Payment status"
                 value={
                   <PaymentStatus
-                    status={job.payment_status}
+                    status={
+                      job.payment_status
+                    }
                   />
                 }
               />
 
               <Info
                 label="Created"
-                value={formatDateTime(job.created_at)}
+                value={formatDateTime(
+                  job.created_at,
+                )}
               />
             </div>
           </section>
 
+          {/* COLLECTION */}
           <DetailSection title="Collection Details">
-            <Detail label="Reference" value={job.reference} />
-            <Detail label="Job ID" value={job.id} />
-            <Detail label="Job type" value={job.job_type} />
-            <Detail label="Load size" value={job.load_size} />
-            <Detail label="Postcode" value={job.postcode} />
-            <Detail label="Address" value={job.address} />
+            <Detail
+              label="Reference"
+              value={job.reference}
+            />
+
+            <Detail
+              label="Job ID"
+              value={job.id}
+            />
+
+            <Detail
+              label="Job type"
+              value={job.job_type}
+            />
+
+            <Detail
+              label="Load size"
+              value={job.load_size}
+            />
+
+            <Detail
+              label="Postcode"
+              value={job.postcode}
+            />
+
+            <Detail
+              label="Address"
+              value={job.address}
+            />
+
             <Detail
               label="Preferred date"
-              value={formatDate(job.preferred_date)}
+              value={formatDate(
+                job.preferred_date,
+              )}
             />
+
             <Detail
               label="Preferred time"
-              value={formatTime(job.preferred_time)}
+              value={formatTime(
+                job.preferred_time,
+              )}
             />
-            <Detail label="Floor" value={job.floor} />
+
+            <Detail
+              label="Floor"
+              value={job.floor}
+            />
+
             <Detail
               label="Stairs"
               value={
@@ -658,25 +912,35 @@ function JobModal({
                     : "No"
               }
             />
+
             <Detail
               label="Access notes"
               value={job.access_notes}
             />
           </DetailSection>
 
+          {/* DESCRIPTION */}
           <section className="mt-8">
             <h3 className="text-lg font-black">
               Description
             </h3>
 
-            <div className="mt-4 rounded-2xl border border-[#17382b] bg-[#06100c] p-5">
-              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-300">
+            <div
+              className="mt-4 rounded-2xl border p-5"
+              style={{
+                borderColor:
+                  "rgba(255,255,255,0.08)",
+                background: SECTION,
+              }}
+            >
+              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-white/65">
                 {job.description ||
                   "No description provided."}
               </p>
             </div>
           </section>
 
+          {/* CUSTOMER */}
           <DetailSection title="Customer">
             <Detail
               label="Customer ID"
@@ -684,12 +948,20 @@ function JobModal({
             />
           </DetailSection>
 
+          {/* DRIVER */}
           <section className="mt-8">
             <h3 className="text-lg font-black">
               Driver Assignment
             </h3>
 
-            <div className="mt-4 rounded-2xl border border-[#17382b] bg-[#06100c] p-5">
+            <div
+              className="mt-4 rounded-2xl border p-5"
+              style={{
+                borderColor:
+                  "rgba(255,255,255,0.08)",
+                background: SECTION,
+              }}
+            >
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 <Detail
                   label="Driver"
@@ -698,61 +970,95 @@ function JobModal({
 
                 <Detail
                   label="Driver ID"
-                  value={job.assigned_driver_id}
+                  value={
+                    job.assigned_driver_id
+                  }
                 />
 
                 <Detail
                   label="Assigned bid ID"
-                  value={job.assigned_bid_id}
+                  value={
+                    job.assigned_bid_id
+                  }
                 />
 
                 <Detail
                   label="Accepted bid ID"
-                  value={job.accepted_bid_id}
+                  value={
+                    job.accepted_bid_id
+                  }
                 />
               </div>
 
               {job.assignedDriver && (
-                <div className="mt-5 grid gap-5 border-t border-[#17382b] pt-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div
+                  className="mt-5 grid gap-5 border-t pt-5 sm:grid-cols-2 lg:grid-cols-4"
+                  style={{
+                    borderColor:
+                      "rgba(255,255,255,0.07)",
+                  }}
+                >
                   <Detail
                     label="Driver name"
-                    value={job.assignedDriver.full_name}
+                    value={
+                      job.assignedDriver
+                        .full_name
+                    }
                   />
 
                   <Detail
                     label="Trading name"
-                    value={job.assignedDriver.trading_name}
+                    value={
+                      job.assignedDriver
+                        .trading_name
+                    }
                   />
 
                   <Detail
                     label="Phone"
-                    value={job.assignedDriver.phone}
+                    value={
+                      job.assignedDriver
+                        .phone
+                    }
                   />
 
                   <Detail
                     label="Email"
-                    value={job.assignedDriver.email}
+                    value={
+                      job.assignedDriver
+                        .email
+                    }
                   />
                 </div>
               )}
             </div>
           </section>
 
+          {/* ACCEPTED BID */}
           <section className="mt-8">
             <h3 className="text-lg font-black">
               Accepted Bid
             </h3>
 
-            <div className="mt-4 rounded-2xl border border-[#17382b] bg-[#06100c] p-5">
+            <div
+              className="mt-4 rounded-2xl border p-5"
+              style={{
+                borderColor:
+                  "rgba(255,255,255,0.08)",
+                background: SECTION,
+              }}
+            >
               {job.winningBid ? (
                 <>
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     <Detail
                       label="Bid amount"
                       value={
-                        job.winningBid.amount !== null
+                        job.winningBid
+                          .amount !== null
                           ? `£${formatMoney(
-                              job.winningBid.amount,
+                              job.winningBid
+                                .amount,
                             )}`
                           : null
                       }
@@ -761,9 +1067,12 @@ function JobModal({
                     <Detail
                       label="Driver payout"
                       value={
-                        job.winningBid.driver_payout !== null
+                        job.winningBid
+                          .driver_payout !==
+                        null
                           ? `£${formatMoney(
-                              job.winningBid.driver_payout,
+                              job.winningBid
+                                .driver_payout,
                             )}`
                           : null
                       }
@@ -772,9 +1081,12 @@ function JobModal({
                     <Detail
                       label="RCS fee"
                       value={
-                        job.winningBid.platform_fee !== null
+                        job.winningBid
+                          .platform_fee !==
+                        null
                           ? `£${formatMoney(
-                              job.winningBid.platform_fee,
+                              job.winningBid
+                                .platform_fee,
                             )}`
                           : null
                       }
@@ -783,7 +1095,9 @@ function JobModal({
                     <Detail
                       label="RCS fee %"
                       value={
-                        job.winningBid.platform_fee_percent !== null
+                        job.winningBid
+                          .platform_fee_percent !==
+                        null
                           ? `${job.winningBid.platform_fee_percent}%`
                           : null
                       }
@@ -791,22 +1105,27 @@ function JobModal({
 
                     <Detail
                       label="Bid status"
-                      value={job.winningBid.status}
+                      value={
+                        job.winningBid.status
+                      }
                     />
 
                     <Detail
                       label="Bid created"
                       value={formatDateTime(
-                        job.winningBid.created_at,
+                        job.winningBid
+                          .created_at,
                       )}
                     />
 
                     <Detail
                       label="Accepted"
                       value={
-                        job.winningBid.accepted_at
+                        job.winningBid
+                          .accepted_at
                           ? formatDateTime(
-                              job.winningBid.accepted_at,
+                              job.winningBid
+                                .accepted_at,
                             )
                           : "Not recorded"
                       }
@@ -814,35 +1133,53 @@ function JobModal({
 
                     <Detail
                       label="Driver ID"
-                      value={job.winningBid.driver_id}
+                      value={
+                        job.winningBid
+                          .driver_id
+                      }
                     />
                   </div>
 
-                  <div className="mt-5 border-t border-[#17382b] pt-5">
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-600">
+                  <div
+                    className="mt-5 border-t pt-5"
+                    style={{
+                      borderColor:
+                        "rgba(255,255,255,0.07)",
+                    }}
+                  >
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-white/25">
                       Driver message
                     </p>
 
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-gray-300">
-                      {job.winningBid.message ||
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-white/65">
+                      {job.winningBid
+                        .message ||
                         "No message provided."}
                     </p>
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-white/35">
                   No accepted bid recorded.
                 </p>
               )}
             </div>
           </section>
 
+          {/* STRIPE */}
           <section className="mt-8">
             <h3 className="text-lg font-black">
               Stripe Payment
             </h3>
 
-            <div className="mt-4 grid gap-5 rounded-2xl border border-[#17382b] bg-[#06100c] p-5 sm:grid-cols-2">
+            <div
+              className="mt-4 grid gap-5 rounded-2xl border p-5 sm:grid-cols-2"
+              style={{
+                borderColor:
+                  "rgba(255,255,255,0.08)",
+                background: SECTION,
+              }}
+            >
               <Detail
                 label="Payment status"
                 value={job.payment_status}
@@ -850,12 +1187,16 @@ function JobModal({
 
               <Detail
                 label="Checkout session"
-                value={job.stripe_checkout_session_id}
+                value={
+                  job.stripe_checkout_session_id
+                }
               />
 
               <Detail
                 label="Payment intent"
-                value={job.stripe_payment_intent_id}
+                value={
+                  job.stripe_payment_intent_id
+                }
               />
             </div>
           </section>
@@ -869,14 +1210,31 @@ function StatCard({
   title,
   value,
   description,
+  accent = false,
 }: {
   title: string;
   value: number;
   description: string;
+  accent?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+    <div
+      className="rounded-2xl border p-5"
+      style={{
+        borderColor: accent
+          ? `${GREEN}25`
+          : "rgba(255,255,255,0.08)",
+        background: CARD,
+      }}
+    >
+      <p
+        className="text-[10px] font-black uppercase tracking-[0.16em]"
+        style={{
+          color: accent
+            ? GREEN
+            : "rgba(255,255,255,0.30)",
+        }}
+      >
         {title}
       </p>
 
@@ -884,7 +1242,7 @@ function StatCard({
         {value}
       </p>
 
-      <p className="mt-1 text-sm text-gray-500">
+      <p className="mt-1 text-xs text-white/30">
         {description}
       </p>
     </div>
@@ -904,11 +1262,18 @@ function FilterButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border px-4 py-2 text-sm font-bold transition ${
-        active
-          ? "border-[#79c51c] bg-[#79c51c]/10 text-[#79c51c]"
-          : "border-[#29483a] bg-[#06100c] text-gray-400 hover:border-[#79c51c]/60 hover:text-white"
-      }`}
+      className="shrink-0 rounded-xl border px-4 py-2.5 text-sm font-bold transition"
+      style={{
+        borderColor: active
+          ? `${GREEN}60`
+          : "rgba(255,255,255,0.10)",
+        background: active
+          ? `${GREEN}12`
+          : CARD,
+        color: active
+          ? GREEN
+          : "rgba(255,255,255,0.50)",
+      }}
     >
       {children}
     </button>
@@ -918,42 +1283,65 @@ function FilterButton({
 function StatusBadge({
   status,
 }: {
-  status: string | null | undefined;
+  status:
+    | string
+    | null
+    | undefined;
 }) {
-  const value = normalise(status) || "unknown";
+  const value =
+    normalise(status) || "unknown";
 
-  let classes =
-    "border-white/10 bg-white/5 text-gray-300";
+  let background =
+    "rgba(255,255,255,0.05)";
+  let color =
+    "rgba(255,255,255,0.55)";
+  let border =
+    "rgba(255,255,255,0.10)";
 
   if (
     value === "open" ||
     value === "bidding"
   ) {
-    classes =
-      "border-yellow-500/30 bg-yellow-500/10 text-yellow-300";
+    background =
+      "rgba(234,179,8,0.10)";
+    color = "#fde68a";
+    border =
+      "rgba(234,179,8,0.25)";
   }
 
   if (value === "assigned") {
-    classes =
-      "border-blue-500/30 bg-blue-500/10 text-blue-300";
+    background =
+      "rgba(59,130,246,0.10)";
+    color = "#93c5fd";
+    border =
+      "rgba(59,130,246,0.25)";
   }
 
   if (value === "completed") {
-    classes =
-      "border-[#79c51c]/30 bg-[#79c51c]/10 text-[#79c51c]";
+    background = `${GREEN}12`;
+    color = GREEN;
+    border = `${GREEN}35`;
   }
 
   if (
     value === "cancelled" ||
     value === "rejected"
   ) {
-    classes =
-      "border-red-500/30 bg-red-500/10 text-red-300";
+    background =
+      "rgba(239,68,68,0.10)";
+    color = "#fca5a5";
+    border =
+      "rgba(239,68,68,0.25)";
   }
 
   return (
     <span
-      className={`inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase ${classes}`}
+      className="inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase"
+      style={{
+        background,
+        color,
+        borderColor: border,
+      }}
     >
       {formatStatus(value)}
     </span>
@@ -963,36 +1351,62 @@ function StatusBadge({
 function JourneyBadge({
   status,
 }: {
-  status: string | null | undefined;
+  status:
+    | string
+    | null
+    | undefined;
 }) {
-  const value = normalise(status) || "unknown";
+  const value =
+    normalise(status) || "not started";
 
-  let classes =
-    "border-white/10 bg-white/5 text-gray-300";
+  let background =
+    "rgba(255,255,255,0.05)";
+  let color =
+    "rgba(255,255,255,0.45)";
+  let border =
+    "rgba(255,255,255,0.08)";
 
   if (value === "assigned") {
-    classes =
-      "border-blue-500/30 bg-blue-500/10 text-blue-300";
+    background =
+      "rgba(59,130,246,0.10)";
+    color = "#93c5fd";
+    border =
+      "rgba(59,130,246,0.25)";
   }
 
   if (value === "on_the_way") {
-    classes =
-      "border-yellow-500/30 bg-yellow-500/10 text-yellow-300";
+    background =
+      "rgba(234,179,8,0.10)";
+    color = "#fde68a";
+    border =
+      "rgba(234,179,8,0.25)";
   }
 
-  if (value === "in_progress") {
-    classes =
-      "border-purple-500/30 bg-purple-500/10 text-purple-300";
+  if (
+    value === "in_progress" ||
+    value === "at_location"
+  ) {
+    background =
+      "rgba(168,85,247,0.10)";
+    color = "#d8b4fe";
+    border =
+      "rgba(168,85,247,0.25)";
   }
 
   if (value === "completed") {
-    classes =
-      "border-[#79c51c]/30 bg-[#79c51c]/10 text-[#79c51c]";
+    background = `${GREEN}12`;
+    color = GREEN;
+    border = `${GREEN}35`;
   }
 
   return (
     <span
-      className={`inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase ${classes}`}
+      className="inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase"
+      style={{
+        background,
+        color,
+        borderColor: border,
+      }}
     >
       {formatStatus(value)}
     </span>
@@ -1002,17 +1416,30 @@ function JourneyBadge({
 function PaymentStatus({
   status,
 }: {
-  status: string | null | undefined;
+  status:
+    | string
+    | null
+    | undefined;
 }) {
-  const value = normalise(status) || "unknown";
+  const value =
+    normalise(status) || "unknown";
+
+  const paid = value === "paid";
 
   return (
     <span
-      className={`inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase ${
-        value === "paid"
-          ? "border-[#79c51c]/30 bg-[#79c51c]/10 text-[#79c51c]"
-          : "border-yellow-500/30 bg-yellow-500/10 text-yellow-300"
-      }`}
+      className="inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase"
+      style={{
+        background: paid
+          ? `${GREEN}12`
+          : "rgba(234,179,8,0.10)",
+        color: paid
+          ? GREEN
+          : "#fde68a",
+        borderColor: paid
+          ? `${GREEN}35`
+          : "rgba(234,179,8,0.25)",
+      }}
     >
       {formatStatus(value)}
     </span>
@@ -1028,7 +1455,7 @@ function Info({
 }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-600">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/25">
         {label}
       </p>
 
@@ -1052,7 +1479,14 @@ function DetailSection({
         {title}
       </h3>
 
-      <div className="mt-4 grid gap-5 rounded-2xl border border-[#17382b] bg-[#06100c] p-5 sm:grid-cols-2">
+      <div
+        className="mt-4 grid gap-5 rounded-2xl border p-5 sm:grid-cols-2"
+        style={{
+          borderColor:
+            "rgba(255,255,255,0.08)",
+          background: SECTION,
+        }}
+      >
         {children}
       </div>
     </section>
@@ -1072,11 +1506,11 @@ function Detail({
 }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.12em] text-gray-600">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/25">
         {label}
       </p>
 
-      <p className="mt-1 break-words text-sm font-bold text-gray-200">
+      <p className="mt-1 break-words text-sm font-bold text-white/65">
         {value === null ||
         value === undefined ||
         value === ""
@@ -1087,16 +1521,82 @@ function Detail({
   );
 }
 
+function LoadingState() {
+  return (
+    <div
+      className="rounded-3xl border p-12 text-center"
+      style={{
+        borderColor:
+          "rgba(255,255,255,0.08)",
+        background: CARD,
+      }}
+    >
+      <div
+        className="mx-auto h-9 w-9 animate-spin rounded-full border-4"
+        style={{
+          borderColor:
+            "rgba(255,255,255,0.08)",
+          borderTopColor: GREEN,
+        }}
+      />
+
+      <p className="mt-4 text-sm font-bold text-white/45">
+        Loading jobs...
+      </p>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div
+      className="rounded-3xl border p-12 text-center"
+      style={{
+        borderColor:
+          "rgba(255,255,255,0.08)",
+        background: CARD,
+      }}
+    >
+      <div
+        className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-black"
+        style={{
+          background: `${GREEN}12`,
+          color: GREEN,
+        }}
+      >
+        ✓
+      </div>
+
+      <h3 className="mt-4 text-xl font-black">
+        No jobs found
+      </h3>
+
+      <p className="mt-2 text-sm text-white/35">
+        Try changing your filter or search.
+      </p>
+    </div>
+  );
+}
+
 function normalise(
-  value: string | null | undefined,
+  value:
+    | string
+    | null
+    | undefined,
 ) {
-  return value?.trim().toLowerCase() || "";
+  return (
+    value?.trim().toLowerCase() || ""
+  );
 }
 
 function formatStatus(
-  value: string | null | undefined,
+  value:
+    | string
+    | null
+    | undefined,
 ) {
-  const safe = normalise(value) || "Unknown";
+  const safe =
+    normalise(value) || "Unknown";
 
   return safe
     .replaceAll("_", " ")
@@ -1106,7 +1606,10 @@ function formatStatus(
 }
 
 function formatMoney(
-  value: number | null | undefined,
+  value:
+    | number
+    | null
+    | undefined,
 ) {
   if (
     value === null ||
@@ -1120,7 +1623,10 @@ function formatMoney(
 }
 
 function formatDate(
-  value: string | null | undefined,
+  value:
+    | string
+    | null
+    | undefined,
 ) {
   if (!value) {
     return "Not provided";
@@ -1132,15 +1638,21 @@ function formatDate(
     return "Invalid date";
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    },
+  ).format(date);
 }
 
 function formatDateTime(
-  value: string | null | undefined,
+  value:
+    | string
+    | null
+    | undefined,
 ) {
   if (!value) {
     return "Not provided";
@@ -1152,13 +1664,16 @@ function formatDateTime(
     return "Invalid date";
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  ).format(date);
 }
 
 function formatTime(
@@ -1190,8 +1705,14 @@ function formatTime(
     return "Evening";
   }
 
-  if (numeric >= 0 && numeric <= 23) {
-    return `${String(numeric).padStart(2, "0")}:00`;
+  if (
+    numeric >= 0 &&
+    numeric <= 23
+  ) {
+    return `${String(numeric).padStart(
+      2,
+      "0",
+    )}:00`;
   }
 
   return String(value);
