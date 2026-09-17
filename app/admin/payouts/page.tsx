@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 type PayoutStatus =
@@ -58,10 +59,154 @@ type Filter =
   | "paid"
   | "rejected";
 
+type SortOption =
+  | "newest"
+  | "oldest"
+  | "highest"
+  | "lowest";
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+  }).format(Number(value || 0));
+}
+
+function formatDate(
+  value: string | null | undefined,
+) {
+  if (!value) {
+    return "Not available";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Not available";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function normalise(
+  value: string | null | undefined,
+) {
+  return value?.trim().toLowerCase() || "";
+}
+
+function formatStatus(
+  value: string | null | undefined,
+) {
+  const safeValue =
+    normalise(value) || "unknown";
+
+  return safeValue
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase(),
+    );
+}
+
+function getDriverName(
+  driver: Driver | null,
+) {
+  if (!driver) {
+    return "Unknown driver";
+  }
+
+  return (
+    driver.trading_name ||
+    driver.company_name ||
+    driver.full_name ||
+    "Unknown driver"
+  );
+}
+
+function getDriverInitials(
+  driver: Driver | null,
+) {
+  const name =
+    driver?.full_name?.trim();
+
+  if (!name) {
+    return "R";
+  }
+
+  const parts =
+    name.split(/\s+/);
+
+  if (parts.length === 1) {
+    return parts[0]
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  return (
+    parts[0][0] +
+    parts[parts.length - 1][0]
+  ).toUpperCase();
+}
+
+function getPendingAgeDays(
+  value: string,
+) {
+  const timestamp =
+    new Date(value).getTime();
+
+  if (Number.isNaN(timestamp)) {
+    return 0;
+  }
+
+  const difference =
+    Date.now() - timestamp;
+
+  return Math.max(
+    0,
+    Math.floor(
+      difference /
+        (1000 * 60 * 60 * 24),
+    ),
+  );
+}
+
+function getPayoutStatusClasses(
+  status: string | null | undefined,
+) {
+  const value = normalise(status);
+
+  if (value === "pending") {
+    return "border-yellow-500/30 bg-yellow-500/10 text-yellow-300";
+  }
+
+  if (value === "processing") {
+    return "border-blue-500/30 bg-blue-500/10 text-blue-300";
+  }
+
+  if (value === "paid") {
+    return "border-[#79c51c]/30 bg-[#79c51c]/10 text-[#79c51c]";
+  }
+
+  if (value === "rejected") {
+    return "border-red-500/30 bg-red-500/10 text-red-300";
+  }
+
+  return "border-white/[0.10] bg-white/5 text-gray-400";
+}
+
 export default function AdminPayoutsPage() {
-  const [payouts, setPayouts] = useState<
-    PayoutRecord[]
-  >([]);
+  const supabase = useMemo(
+    () => createClient(),
+    [],
+  );
+
+  const [payouts, setPayouts] =
+    useState<PayoutRecord[]>([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -75,6 +220,12 @@ export default function AdminPayoutsPage() {
   const [filter, setFilter] =
     useState<Filter>("pending");
 
+  const [sort, setSort] =
+    useState<SortOption>("newest");
+
+  const [search, setSearch] =
+    useState("");
+
   const [selectedPayout, setSelectedPayout] =
     useState<PayoutRecord | null>(null);
 
@@ -87,90 +238,93 @@ export default function AdminPayoutsPage() {
   const [notes, setNotes] =
     useState("");
 
-  const loadPayouts = useCallback(
-    async (silent = false) => {
-      if (silent) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+  const [copiedValue, setCopiedValue] =
+    useState("");
 
-      setErrorMessage("");
-
-      try {
-        const supabase = createClient();
-
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          throw new Error(
-            sessionError.message
-          );
+  const loadPayouts =
+    useCallback(
+      async (silent = false) => {
+        if (silent) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
         }
 
-        if (!session?.access_token) {
-          throw new Error(
-            "Your admin session has expired. Please log in again."
-          );
-        }
+        setErrorMessage("");
 
-        const response = await fetch(
-          "/api/admin/payouts",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-              "Content-Type":
-                "application/json",
-            },
-            cache: "no-store",
+        try {
+          const {
+            data: { session },
+            error: sessionError,
+          } =
+            await supabase.auth.getSession();
+
+          if (sessionError) {
+            throw new Error(
+              sessionError.message,
+            );
           }
-        );
 
-        const data =
-          await response.json();
+          if (!session?.access_token) {
+            throw new Error(
+              "Your admin session has expired. Please log in again.",
+            );
+          }
 
-        if (!response.ok) {
-          throw new Error(
-            data?.error ||
-              "Unable to load payout requests."
+          const response =
+            await fetch(
+              "/api/admin/payouts",
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                  "Content-Type":
+                    "application/json",
+                },
+                cache: "no-store",
+              },
+            );
+
+          const data =
+            await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data?.error ||
+                "Unable to load payout requests.",
+            );
+          }
+
+          setPayouts(
+            Array.isArray(
+              data.payouts,
+            )
+              ? data.payouts
+              : [],
           );
+        } catch (error) {
+          console.error(
+            "Admin payouts error:",
+            error,
+          );
+
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load payout requests.",
+          );
+        } finally {
+          setLoading(false);
+          setRefreshing(false);
         }
-
-        setPayouts(
-          Array.isArray(data.payouts)
-            ? data.payouts
-            : []
-        );
-      } catch (error) {
-        console.error(
-          "Admin payouts error:",
-          error
-        );
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to load payout requests."
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    []
-  );
+      },
+      [supabase],
+    );
 
   useEffect(() => {
     void loadPayouts();
   }, [loadPayouts]);
 
-  /*
-   * Keep the payout page reasonably fresh.
-   */
   useEffect(() => {
     const interval =
       window.setInterval(() => {
@@ -178,77 +332,248 @@ export default function AdminPayoutsPage() {
       }, 15000);
 
     return () => {
-      window.clearInterval(interval);
+      window.clearInterval(
+        interval,
+      );
     };
   }, [loadPayouts]);
 
-  /*
-   * Filtered records.
-   */
-  const filteredPayouts = useMemo(() => {
-    if (filter === "all") {
-      return payouts;
-    }
-
-    return payouts.filter(
-      (payout) =>
-        normalise(payout.status) === filter
-    );
-  }, [payouts, filter]);
-
-  /*
-   * Summary figures.
-   */
   const pendingPayouts =
-    payouts.filter(
-      (payout) =>
-        normalise(payout.status) ===
-        "pending"
+    useMemo(
+      () =>
+        payouts.filter(
+          (payout) =>
+            normalise(
+              payout.status,
+            ) === "pending",
+        ),
+      [payouts],
     );
 
   const processingPayouts =
-    payouts.filter(
-      (payout) =>
-        normalise(payout.status) ===
-        "processing"
+    useMemo(
+      () =>
+        payouts.filter(
+          (payout) =>
+            normalise(
+              payout.status,
+            ) === "processing",
+        ),
+      [payouts],
     );
 
   const paidPayouts =
-    payouts.filter(
-      (payout) =>
-        normalise(payout.status) === "paid"
+    useMemo(
+      () =>
+        payouts.filter(
+          (payout) =>
+            normalise(
+              payout.status,
+            ) === "paid",
+        ),
+      [payouts],
     );
 
   const rejectedPayouts =
-    payouts.filter(
-      (payout) =>
-        normalise(payout.status) ===
-        "rejected"
+    useMemo(
+      () =>
+        payouts.filter(
+          (payout) =>
+            normalise(
+              payout.status,
+            ) === "rejected",
+        ),
+      [payouts],
     );
 
   const pendingValue =
-    pendingPayouts.reduce(
-      (total, payout) =>
-        total + Number(payout.amount || 0),
-      0
+    useMemo(
+      () =>
+        pendingPayouts.reduce(
+          (total, payout) =>
+            total +
+            Number(
+              payout.amount || 0,
+            ),
+          0,
+        ),
+      [pendingPayouts],
+    );
+
+  const processingValue =
+    useMemo(
+      () =>
+        processingPayouts.reduce(
+          (total, payout) =>
+            total +
+            Number(
+              payout.amount || 0,
+            ),
+          0,
+        ),
+      [processingPayouts],
     );
 
   const paidValue =
-    paidPayouts.reduce(
-      (total, payout) =>
-        total + Number(payout.amount || 0),
-      0
+    useMemo(
+      () =>
+        paidPayouts.reduce(
+          (total, payout) =>
+            total +
+            Number(
+              payout.amount || 0,
+            ),
+          0,
+        ),
+      [paidPayouts],
     );
 
-  /*
-   * Open payout modal.
-   */
+  const filteredPayouts =
+    useMemo(() => {
+      const searchValue =
+        search
+          .trim()
+          .toLowerCase();
+
+      const records =
+        payouts.filter(
+          (payout) => {
+            if (
+              filter !== "all" &&
+              normalise(
+                payout.status,
+              ) !== filter
+            ) {
+              return false;
+            }
+
+            if (!searchValue) {
+              return true;
+            }
+
+            const driverName =
+              payout.driver?.full_name?.toLowerCase() ??
+              "";
+
+            const tradingName =
+              payout.driver?.trading_name?.toLowerCase() ??
+              "";
+
+            const companyName =
+              payout.driver?.company_name?.toLowerCase() ??
+              "";
+
+            const email =
+              payout.driver?.email?.toLowerCase() ??
+              "";
+
+            const payoutId =
+              String(payout.id);
+
+            const driverId =
+              String(
+                payout.driver_id,
+              );
+
+            return (
+              driverName.includes(
+                searchValue,
+              ) ||
+              tradingName.includes(
+                searchValue,
+              ) ||
+              companyName.includes(
+                searchValue,
+              ) ||
+              email.includes(
+                searchValue,
+              ) ||
+              payoutId.includes(
+                searchValue,
+              ) ||
+              driverId.includes(
+                searchValue,
+              )
+            );
+          },
+        );
+
+      return [...records].sort(
+        (a, b) => {
+          if (
+            sort === "highest"
+          ) {
+            return (
+              Number(b.amount) -
+              Number(a.amount)
+            );
+          }
+
+          if (
+            sort === "lowest"
+          ) {
+            return (
+              Number(a.amount) -
+              Number(b.amount)
+            );
+          }
+
+          const aTime =
+            new Date(
+              a.requested_at,
+            ).getTime();
+
+          const bTime =
+            new Date(
+              b.requested_at,
+            ).getTime();
+
+          if (
+            sort === "oldest"
+          ) {
+            return (
+              aTime - bTime
+            );
+          }
+
+          return (
+            bTime - aTime
+          );
+        },
+      );
+    }, [
+      payouts,
+      filter,
+      search,
+      sort,
+    ]);
+
+  const oldestPending =
+    useMemo(() => {
+      if (!pendingPayouts.length) {
+        return null;
+      }
+
+      return (
+        [...pendingPayouts].sort(
+          (a, b) =>
+            new Date(
+              a.requested_at,
+            ).getTime() -
+            new Date(
+              b.requested_at,
+            ).getTime(),
+        )[0] || null
+      );
+    }, [pendingPayouts]);
+
   function openPayout(
-    payout: PayoutRecord
+    payout: PayoutRecord,
   ) {
     setSelectedPayout(payout);
     setNotes(payout.notes || "");
     setActionError("");
+    setCopiedValue("");
   }
 
   function closePayout() {
@@ -259,17 +584,15 @@ export default function AdminPayoutsPage() {
     setSelectedPayout(null);
     setNotes("");
     setActionError("");
+    setCopiedValue("");
   }
 
-  /*
-   * Secure admin payout action.
-   */
   async function updatePayout(
     payoutId: number,
     status:
       | "processing"
       | "paid"
-      | "rejected"
+      | "rejected",
   ) {
     if (processingId !== null) {
       return;
@@ -284,52 +607,56 @@ export default function AdminPayoutsPage() {
 
     const confirmed =
       window.confirm(
-        `Are you sure you want to ${actionText}?`
+        `Are you sure you want to ${actionText}?`,
       );
 
     if (!confirmed) {
       return;
     }
 
-    setProcessingId(payoutId);
+    setProcessingId(
+      payoutId,
+    );
     setActionError("");
 
     try {
-      const supabase = createClient();
-
       const {
         data: { session },
         error: sessionError,
-      } = await supabase.auth.getSession();
+      } =
+        await supabase.auth.getSession();
 
       if (sessionError) {
         throw new Error(
-          sessionError.message
+          sessionError.message,
         );
       }
 
       if (!session?.access_token) {
         throw new Error(
-          "Your admin session has expired. Please log in again."
+          "Your admin session has expired. Please log in again.",
         );
       }
 
-      const response = await fetch(
-        "/api/admin/payouts",
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type":
-              "application/json",
+      const response =
+        await fetch(
+          "/api/admin/payouts",
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              payoutId,
+              status,
+              notes:
+                notes.trim() ||
+                null,
+            }),
           },
-          body: JSON.stringify({
-            payoutId,
-            status,
-            notes: notes.trim() || null,
-          }),
-        }
-      );
+        );
 
       const data =
         await response.json();
@@ -337,71 +664,119 @@ export default function AdminPayoutsPage() {
       if (!response.ok) {
         throw new Error(
           data?.error ||
-            "Unable to update payout."
+            "Unable to update payout.",
         );
       }
 
-      await loadPayouts(true);
-
-      const updated =
-        Array.isArray(data.payouts)
-          ? data.payouts
-          : null;
-
-      if (updated) {
-        setPayouts(updated);
+      if (
+        Array.isArray(
+          data.payouts,
+        )
+      ) {
+        setPayouts(
+          data.payouts,
+        );
+      } else {
+        await loadPayouts(
+          true,
+        );
       }
 
-      setSelectedPayout(null);
+      setSelectedPayout(
+        null,
+      );
       setNotes("");
     } catch (error) {
       console.error(
         "Payout update error:",
-        error
+        error,
       );
 
       setActionError(
         error instanceof Error
           ? error.message
-          : "Unable to update payout."
+          : "Unable to update payout.",
       );
     } finally {
       setProcessingId(null);
     }
   }
 
-  return (
-    <main className="min-h-screen bg-[#06100c] text-white">
-      {/* HEADER */}
+  async function copyValue(
+    value: string,
+    label: string,
+  ) {
+    try {
+      await navigator.clipboard.writeText(
+        value,
+      );
 
-      <header className="sticky top-0 z-50 border-b border-[#17382b] bg-[#081710]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
+      setCopiedValue(label);
+
+      window.setTimeout(() => {
+        setCopiedValue("");
+      }, 1500);
+    } catch {
+      setCopiedValue("");
+    }
+  }
+
+  return (
+    <main className="min-h-screen overflow-x-hidden bg-[#050705] text-white">
+      {/* ================================================= */}
+      {/* HEADER                                            */}
+      {/* ================================================= */}
+
+      <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl">
+        <div className="mx-auto flex min-h-[68px] max-w-7xl items-center justify-between gap-3 px-4 sm:min-h-[76px] sm:px-6 lg:px-8">
           <Link
             href="/admin/dashboard"
             className="shrink-0"
           >
-            <img
-              src="/rcs-logo.jpg"
+            <Image
+              src="/rapid-clear-logo.png"
               alt="Rapid Clear Solutions"
-              className="h-11 w-auto object-contain sm:h-14"
+              width={220}
+              height={90}
+              className="h-9 w-auto object-contain sm:h-12"
+              priority
             />
           </Link>
 
-          <div className="text-right">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1BBB8C] sm:text-xs">
-              RCS Admin
-            </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                void loadPayouts(
+                  false,
+                )
+              }
+              disabled={
+                loading ||
+                refreshing
+              }
+              className="rounded-xl border border-white/[0.10] bg-[#0a0e0a] px-3.5 py-2.5 text-xs font-black transition hover:border-[#79c51c] hover:text-[#79c51c] disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
+            >
+              {refreshing
+                ? "Refreshing..."
+                : "Refresh"}
+            </button>
 
-            <p className="mt-1 hidden text-xs text-[#71857b] sm:block">
-              Driver Payouts
-            </p>
+            <Link
+              href="/admin/dashboard"
+              className="hidden rounded-xl border border-white/[0.10] bg-[#0a0e0a] px-4 py-2.5 text-sm font-black text-gray-300 transition hover:border-[#79c51c] hover:text-[#79c51c] sm:block"
+            >
+              Dashboard
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* MOBILE NAV */}
+      {/* ================================================= */}
+      {/* MOBILE NAV                                        */}
+      {/* ================================================= */}
 
-      <div className="border-b border-[#17382b] bg-[#07130e] sm:hidden">
+      <div className="border-b border-white/[0.07] bg-[#080b08] sm:hidden">
         <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-2">
           <MobileNavLink
             href="/admin/dashboard"
@@ -431,128 +806,260 @@ export default function AdminPayoutsPage() {
         </div>
       </div>
 
-      {/* PAGE */}
+      {/* ================================================= */}
+      {/* PAGE                                               */}
+      {/* ================================================= */}
 
-      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-10">
-        {/* TITLE */}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        {/* INTRO */}
 
-        <section className="mb-6 rounded-3xl border border-[#17382b] bg-[#0b1b14] p-5 shadow-xl sm:mb-8 sm:p-7">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1BBB8C] sm:text-xs">
-                Driver Payments
-              </p>
+        <section className="mb-8">
+          <Link
+            href="/admin/dashboard"
+            className="inline-flex text-xs font-black uppercase tracking-wider text-[#79c51c] transition hover:text-[#91db32]"
+          >
+            ← Back to Admin Dashboard
+          </Link>
 
-              <h1 className="mt-2 text-2xl font-black sm:text-4xl">
-                Payout Control
-              </h1>
+          <div className="mt-6">
+            <div className="flex items-center gap-2.5">
+              <span className="h-2 w-2 rounded-full bg-[#79c51c]" />
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#82958c] sm:text-base">
-                Review driver payout requests,
-                verify payment information and
-                record payments made to drivers.
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#79c51c] sm:text-xs">
+                RCS Marketplace
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                void loadPayouts()
-              }
-              disabled={
-                loading || refreshing
-              }
-              className="min-h-12 rounded-xl border border-[#29483a] bg-[#07130e] px-5 py-3 text-sm font-black text-[#d5dfda] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {refreshing
-                ? "Updating..."
-                : "Refresh"}
-            </button>
+            <h1 className="mt-3 text-4xl font-black uppercase leading-[0.9] tracking-tight sm:text-6xl">
+              Driver
+              <span className="block text-[#79c51c]">
+                Payouts
+              </span>
+            </h1>
+
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
+              Review driver payout requests,
+              verify payment information and
+              record payments made to drivers.
+            </p>
           </div>
         </section>
 
         {/* ERROR */}
 
         {errorMessage && (
-          <div className="mb-6 rounded-2xl border border-red-900/60 bg-[#230e0e] p-5">
+          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4">
             <p className="text-sm leading-6 text-red-300">
               {errorMessage}
             </p>
           </div>
         )}
 
-        {/* SUMMARY */}
+        {/* ================================================= */}
+        {/* SUMMARY                                           */}
+        {/* ================================================= */}
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <SummaryCard
             label="Pending"
-            value={pendingPayouts.length}
-            detail={`£${formatMoney(
-              pendingValue
+            value={
+              pendingPayouts.length
+            }
+            detail={`${formatMoney(
+              pendingValue,
             )} waiting`}
             highlighted
+            accent="yellow"
           />
 
           <SummaryCard
             label="Processing"
-            value={processingPayouts.length}
-            detail="Being processed"
+            value={
+              processingPayouts.length
+            }
+            detail={formatMoney(
+              processingValue,
+            )}
+            accent="blue"
           />
 
           <SummaryCard
             label="Paid"
-            value={paidPayouts.length}
-            detail={`£${formatMoney(
-              paidValue
+            value={
+              paidPayouts.length
+            }
+            detail={`${formatMoney(
+              paidValue,
             )} paid`}
+            accent="green"
           />
 
           <SummaryCard
             label="Rejected"
-            value={rejectedPayouts.length}
+            value={
+              rejectedPayouts.length
+            }
             detail="Rejected requests"
+            accent="red"
           />
 
           <SummaryCard
             label="All Requests"
-            value={payouts.length}
+            value={
+              payouts.length
+            }
             detail="Total payout requests"
           />
         </section>
 
-        {/* FILTERS */}
+        {/* ================================================= */}
+        {/* OLDEST PENDING WARNING                           */}
+        {/* ================================================= */}
 
-        <section className="mt-7">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+        {oldestPending && (
+          <section className="mt-5 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-yellow-300">
+                  Oldest pending payout
+                </p>
+
+                <p className="mt-2 text-lg font-black">
+                  {getDriverName(
+                    oldestPending.driver,
+                  )}
+                </p>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Requested{" "}
+                  {formatDate(
+                    oldestPending.requested_at,
+                  )}
+                </p>
+              </div>
+
+              <div className="text-left sm:text-right">
+                <p className="text-2xl font-black text-yellow-300">
+                  {formatMoney(
+                    oldestPending.amount,
+                  )}
+                </p>
+
+                <p className="mt-1 text-xs font-bold text-yellow-300/70">
+                  {getPendingAgeDays(
+                    oldestPending.requested_at,
+                  )}{" "}
+                  days old
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ================================================= */}
+        {/* CONTROLS                                          */}
+        {/* ================================================= */}
+
+        <section className="mt-6 rounded-3xl border border-white/[0.08] bg-[#080b08] p-5 sm:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
+                Payout Queue
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black uppercase">
+                {filteredPayouts.length}{" "}
+                request
+                {filteredPayouts.length ===
+                1
+                  ? ""
+                  : "s"}{" "}
+                shown
+              </h2>
+            </div>
+
+            <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-xl">
+              <input
+                type="text"
+                value={search}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value,
+                  )
+                }
+                placeholder="Search driver, company or payout ID..."
+                className="w-full rounded-xl border border-white/[0.10] bg-[#050705] px-4 py-3 text-sm text-white outline-none placeholder:text-gray-700 focus:border-[#79c51c]"
+              />
+
+              <select
+                value={sort}
+                onChange={(event) =>
+                  setSort(
+                    event.target
+                      .value as SortOption,
+                  )
+                }
+                className="rounded-xl border border-white/[0.10] bg-[#050705] px-4 py-3 text-sm font-bold text-gray-300 outline-none focus:border-[#79c51c]"
+              >
+                <option value="newest">
+                  Newest requests
+                </option>
+
+                <option value="oldest">
+                  Oldest requests
+                </option>
+
+                <option value="highest">
+                  Highest amount
+                </option>
+
+                <option value="lowest">
+                  Lowest amount
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
             <FilterButton
               label="Pending"
-              value="pending"
-              active={filter === "pending"}
-              count={pendingPayouts.length}
+              active={
+                filter === "pending"
+              }
+              count={
+                pendingPayouts.length
+              }
               onClick={() =>
-                setFilter("pending")
+                setFilter(
+                  "pending",
+                )
               }
             />
 
             <FilterButton
               label="Processing"
-              value="processing"
               active={
-                filter === "processing"
+                filter ===
+                "processing"
               }
               count={
                 processingPayouts.length
               }
               onClick={() =>
-                setFilter("processing")
+                setFilter(
+                  "processing",
+                )
               }
             />
 
             <FilterButton
               label="Paid"
-              value="paid"
-              active={filter === "paid"}
-              count={paidPayouts.length}
+              active={
+                filter === "paid"
+              }
+              count={
+                paidPayouts.length
+              }
               onClick={() =>
                 setFilter("paid")
               }
@@ -560,7 +1067,6 @@ export default function AdminPayoutsPage() {
 
             <FilterButton
               label="Rejected"
-              value="rejected"
               active={
                 filter === "rejected"
               }
@@ -568,15 +1074,20 @@ export default function AdminPayoutsPage() {
                 rejectedPayouts.length
               }
               onClick={() =>
-                setFilter("rejected")
+                setFilter(
+                  "rejected",
+                )
               }
             />
 
             <FilterButton
               label="All"
-              value="all"
-              active={filter === "all"}
-              count={payouts.length}
+              active={
+                filter === "all"
+              }
+              count={
+                payouts.length
+              }
               onClick={() =>
                 setFilter("all")
               }
@@ -584,12 +1095,30 @@ export default function AdminPayoutsPage() {
           </div>
         </section>
 
-        {/* PAYOUTS */}
+        {/* ================================================= */}
+        {/* PAYOUT LIST                                       */}
+        {/* ================================================= */}
 
-        <section className="mt-5">
+        <section className="mt-10">
+          <div className="mb-5">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
+              Driver Payments
+            </p>
+
+            <h2 className="mt-2 text-2xl font-black uppercase sm:text-3xl">
+              Payout Requests
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-600">
+              Automatically refreshed every
+              15 seconds.
+            </p>
+          </div>
+
           {loading ? (
             <LoadingCard />
-          ) : filteredPayouts.length === 0 ? (
+          ) : filteredPayouts.length ===
+            0 ? (
             <EmptyPayouts
               filter={filter}
             />
@@ -601,36 +1130,51 @@ export default function AdminPayoutsPage() {
                     key={payout.id}
                     payout={payout}
                     onOpen={() =>
-                      openPayout(payout)
+                      openPayout(
+                        payout,
+                      )
                     }
                   />
-                )
+                ),
               )}
             </div>
           )}
         </section>
 
-        {/* SAFETY NOTE */}
+        {/* ================================================= */}
+        {/* PAYMENT PROCESS                                   */}
+        {/* ================================================= */}
 
-        <section className="mt-8 rounded-3xl border border-[#17382b] bg-[#0b1b14] p-5 sm:p-7">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1BBB8C]">
-            Payment Process
-          </p>
+        <section className="mt-8 rounded-3xl border border-white/[0.08] bg-[#080b08] p-5 sm:p-7">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#79c51c]/20 bg-[#79c51c]/10 text-sm font-black text-[#79c51c]">
+              RCS
+            </div>
 
-          <h2 className="mt-2 text-xl font-black">
-            Manual bank transfer
-          </h2>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
+                Payment Process
+              </p>
 
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#71857b]">
-            The current payout system records the
-            payment after you make the bank transfer.
-            Always verify the driver, amount and bank
-            details before marking a request as paid.
-          </p>
+              <h2 className="mt-2 text-xl font-black uppercase">
+                Manual bank transfer
+              </h2>
+
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-gray-600">
+                The current payout system records
+                the payment after you make the
+                bank transfer. Always verify the
+                driver, amount and bank details
+                before marking a request as paid.
+              </p>
+            </div>
+          </div>
         </section>
       </div>
 
-      {/* PAYOUT MODAL */}
+      {/* ================================================= */}
+      {/* PAYOUT MODAL                                      */}
+      {/* ================================================= */}
 
       {selectedPayout && (
         <PayoutModal
@@ -638,26 +1182,29 @@ export default function AdminPayoutsPage() {
           notes={notes}
           setNotes={setNotes}
           processing={
-            processingId === selectedPayout.id
+            processingId ===
+            selectedPayout.id
           }
           actionError={actionError}
+          copiedValue={copiedValue}
+          onCopy={copyValue}
           onClose={closePayout}
           onProcessing={() =>
             void updatePayout(
               selectedPayout.id,
-              "processing"
+              "processing",
             )
           }
           onPaid={() =>
             void updatePayout(
               selectedPayout.id,
-              "paid"
+              "paid",
             )
           }
           onRejected={() =>
             void updatePayout(
               selectedPayout.id,
-              "rejected"
+              "rejected",
             )
           }
         />
@@ -667,7 +1214,7 @@ export default function AdminPayoutsPage() {
 }
 
 /* ===================================================== */
-/* PAYOUT CARD                                             */
+/* PAYOUT CARD                                            */
 /* ===================================================== */
 
 function PayoutCard({
@@ -680,53 +1227,117 @@ function PayoutCard({
   const driver =
     payout.driver;
 
+  const age =
+    normalise(
+      payout.status,
+    ) === "pending"
+      ? getPendingAgeDays(
+          payout.requested_at,
+        )
+      : 0;
+
+  const hasPaymentDetails =
+    Boolean(
+      payout.paymentDetails,
+    );
+
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="w-full rounded-2xl border border-[#17382b] bg-[#0b1b14] p-4 text-left shadow-lg transition hover:border-[#1BBB8C] sm:rounded-3xl sm:p-6"
+      className="group w-full rounded-2xl border border-white/[0.08] bg-[#080b08] p-4 text-left transition hover:border-[#79c51c]/30 sm:p-5"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-base font-black sm:text-lg">
-              {driver?.full_name ||
-                "Unknown driver"}
-            </p>
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        {/* DRIVER */}
 
-            <StatusBadge
-              status={payout.status}
-            />
+        <div className="flex min-w-0 items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/10 text-xs font-black text-[#79c51c] sm:h-14 sm:w-14">
+            {getDriverInitials(
+              driver,
+            )}
           </div>
 
-          <p className="mt-1 truncate text-xs text-[#71857b] sm:text-sm">
-            {driver?.email ||
-              "No email available"}
-          </p>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="truncate text-lg font-black sm:text-xl">
+                {getDriverName(
+                  driver,
+                )}
+              </h3>
 
-          <p className="mt-2 text-[11px] text-[#82958c]">
-            Requested{" "}
-            {formatDate(
-              payout.requested_at
-            )}
-          </p>
+              <StatusBadge
+                status={
+                  payout.status
+                }
+              />
+            </div>
+
+            <p className="mt-1 truncate text-sm text-gray-500">
+              {driver?.email ||
+                "No email available"}
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full border border-white/[0.08] bg-[#050705] px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-gray-600">
+                Request #
+                {payout.id}
+              </span>
+
+              {hasPaymentDetails ? (
+                <span className="rounded-full border border-[#79c51c]/20 bg-[#79c51c]/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-[#79c51c]">
+                  Bank details saved
+                </span>
+              ) : (
+                <span className="rounded-full border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-red-300">
+                  No bank details
+                </span>
+              )}
+
+              {driver?.approved && (
+                <span className="rounded-full border border-white/[0.08] bg-[#050705] px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-gray-500">
+                  Approved driver
+                </span>
+              )}
+            </div>
+
+            <p className="mt-3 text-xs text-gray-600">
+              Requested{" "}
+              <span className="font-bold text-gray-400">
+                {formatDate(
+                  payout.requested_at,
+                )}
+              </span>
+
+              {age > 0 && (
+                <span className="ml-2 text-yellow-300/70">
+                  • {age}{" "}
+                  {age === 1
+                    ? "day"
+                    : "days"}{" "}
+                  old
+                </span>
+              )}
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 sm:justify-end">
-          <div className="text-left sm:text-right">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#71857b]">
+        {/* AMOUNT */}
+
+        <div className="flex items-end justify-between gap-6 border-t border-white/[0.08] pt-4 lg:min-w-[300px] lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-600">
               Payout
             </p>
 
-            <p className="mt-1 text-2xl font-black text-[#1BBB8C] sm:text-3xl">
-              £{formatMoney(
-                payout.amount
+            <p className="mt-1 text-2xl font-black text-[#79c51c] sm:text-3xl">
+              {formatMoney(
+                payout.amount,
               )}
             </p>
           </div>
 
-          <span className="rounded-xl border border-[#29483a] bg-[#07130e] px-3 py-2 text-[10px] font-black text-[#9cafa6]">
-            Review
+          <span className="rounded-xl border border-white/[0.10] bg-[#050705] px-3 py-2 text-[9px] font-black uppercase tracking-wider text-gray-500 transition group-hover:border-[#79c51c] group-hover:text-[#79c51c]">
+            Review →
           </span>
         </div>
       </div>
@@ -735,7 +1346,7 @@ function PayoutCard({
 }
 
 /* ===================================================== */
-/* PAYOUT MODAL                                            */
+/* PAYOUT MODAL                                           */
 /* ===================================================== */
 
 function PayoutModal({
@@ -744,6 +1355,8 @@ function PayoutModal({
   setNotes,
   processing,
   actionError,
+  copiedValue,
+  onCopy,
   onClose,
   onProcessing,
   onPaid,
@@ -751,9 +1364,16 @@ function PayoutModal({
 }: {
   payout: PayoutRecord;
   notes: string;
-  setNotes: (value: string) => void;
+  setNotes: (
+    value: string,
+  ) => void;
   processing: boolean;
   actionError: string;
+  copiedValue: string;
+  onCopy: (
+    value: string,
+    label: string,
+  ) => Promise<void>;
   onClose: () => void;
   onProcessing: () => void;
   onPaid: () => void;
@@ -766,83 +1386,131 @@ function PayoutModal({
     payout.paymentDetails;
 
   const isPending =
-    normalise(payout.status) ===
-    "pending";
+    normalise(
+      payout.status,
+    ) === "pending";
 
   const isProcessing =
-    normalise(payout.status) ===
-    "processing";
+    normalise(
+      payout.status,
+    ) === "processing";
 
   const isPaid =
-    normalise(payout.status) ===
-    "paid";
+    normalise(
+      payout.status,
+    ) === "paid";
 
   const isRejected =
-    normalise(payout.status) ===
-    "rejected";
+    normalise(
+      payout.status,
+    ) === "rejected";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-[#29483a] bg-[#0b1b14] shadow-2xl sm:rounded-3xl">
-        {/* MODAL HEADER */}
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/85 p-2 backdrop-blur-sm sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(event) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          onClose();
+        }
+      }}
+    >
+      <div className="my-2 w-full max-w-3xl overflow-hidden rounded-3xl border border-white/[0.10] bg-[#080b08] shadow-2xl sm:my-8">
+        {/* HEADER */}
 
-        <div className="sticky top-0 z-10 border-b border-[#17382b] bg-[#0b1b14] p-5 sm:p-6">
+        <div className="sticky top-0 z-20 border-b border-white/[0.08] bg-[#050705]/95 p-4 backdrop-blur-xl sm:p-6">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1BBB8C]">
-                Payout Request
-              </p>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#79c51c]/20 bg-[#79c51c]/10 text-xs font-black text-[#79c51c]">
+                {getDriverInitials(
+                  driver,
+                )}
+              </div>
 
-              <h2 className="mt-2 text-xl font-black sm:text-2xl">
-                {driver?.full_name ||
-                  "Unknown driver"}
-              </h2>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
+                  Payout Request
+                </p>
 
-              <p className="mt-1 text-xs text-[#71857b]">
-                Request #{payout.id}
-              </p>
+                <h2 className="mt-1 truncate text-xl font-black sm:text-2xl">
+                  {getDriverName(
+                    driver,
+                  )}
+                </h2>
+
+                <p className="mt-1 text-xs text-gray-600">
+                  Request #
+                  {payout.id}
+                </p>
+              </div>
             </div>
 
             <button
               type="button"
               onClick={onClose}
               disabled={processing}
-              className="rounded-xl border border-[#29483a] bg-[#07130e] px-3 py-2 text-sm font-black text-[#9cafa6] hover:border-[#1BBB8C] hover:text-[#1BBB8C] disabled:opacity-50"
+              aria-label="Close payout"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.10] text-xl text-gray-500 transition hover:border-[#79c51c] hover:text-white disabled:opacity-50"
             >
-              Close
+              ×
             </button>
           </div>
         </div>
 
-        <div className="space-y-5 p-5 sm:p-6">
+        <div className="max-h-[86vh] overflow-y-auto p-4 sm:p-7">
           {/* AMOUNT */}
 
-          <div className="rounded-2xl border border-[#285c48] bg-[#0e251b] p-5">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#71857b]">
-              Amount to pay
-            </p>
+          <section className="rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-600">
+                  Amount to pay
+                </p>
 
-            <p className="mt-1 text-4xl font-black text-[#1BBB8C]">
-              £{formatMoney(
-                payout.amount
-              )}
-            </p>
+                <p className="mt-1 text-4xl font-black text-[#79c51c]">
+                  {formatMoney(
+                    payout.amount,
+                  )}
+                </p>
+              </div>
 
-            <div className="mt-3">
               <StatusBadge
-                status={payout.status}
+                status={
+                  payout.status
+                }
               />
             </div>
-          </div>
+          </section>
 
           {/* DRIVER */}
 
-          <div className="rounded-2xl border border-[#17382b] bg-[#07130e] p-5">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
-              Driver
-            </p>
+          <section className="mt-6 rounded-2xl border border-white/[0.08] bg-[#050705] p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
+                  Driver
+                </p>
 
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <h3 className="mt-2 text-xl font-black">
+                  {getDriverName(
+                    driver,
+                  )}
+                </h3>
+              </div>
+
+              <Link
+                href="/admin/drivers"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-white/[0.10] bg-[#080b08] px-4 text-xs font-black uppercase tracking-wider text-gray-400 transition hover:border-[#79c51c] hover:text-[#79c51c]"
+              >
+                Driver Management →
+              </Link>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <InfoItem
                 label="Name"
                 value={
@@ -870,36 +1538,87 @@ function PayoutModal({
               <InfoItem
                 label="Company"
                 value={
-                  driver?.trading_name ||
-                  driver?.company_name ||
+                  driver
+                    ?.trading_name ||
+                  driver
+                    ?.company_name ||
                   "Not available"
                 }
               />
+
+              <InfoItem
+                label="Driver status"
+                value={
+                  driver?.application_status
+                    ? formatStatus(
+                        driver.application_status,
+                      )
+                    : "Unknown"
+                }
+              />
+
+              <InfoItem
+                label="Approved"
+                value={
+                  driver?.approved
+                    ? "Yes"
+                    : "No"
+                }
+              />
             </div>
-          </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {driver?.email ? (
+                <a
+                  href={`mailto:${driver.email}`}
+                  className="flex min-h-[48px] items-center justify-center rounded-xl border border-white/[0.10] bg-[#080b08] px-4 text-xs font-black uppercase tracking-wider text-gray-400 transition hover:border-[#79c51c] hover:text-[#79c51c]"
+                >
+                  Email Driver →
+                </a>
+              ) : (
+                <div className="flex min-h-[48px] items-center justify-center rounded-xl border border-white/[0.06] bg-[#080b08] text-xs font-black uppercase tracking-wider text-gray-700">
+                  No Email
+                </div>
+              )}
+
+              {driver?.phone ? (
+                <a
+                  href={`tel:${driver.phone}`}
+                  className="flex min-h-[48px] items-center justify-center rounded-xl border border-white/[0.10] bg-[#080b08] px-4 text-xs font-black uppercase tracking-wider text-gray-400 transition hover:border-[#79c51c] hover:text-[#79c51c]"
+                >
+                  Call Driver →
+                </a>
+              ) : (
+                <div className="flex min-h-[48px] items-center justify-center rounded-xl border border-white/[0.06] bg-[#080b08] text-xs font-black uppercase tracking-wider text-gray-700">
+                  No Phone
+                </div>
+              )}
+            </div>
+          </section>
 
           {/* BANK DETAILS */}
 
-          <div className="rounded-2xl border border-[#285c48] bg-[#07130e] p-5">
-            <div className="flex items-center justify-between gap-3">
+          <section className="mt-6 rounded-2xl border border-yellow-500/20 bg-[#080b08] p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1BBB8C]">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
                   Bank Details
                 </p>
 
-                <p className="mt-1 text-xs text-[#71857b]">
-                  Verify these details before
-                  transferring money.
+                <p className="mt-1 text-xs leading-5 text-gray-600">
+                  Verify these details against the
+                  driver information before making
+                  the transfer.
                 </p>
               </div>
 
-              <span className="rounded-full border border-amber-900/60 bg-amber-950/50 px-2.5 py-1 text-[9px] font-black uppercase text-amber-300">
+              <span className="w-fit rounded-full border border-yellow-500/20 bg-yellow-500/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-yellow-300">
                 Sensitive
               </span>
             </div>
 
             {!details ? (
-              <div className="mt-4 rounded-xl border border-red-900/60 bg-[#230e0e] p-4">
+              <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
                 <p className="text-sm font-semibold text-red-300">
                   No payment details have been
                   saved for this driver.
@@ -925,7 +1644,7 @@ function PayoutModal({
                 <InfoItem
                   label="Sort code"
                   value={maskSortCode(
-                    details.sort_code
+                    details.sort_code,
                   )}
                   sensitive
                 />
@@ -933,21 +1652,21 @@ function PayoutModal({
                 <InfoItem
                   label="Account number"
                   value={maskAccountNumber(
-                    details.account_number
+                    details.account_number,
                   )}
                   sensitive
                 />
               </div>
             )}
-          </div>
+          </section>
 
           {/* REQUEST INFORMATION */}
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <section className="mt-6 grid gap-3 sm:grid-cols-2">
             <InfoItem
               label="Requested"
               value={formatDate(
-                payout.requested_at
+                payout.requested_at,
               )}
             />
 
@@ -956,19 +1675,68 @@ function PayoutModal({
               value={
                 payout.processed_at
                   ? formatDate(
-                      payout.processed_at
+                      payout.processed_at,
                     )
                   : "Not processed"
               }
             />
-          </div>
+
+            <InfoItem
+              label="Driver ID"
+              value={
+                payout.driver_id
+              }
+            />
+
+            <InfoItem
+              label="Processed by"
+              value={
+                payout.processed_by ||
+                "Not processed"
+              }
+            />
+          </section>
+
+          {/* COPY IDs */}
+
+          <section className="mt-6 grid gap-3 sm:grid-cols-2">
+            <CopyButton
+              label="Copy Payout ID"
+              copied={
+                copiedValue ===
+                "payout"
+              }
+              onClick={() =>
+                void onCopy(
+                  String(
+                    payout.id,
+                  ),
+                  "payout",
+                )
+              }
+            />
+
+            <CopyButton
+              label="Copy Driver ID"
+              copied={
+                copiedValue ===
+                "driver"
+              }
+              onClick={() =>
+                void onCopy(
+                  payout.driver_id,
+                  "driver",
+                )
+              }
+            />
+          </section>
 
           {/* NOTES */}
 
-          <div>
+          <section className="mt-6">
             <label
               htmlFor="admin-payout-notes"
-              className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#1BBB8C]"
+              className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]"
             >
               Admin Notes
             </label>
@@ -978,20 +1746,23 @@ function PayoutModal({
               value={notes}
               onChange={(event) =>
                 setNotes(
-                  event.target.value
+                  event.target.value,
                 )
               }
-              disabled={processing || isPaid}
+              disabled={
+                processing ||
+                isPaid
+              }
               rows={4}
               placeholder="Add a note about this payout..."
-              className="w-full rounded-xl border border-[#29483a] bg-[#07130e] px-4 py-3 text-sm text-white outline-none placeholder:text-[#52655c] focus:border-[#1BBB8C] disabled:opacity-60"
+              className="w-full rounded-xl border border-white/[0.10] bg-[#050705] px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-gray-700 focus:border-[#79c51c] disabled:opacity-60"
             />
-          </div>
+          </section>
 
           {/* ACTION ERROR */}
 
           {actionError && (
-            <div className="rounded-xl border border-red-900/60 bg-[#230e0e] p-4">
+            <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
               <p className="text-sm leading-6 text-red-300">
                 {actionError}
               </p>
@@ -1000,94 +1771,117 @@ function PayoutModal({
 
           {/* ACTIONS */}
 
-          {!isPaid && !isRejected && (
-            <div className="space-y-3 border-t border-[#17382b] pt-5">
-              <p className="text-xs leading-5 text-[#71857b]">
-                Only mark this request as paid after
-                the bank transfer has actually been
-                completed.
-              </p>
+          {!isPaid &&
+            !isRejected && (
+              <section className="mt-6 border-t border-white/[0.08] pt-6">
+                <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
+                  <p className="text-xs font-bold leading-5 text-yellow-300">
+                    Only mark this request as paid
+                    after the bank transfer has
+                    actually been completed.
+                  </p>
+                </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                {isPending && (
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {isPending && (
+                    <button
+                      type="button"
+                      onClick={
+                        onProcessing
+                      }
+                      disabled={
+                        processing
+                      }
+                      className="min-h-[52px] rounded-xl border border-white/[0.10] bg-[#050705] px-4 py-3 text-xs font-black uppercase tracking-wider text-gray-300 transition hover:border-[#79c51c] hover:text-[#79c51c] disabled:opacity-50"
+                    >
+                      {processing
+                        ? "Updating..."
+                        : "Mark Processing"}
+                    </button>
+                  )}
+
+                  {isProcessing && (
+                    <div className="flex min-h-[52px] items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-xs font-black uppercase tracking-wider text-blue-300">
+                      Processing
+                    </div>
+                  )}
+
                   <button
                     type="button"
-                    onClick={onProcessing}
-                    disabled={processing}
-                    className="min-h-12 rounded-xl border border-[#29483a] bg-[#07130e] px-4 py-3 text-xs font-black text-[#d5dfda] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C] disabled:opacity-50"
+                    onClick={
+                      onRejected
+                    }
+                    disabled={
+                      processing
+                    }
+                    className="min-h-[52px] rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-xs font-black uppercase tracking-wider text-red-300 transition hover:border-red-500 disabled:opacity-50"
                   >
                     {processing
                       ? "Updating..."
-                      : "Mark Processing"}
+                      : "Reject Payout"}
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={
+                      onPaid
+                    }
+                    disabled={
+                      processing ||
+                      !details
+                    }
+                    className="min-h-[52px] rounded-xl bg-[#79c51c] px-4 py-3 text-xs font-black uppercase tracking-wider text-black transition hover:bg-[#91db32] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {processing
+                      ? "Updating..."
+                      : "Mark Paid"}
+                  </button>
+                </div>
+
+                {!details && (
+                  <p className="mt-3 text-xs font-semibold text-yellow-300">
+                    Mark Paid is disabled because
+                    this driver has no saved bank
+                    details.
+                  </p>
                 )}
+              </section>
+            )}
 
-                {isProcessing && (
-                  <div className="rounded-xl border border-amber-900/60 bg-amber-950/30 px-4 py-3 text-center text-xs font-black text-amber-300 sm:col-span-1">
-                    Processing
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={onRejected}
-                  disabled={processing}
-                  className="min-h-12 rounded-xl border border-red-900/60 bg-red-950/30 px-4 py-3 text-xs font-black text-red-300 transition hover:border-red-500 disabled:opacity-50"
-                >
-                  {processing
-                    ? "Updating..."
-                    : "Reject Payout"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onPaid}
-                  disabled={
-                    processing ||
-                    !details
-                  }
-                  className="min-h-12 rounded-xl bg-[#1BBB8C] px-4 py-3 text-xs font-black text-[#06100c] transition hover:bg-[#16a77c] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {processing
-                    ? "Updating..."
-                    : "Mark Paid"}
-                </button>
-              </div>
-
-              {!details && (
-                <p className="text-xs font-semibold text-amber-300">
-                  Mark Paid is disabled because the
-                  driver has no saved bank details.
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* COMPLETED MESSAGE */}
+          {/* COMPLETED */}
 
           {isPaid && (
-            <div className="rounded-2xl border border-green-900/60 bg-green-950/30 p-5">
-              <p className="text-sm font-black text-green-300">
-                This payout has been marked as paid.
+            <section className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-5">
+              <p className="text-sm font-black text-[#79c51c]">
+                This payout has been marked as
+                paid.
               </p>
 
               {payout.processed_at && (
-                <p className="mt-1 text-xs text-green-400/80">
+                <p className="mt-1 text-xs text-gray-600">
                   Processed{" "}
                   {formatDate(
-                    payout.processed_at
+                    payout.processed_at,
                   )}
                 </p>
               )}
-            </div>
+            </section>
           )}
 
+          {/* REJECTED */}
+
           {isRejected && (
-            <div className="rounded-2xl border border-red-900/60 bg-red-950/30 p-5">
+            <section className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
               <p className="text-sm font-black text-red-300">
                 This payout has been rejected.
               </p>
-            </div>
+
+              {payout.notes && (
+                <p className="mt-2 text-sm leading-6 text-gray-500">
+                  {payout.notes}
+                </p>
+              )}
+            </section>
           )}
         </div>
       </div>
@@ -1096,7 +1890,7 @@ function PayoutModal({
 }
 
 /* ===================================================== */
-/* SUMMARY CARD                                            */
+/* SUMMARY CARD                                           */
 /* ===================================================== */
 
 function SummaryCard({
@@ -1104,21 +1898,41 @@ function SummaryCard({
   value,
   detail,
   highlighted = false,
+  accent = "default",
 }: {
   label: string;
   value: number;
   detail: string;
   highlighted?: boolean;
+  accent?:
+    | "default"
+    | "green"
+    | "yellow"
+    | "blue"
+    | "red";
 }) {
+  const labelClass =
+    accent === "green"
+      ? "text-[#79c51c]"
+      : accent === "yellow"
+        ? "text-yellow-300"
+        : accent === "blue"
+          ? "text-blue-300"
+          : accent === "red"
+            ? "text-red-300"
+            : "text-gray-400";
+
   return (
     <div
-      className={`rounded-2xl border p-4 shadow-lg sm:rounded-3xl sm:p-5 ${
+      className={`rounded-2xl border p-4 sm:rounded-3xl sm:p-5 ${
         highlighted
-          ? "border-[#1BBB8C] bg-[#0e251b]"
-          : "border-[#17382b] bg-[#0b1b14]"
+          ? "border-yellow-500/20 bg-yellow-500/5"
+          : "border-white/[0.08] bg-[#080b08]"
       }`}
     >
-      <p className="text-[10px] font-black uppercase tracking-wide text-[#1BBB8C]">
+      <p
+        className={`text-[10px] font-black uppercase tracking-[0.18em] ${labelClass}`}
+      >
         {label}
       </p>
 
@@ -1126,7 +1940,7 @@ function SummaryCard({
         {value}
       </p>
 
-      <p className="mt-1 text-[10px] text-[#71857b] sm:text-xs">
+      <p className="mt-1 text-[10px] text-gray-600 sm:text-xs">
         {detail}
       </p>
     </div>
@@ -1134,18 +1948,16 @@ function SummaryCard({
 }
 
 /* ===================================================== */
-/* FILTER BUTTON                                           */
+/* FILTER BUTTON                                          */
 /* ===================================================== */
 
 function FilterButton({
   label,
-  value,
   active,
   count,
   onClick,
 }: {
   label: string;
-  value: Filter;
   active: boolean;
   count: number;
   onClick: () => void;
@@ -1156,12 +1968,18 @@ function FilterButton({
       onClick={onClick}
       className={`shrink-0 rounded-xl border px-4 py-2.5 text-xs font-black transition ${
         active
-          ? "border-[#1BBB8C] bg-[#1BBB8C] text-[#06100c]"
-          : "border-[#29483a] bg-[#0b1b14] text-[#9cafa6] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+          ? "border-[#79c51c] bg-[#79c51c] text-black"
+          : "border-white/[0.10] bg-[#050705] text-gray-500 hover:border-[#79c51c] hover:text-[#79c51c]"
       }`}
     >
       {label}{" "}
-      <span className={active ? "" : "text-[#1BBB8C]"}>
+      <span
+        className={
+          active
+            ? "text-black"
+            : "text-[#79c51c]"
+        }
+      >
         {count}
       </span>
     </button>
@@ -1182,16 +2000,16 @@ function InfoItem({
   sensitive?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-[#17382b] bg-[#0b1b14] p-3">
-      <p className="text-[9px] font-black uppercase tracking-wide text-[#64786e]">
+    <div className="rounded-xl border border-white/[0.08] bg-[#080b08] p-3">
+      <p className="text-[9px] font-black uppercase tracking-[0.12em] text-gray-700">
         {label}
       </p>
 
       <p
         className={`mt-1 break-words text-xs font-bold ${
           sensitive
-            ? "font-mono text-[#d5dfda]"
-            : "text-[#c0cdc6]"
+            ? "font-mono text-gray-300"
+            : "text-gray-400"
         }`}
       >
         {value}
@@ -1201,59 +2019,62 @@ function InfoItem({
 }
 
 /* ===================================================== */
-/* STATUS BADGE                                            */
+/* STATUS BADGE                                           */
 /* ===================================================== */
 
 function StatusBadge({
   status,
 }: {
-  status: string | null | undefined;
+  status:
+    | string
+    | null
+    | undefined;
 }) {
   const safeStatus =
-    normalise(status) || "unknown";
-
-  let className =
-    "border-[#29483a] bg-[#07130e] text-[#9cafa6]";
-
-  if (
-    safeStatus === "pending"
-  ) {
-    className =
-      "border-amber-900/60 bg-amber-950/50 text-amber-300";
-  }
-
-  if (
-    safeStatus === "processing"
-  ) {
-    className =
-      "border-blue-900/60 bg-blue-950/40 text-blue-300";
-  }
-
-  if (
-    safeStatus === "paid"
-  ) {
-    className =
-      "border-green-900/60 bg-green-950/40 text-green-300";
-  }
-
-  if (
-    safeStatus === "rejected"
-  ) {
-    className =
-      "border-red-900/60 bg-red-950/40 text-red-300";
-  }
+    normalise(status) ||
+    "unknown";
 
   return (
     <span
-      className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${className}`}
+      className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider ${getPayoutStatusClasses(
+        safeStatus,
+      )}`}
     >
-      {formatStatus(safeStatus)}
+      {formatStatus(
+        safeStatus,
+      )}
     </span>
   );
 }
 
 /* ===================================================== */
-/* MOBILE NAV                                              */
+/* COPY BUTTON                                             */
+/* ===================================================== */
+
+function CopyButton({
+  label,
+  copied,
+  onClick,
+}: {
+  label: string;
+  copied: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-[48px] items-center justify-center rounded-xl border border-white/[0.10] bg-[#080b08] px-4 text-xs font-black uppercase tracking-wider text-gray-400 transition hover:border-[#79c51c] hover:text-[#79c51c]"
+    >
+      {copied
+        ? "Copied"
+        : label}
+    </button>
+  );
+}
+
+/* ===================================================== */
+/* MOBILE NAV                                             */
 /* ===================================================== */
 
 function MobileNavLink({
@@ -1270,8 +2091,8 @@ function MobileNavLink({
       href={href}
       className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-black transition ${
         active
-          ? "bg-[#1BBB8C] text-[#06100c]"
-          : "border border-[#17382b] bg-[#0b1b14] text-[#9cafa6]"
+          ? "bg-[#79c51c] text-black"
+          : "border border-white/[0.08] bg-[#0a0e0a] text-gray-500"
       }`}
     >
       {label}
@@ -1280,13 +2101,15 @@ function MobileNavLink({
 }
 
 /* ===================================================== */
-/* LOADING                                                 */
+/* LOADING                                                */
 /* ===================================================== */
 
 function LoadingCard() {
   return (
-    <div className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-8 text-center">
-      <p className="text-sm font-bold text-[#71857b]">
+    <div className="rounded-3xl border border-white/[0.08] bg-[#080b08] p-12 text-center">
+      <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-white/[0.08] border-t-[#79c51c]" />
+
+      <p className="mt-5 text-sm font-semibold text-gray-500">
         Loading payout requests...
       </p>
     </div>
@@ -1294,7 +2117,7 @@ function LoadingCard() {
 }
 
 /* ===================================================== */
-/* EMPTY                                                    */
+/* EMPTY                                                  */
 /* ===================================================== */
 
 function EmptyPayouts({
@@ -1326,12 +2149,18 @@ function EmptyPayouts({
   }
 
   return (
-    <div className="rounded-3xl border border-dashed border-[#29483a] bg-[#081710] p-10 text-center">
-      <p className="text-base font-black">
+    <div className="rounded-3xl border border-dashed border-white/[0.12] bg-[#080b08] p-12 text-center">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.10] bg-[#050705]">
+        <span className="font-black text-[#79c51c]">
+          RCS
+        </span>
+      </div>
+
+      <p className="mt-5 text-xl font-black uppercase">
         No payout requests
       </p>
 
-      <p className="mt-2 text-sm text-[#71857b]">
+      <p className="mt-2 text-sm text-gray-600">
         {message}
       </p>
     </div>
@@ -1339,77 +2168,44 @@ function EmptyPayouts({
 }
 
 /* ===================================================== */
-/* HELPERS                                                  */
+/* BANK MASKING                                           */
 /* ===================================================== */
 
-function normalise(
-  value: string | null | undefined
-) {
-  return value?.trim().toLowerCase() || "";
-}
-
-function formatStatus(
-  value: string | null | undefined
-) {
-  const safeValue =
-    normalise(value) || "Unknown";
-
-  return safeValue
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) =>
-      letter.toUpperCase()
-    );
-}
-
-function formatMoney(
-  value: number
-) {
-  return Number(value || 0).toFixed(2);
-}
-
-function formatDate(
-  value: string | null | undefined
-) {
-  if (!value) {
-    return "Not available";
-  }
-
-  return new Date(value).toLocaleString(
-    "en-GB",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  );
-}
-
 function maskSortCode(
-  value: string
+  value: string,
 ) {
   const digits =
-    value.replace(/\D/g, "");
+    value.replace(
+      /\D/g,
+      "",
+    );
 
   if (digits.length !== 6) {
     return "******";
   }
 
-  return `**-**-${digits.slice(4)}`;
+  return `**-**-${digits.slice(
+    4,
+  )}`;
 }
 
 function maskAccountNumber(
-  value: string
+  value: string,
 ) {
   const digits =
-    value.replace(/\D/g, "");
+    value.replace(
+      /\D/g,
+      "",
+    );
 
   if (digits.length < 4) {
     return "********";
   }
 
   return `${"*".repeat(
-    Math.max(0, digits.length - 4)
+    Math.max(
+      0,
+      digits.length - 4,
+    ),
   )}${digits.slice(-4)}`;
 }
