@@ -725,6 +725,11 @@ export default function AdminDashboard() {
             href="/admin/payouts"
             label="Payouts"
           />
+
+          <AdminNavLink
+            href="/admin/support"
+            label="Support"
+          />
         </div>
       </nav>
 
@@ -884,6 +889,8 @@ export default function AdminDashboard() {
                 pendingBids.length > 0
               }
             />
+
+            <SupportActionCard />
 
             <ActionCard
               href="/admin/payouts"
@@ -1055,6 +1062,13 @@ export default function AdminDashboard() {
               title="Bids"
               description="Review driver quotes and pricing."
               number={bids.length}
+            />
+
+            <ManagementCard
+              href="/admin/support"
+              title="Support"
+              description="Customer in-house support conversations and enquiries."
+              number={0}
             />
 
             <ManagementCard
@@ -1311,6 +1325,30 @@ function StatCard({
   );
 }
 
+function SupportActionCard() {
+  return (
+    <Link
+      href="/admin/support"
+      className="admin-card rounded-2xl border p-4 sm:rounded-3xl sm:p-5"
+      style={{
+        background: "rgba(121,197,28,0.08)",
+        borderColor: "rgba(121,197,28,0.34)",
+      }}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-xs font-black sm:text-sm">Customer Enquiries</p>
+        <span className="text-xl font-black text-[#79c51c] sm:text-2xl">→</span>
+      </div>
+      <p className="mt-2 text-[11px] leading-5 text-zinc-500 sm:text-xs">
+        Open the in-house customer support inbox and reply to customer enquiries.
+      </p>
+      <p className="mt-3 text-[10px] font-black text-[#79c51c] sm:text-xs">
+        Open Support →
+      </p>
+    </Link>
+  );
+}
+
 function ActionCard({
   href,
   label,
@@ -1438,7 +1476,7 @@ function ManagementCard({
   href: string;
   title: string;
   description: string;
-  number: number;
+  number: number | string;
   highlighted?: boolean;
 }) {
   return (
