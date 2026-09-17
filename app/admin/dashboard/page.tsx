@@ -67,11 +67,7 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [bids, setBids] = useState<Bid[]>([]);
-  const [payoutRequests, setPayoutRequests] = useState<
-    PayoutRequest[]
-  >([]);
-
-  const [customersCount, setCustomersCount] = useState(0);
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,8 +76,7 @@ export default function AdminDashboard() {
   const [realtimeState, setRealtimeState] =
     useState<RealtimeState>("connecting");
 
-  const [lastLiveUpdate, setLastLiveUpdate] =
-    useState<Date | null>(null);
+  const [lastLiveUpdate, setLastLiveUpdate] = useState<Date | null>(null);
 
   const refreshTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,7 +116,7 @@ export default function AdminDashboard() {
 
       if (!session?.access_token) {
         throw new Error(
-          "Your admin session has expired. Please log in again.",
+          "Your admin session has expired. Please log in again."
         );
       }
 
@@ -138,7 +133,7 @@ export default function AdminDashboard() {
 
       if (!response.ok) {
         throw new Error(
-          data?.error || "Unable to load admin dashboard.",
+          data?.error || "Unable to load admin dashboard."
         );
       }
 
@@ -146,46 +141,24 @@ export default function AdminDashboard() {
         return;
       }
 
-      setJobs(
-        Array.isArray(data.jobs)
-          ? data.jobs
-          : [],
-      );
-
-      setDrivers(
-        Array.isArray(data.drivers)
-          ? data.drivers
-          : [],
-      );
-
-      setBids(
-        Array.isArray(data.bids)
-          ? data.bids
-          : [],
-      );
-
+      setJobs(Array.isArray(data.jobs) ? data.jobs : []);
+      setDrivers(Array.isArray(data.drivers) ? data.drivers : []);
+      setBids(Array.isArray(data.bids) ? data.bids : []);
       setPayoutRequests(
         Array.isArray(data.payoutRequests)
           ? data.payoutRequests
-          : [],
-      );
-
-      setCustomersCount(
-        Number(data.customersCount || 0),
+          : []
       );
 
       setLastLiveUpdate(new Date());
     } catch (error) {
-      console.error(
-        "Admin dashboard error:",
-        error,
-      );
+      console.error("Admin dashboard error:", error);
 
       if (mountedRef.current) {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Unable to load admin dashboard.",
+            : "Unable to load admin dashboard."
         );
       }
     } finally {
@@ -198,6 +171,9 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  /*
+   * Initial dashboard load.
+   */
   useEffect(() => {
     mountedRef.current = true;
 
@@ -208,12 +184,23 @@ export default function AdminDashboard() {
     };
   }, [loadDashboard]);
 
+  /*
+   * SUPABASE REALTIME
+   *
+   * Any INSERT / UPDATE / DELETE on:
+   *
+   * jobs
+   * drivers
+   * bids
+   * driver_payout_requests
+   *
+   * causes the dashboard API to reload automatically.
+   */
   useEffect(() => {
     const supabase = createClient();
 
-    let channel:
-      | ReturnType<typeof supabase.channel>
-      | null = null;
+    let channel: ReturnType<typeof supabase.channel> | null =
+      null;
 
     let reconnectAttempts = 0;
     let destroyed = false;
@@ -235,6 +222,10 @@ export default function AdminDashboard() {
         return;
       }
 
+      /*
+       * Several database changes can happen almost simultaneously.
+       * Instead of making 5 API requests, wait 300ms and make one.
+       */
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
@@ -256,9 +247,7 @@ export default function AdminDashboard() {
       }
 
       setRealtimeState(
-        reconnectAttempts === 0
-          ? "connecting"
-          : "reconnecting",
+        reconnectAttempts === 0 ? "connecting" : "reconnecting"
       );
 
       if (channel) {
@@ -267,9 +256,7 @@ export default function AdminDashboard() {
       }
 
       channel = supabase
-        .channel(
-          `admin-dashboard-live-${Date.now()}`,
-        )
+        .channel(`admin-dashboard-live-${Date.now()}`)
         .on(
           "postgres_changes",
           {
@@ -278,9 +265,10 @@ export default function AdminDashboard() {
             table: "jobs",
           },
           () => {
+            console.log("RCS Realtime: jobs changed");
             setLastLiveUpdate(new Date());
             scheduleRefresh();
-          },
+          }
         )
         .on(
           "postgres_changes",
@@ -290,9 +278,10 @@ export default function AdminDashboard() {
             table: "drivers",
           },
           () => {
+            console.log("RCS Realtime: drivers changed");
             setLastLiveUpdate(new Date());
             scheduleRefresh();
-          },
+          }
         )
         .on(
           "postgres_changes",
@@ -302,9 +291,10 @@ export default function AdminDashboard() {
             table: "bids",
           },
           () => {
+            console.log("RCS Realtime: bids changed");
             setLastLiveUpdate(new Date());
             scheduleRefresh();
-          },
+          }
         )
         .on(
           "postgres_changes",
@@ -314,24 +304,19 @@ export default function AdminDashboard() {
             table: "driver_payout_requests",
           },
           () => {
+            console.log(
+              "RCS Realtime: payout request changed"
+            );
             setLastLiveUpdate(new Date());
             scheduleRefresh();
-          },
+          }
         )
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "profiles",
-            filter: "role=eq.customer",
-          },
-          () => {
-            setLastLiveUpdate(new Date());
-            scheduleRefresh();
-          },
-        )
-        .subscribe((status) => {
+        .subscribe((status: string) => {
+          console.log(
+            "RCS Admin Realtime status:",
+            status
+          );
+
           if (destroyed) {
             return;
           }
@@ -339,6 +324,11 @@ export default function AdminDashboard() {
           if (status === "SUBSCRIBED") {
             reconnectAttempts = 0;
             setRealtimeState("live");
+
+            console.log(
+              "RCS Admin Realtime: LIVE"
+            );
+
             return;
           }
 
@@ -354,26 +344,24 @@ export default function AdminDashboard() {
               30000,
               Math.max(
                 2000,
-                reconnectAttempts * 2000,
-              ),
+                reconnectAttempts * 2000
+              )
             );
 
             if (reconnectTimeoutRef.current) {
               clearTimeout(
-                reconnectTimeoutRef.current,
+                reconnectTimeoutRef.current
               );
             }
 
-            reconnectTimeoutRef.current = setTimeout(
-              () => {
+            reconnectTimeoutRef.current =
+              setTimeout(() => {
                 reconnectTimeoutRef.current = null;
 
                 if (!destroyed) {
                   subscribe();
                 }
-              },
-              delay,
-            );
+              }, delay);
 
             return;
           }
@@ -387,33 +375,39 @@ export default function AdminDashboard() {
               30000,
               Math.max(
                 2000,
-                reconnectAttempts * 2000,
-              ),
+                reconnectAttempts * 2000
+              )
             );
 
             if (reconnectTimeoutRef.current) {
               clearTimeout(
-                reconnectTimeoutRef.current,
+                reconnectTimeoutRef.current
               );
             }
 
-            reconnectTimeoutRef.current = setTimeout(
-              () => {
+            reconnectTimeoutRef.current =
+              setTimeout(() => {
                 reconnectTimeoutRef.current = null;
 
                 if (!destroyed) {
                   subscribe();
                 }
-              },
-              delay,
-            );
+              }, delay);
           }
         });
     };
 
     subscribe();
 
+    /*
+     * If the browser tab loses network and comes back,
+     * reconnect to Supabase automatically.
+     */
     const handleOnline = () => {
+      console.log(
+        "RCS Admin: browser back online"
+      );
+
       reconnectAttempts = 0;
 
       if (!destroyed) {
@@ -424,17 +418,21 @@ export default function AdminDashboard() {
     };
 
     const handleOffline = () => {
+      console.log(
+        "RCS Admin: browser offline"
+      );
+
       setRealtimeState("offline");
     };
 
     window.addEventListener(
       "online",
-      handleOnline,
+      handleOnline
     );
 
     window.addEventListener(
       "offline",
-      handleOffline,
+      handleOffline
     );
 
     return () => {
@@ -444,12 +442,12 @@ export default function AdminDashboard() {
 
       window.removeEventListener(
         "online",
-        handleOnline,
+        handleOnline
       );
 
       window.removeEventListener(
         "offline",
-        handleOffline,
+        handleOffline
       );
 
       if (channel) {
@@ -459,6 +457,12 @@ export default function AdminDashboard() {
     };
   }, [loadDashboard]);
 
+  /*
+   * 15-second fallback.
+   *
+   * Realtime should normally update the dashboard immediately,
+   * but this protects against a temporary websocket issue.
+   */
   useEffect(() => {
     const interval = window.setInterval(() => {
       void loadDashboard(true);
@@ -469,130 +473,124 @@ export default function AdminDashboard() {
     };
   }, [loadDashboard]);
 
-  const openJobs = jobs.filter((job) =>
+  const openJobs = jobs.filter((j) =>
     ["open", "bidding"].includes(
-      normalise(job.status),
-    ),
+      normalise(j.status)
+    )
   );
 
   const assignedJobs = jobs.filter(
-    (job) =>
-      normalise(job.status) === "assigned",
+    (j) => normalise(j.status) === "assigned"
   );
 
   const onTheWayJobs = jobs.filter(
-    (job) =>
-      normalise(job.journey_status) ===
-      "on_the_way",
+    (j) =>
+      normalise(j.journey_status) ===
+      "on_the_way"
   );
 
   const inProgressJobs = jobs.filter(
-    (job) =>
-      normalise(job.journey_status) ===
-      "in_progress",
+    (j) =>
+      normalise(j.journey_status) ===
+      "in_progress"
   );
 
   const completedJobs = jobs.filter(
-    (job) =>
-      normalise(job.status) === "completed" ||
-      normalise(job.journey_status) ===
-        "completed",
+    (j) =>
+      normalise(j.status) === "completed" ||
+      normalise(j.journey_status) ===
+        "completed"
   );
 
   const pendingDrivers = drivers.filter(
-    (driver) =>
-      normalise(
-        driver.application_status,
-      ) === "pending",
+    (d) =>
+      normalise(d.application_status) ===
+      "pending"
   );
 
   const approvedDrivers = drivers.filter(
-    (driver) =>
-      normalise(
-        driver.application_status,
-      ) === "approved" ||
-      driver.approved === true,
+    (d) =>
+      normalise(d.application_status) ===
+        "approved" ||
+      d.approved === true
   );
 
   const suspendedDrivers = drivers.filter(
-    (driver) =>
-      normalise(
-        driver.application_status,
-      ) === "suspended",
+    (d) =>
+      normalise(d.application_status) ===
+      "suspended"
   );
 
   const acceptedBids = bids.filter(
-    (bid) =>
-      normalise(bid.status) === "accepted",
+    (b) =>
+      normalise(b.status) === "accepted"
   );
 
   const pendingBids = bids.filter(
-    (bid) =>
-      !bid.status ||
-      normalise(bid.status) === "pending",
+    (b) =>
+      !b.status ||
+      normalise(b.status) === "pending"
   );
 
   const paidJobs = jobs.filter(
-    (job) =>
-      normalise(job.payment_status) === "paid",
+    (j) =>
+      normalise(j.payment_status) ===
+      "paid"
   );
 
   const totalAcceptedValue =
     acceptedBids.reduce(
       (total, bid) =>
         total + Number(bid.amount || 0),
-      0,
+      0
     );
 
   const totalRcsFees =
     acceptedBids.reduce(
       (total, bid) =>
-        total + Number(bid.platform_fee || 0),
-      0,
+        total + Number(
+          bid.platform_fee || 0
+        ),
+      0
     );
 
   const totalDriverPayouts =
     acceptedBids.reduce(
       (total, bid) =>
-        total + Number(bid.driver_payout || 0),
-      0,
+        total + Number(
+          bid.driver_payout || 0
+        ),
+      0
     );
 
   const pendingPayoutRequests =
     payoutRequests.filter(
       (request) =>
-        normalise(request.status) === "pending",
+        normalise(request.status) ===
+        "pending"
     );
 
   const totalPendingPayouts =
     pendingPayoutRequests.reduce(
       (total, request) =>
-        total + Number(request.amount || 0),
-      0,
+        total + Number(
+          request.amount || 0
+        ),
+      0
     );
 
   if (loading) {
     return (
-      <main
-        className="min-h-screen text-white"
-        style={{ background: BG }}
-      >
+      <main className="min-h-screen bg-[#050705] text-white">
         <div className="flex min-h-screen items-center justify-center px-6">
           <div className="text-center">
-            <div
-              className="mx-auto h-11 w-11 animate-spin rounded-full border-4"
-              style={{
-                borderColor:
-                  "rgba(255,255,255,0.07)",
-                borderTopColor: GREEN,
-              }}
-            />
+            <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-[#182017] border-t-[#79c51c]" />
 
             <p className="mt-5 text-lg font-black">
               Loading admin dashboard...
             </p>
 
-            <p className="mt-2 text-sm text-white/35">
+            <p className="mt-2 text-sm text-zinc-500">
               Getting the latest marketplace data
             </p>
           </div>
@@ -602,10 +600,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <main
-      className="min-h-screen overflow-x-hidden text-white"
-      style={{ background: BG }}
-    >
+    <main className="min-h-screen overflow-x-hidden bg-[#050705] pb-10 text-white">
       <style jsx global>{`
         * {
           box-sizing: border-box;
@@ -613,11 +608,11 @@ export default function AdminDashboard() {
 
         body {
           margin: 0;
-          background: ${BG};
+          background: #050705;
         }
 
         .admin-scroll::-webkit-scrollbar {
-          height: 4px;
+          height: 5px;
         }
 
         .admin-scroll::-webkit-scrollbar-track {
@@ -625,7 +620,7 @@ export default function AdminDashboard() {
         }
 
         .admin-scroll::-webkit-scrollbar-thumb {
-          background: rgba(121, 197, 28, 0.3);
+          background: rgba(121, 197, 28, 0.25);
           border-radius: 999px;
         }
 
@@ -642,31 +637,18 @@ export default function AdminDashboard() {
             121,
             197,
             28,
-            0.34
+            0.38
           ) !important;
           background: #0c110c !important;
         }
 
         .admin-link:hover {
-          color: ${GREEN_HOVER} !important;
+          color: #91db32 !important;
         }
       `}</style>
 
-      {/* ====================================================== */}
-      {/* HEADER */}
-      {/* ====================================================== */}
-
-      <header
-        className="sticky top-0 z-50 border-b backdrop-blur-xl"
-        style={{
-          borderColor: BORDER,
-          background:
-            "rgba(5,7,5,0.96)",
-          paddingTop:
-            "env(safe-area-inset-top)",
-        }}
-      >
-        <div className="mx-auto flex min-h-[70px] max-w-7xl items-center justify-between gap-3 px-4 sm:min-h-[78px] sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-50 border-b border-[rgba(121,197,28,0.16)] bg-[#050705]/95 backdrop-blur-xl">
+        <div className="mx-auto flex min-h-[76px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link
             href="/admin/dashboard"
             className="shrink-0"
@@ -677,33 +659,33 @@ export default function AdminDashboard() {
               width={180}
               height={55}
               priority
-              className="h-9 w-auto object-contain sm:h-12"
+              className="h-10 w-auto object-contain sm:h-12"
             />
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-4">
             <RealtimeIndicator
               state={realtimeState}
             />
 
+            <div className="hidden text-right md:block">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
+                RCS Admin
+              </p>
+
+              <p className="mt-1 text-xs text-zinc-500">
+                Marketplace Control Centre
+              </p>
+            </div>
+
             <button
               type="button"
               onClick={async () => {
-                await createClient()
-                  .auth
-                  .signOut();
-
+                await createClient().auth.signOut();
                 window.location.href =
                   "/admin/login";
               }}
-              className="min-h-[42px] rounded-xl border px-3 text-[10px] font-black transition sm:px-4 sm:text-xs"
-              style={{
-                borderColor:
-                  "rgba(255,255,255,0.10)",
-                background: CARD,
-                color:
-                  "rgba(255,255,255,0.70)",
-              }}
+              className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-2.5 text-xs font-black text-zinc-300 transition hover:border-[#79c51c]/50 hover:text-[#91db32] sm:px-4"
             >
               LOG OUT
             </button>
@@ -711,52 +693,8 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* ====================================================== */}
-      {/* MOBILE BACK */}
-      {/* ====================================================== */}
-
-      <div
-        className="border-b px-4 py-3 sm:hidden"
-        style={{
-          borderColor:
-            "rgba(255,255,255,0.07)",
-          background: SECTION,
-        }}
-      >
-        <Link
-          href="/admin/dashboard"
-          className="flex min-h-[46px] w-full items-center justify-center rounded-xl border text-xs font-black"
-          style={{
-            borderColor:
-              "rgba(121,197,28,0.20)",
-            background:
-              "rgba(121,197,28,0.05)",
-            color: GREEN,
-          }}
-        >
-          ADMIN CONTROL CENTRE
-        </Link>
-      </div>
-
-      {/* ====================================================== */}
-      {/* NAV */}
-      {/* ====================================================== */}
-
-      <nav
-        className="border-b"
-        style={{
-          borderColor:
-            "rgba(255,255,255,0.06)",
-          background: SECTION,
-        }}
-      >
-        <div
-          className="admin-scroll mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-2.5 sm:px-6 lg:px-8"
-          style={{
-            WebkitOverflowScrolling:
-              "touch",
-          }}
-        >
+      <nav className="border-b border-[rgba(121,197,28,0.16)] bg-[#080b08]">
+        <div className="admin-scroll mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-2.5 sm:px-6 lg:px-8">
           <AdminNavLink
             href="/admin/dashboard"
             label="Dashboard"
@@ -766,21 +704,11 @@ export default function AdminDashboard() {
           <AdminNavLink
             href="/admin/jobs"
             label="Jobs"
-            badge={
-              openJobs.length > 0
-                ? openJobs.length
-                : undefined
-            }
           />
 
           <AdminNavLink
             href="/admin/drivers"
             label="Drivers"
-            badge={
-              pendingDrivers.length > 0
-                ? pendingDrivers.length
-                : undefined
-            }
           />
 
           <AdminNavLink
@@ -791,60 +719,31 @@ export default function AdminDashboard() {
           <AdminNavLink
             href="/admin/bids"
             label="Bids"
-            badge={
-              pendingBids.length > 0
-                ? pendingBids.length
-                : undefined
-            }
           />
 
           <AdminNavLink
             href="/admin/payouts"
             label="Payouts"
-            badge={
-              pendingPayoutRequests.length >
-              0
-                ? pendingPayoutRequests.length
-                : undefined
-            }
           />
         </div>
       </nav>
 
-      {/* ====================================================== */}
-      {/* CONTENT */}
-      {/* ====================================================== */}
-
-      <div
-        className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8"
-        style={{
-          paddingBottom:
-            "calc(2rem + env(safe-area-inset-bottom))",
-        }}
-      >
-        {/* HERO */}
-
-        <section
-          className="mb-6 overflow-hidden rounded-3xl border p-5 sm:mb-8 sm:p-7"
-          style={{
-            borderColor: BORDER,
-            background: SECTION,
-          }}
-        >
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <section className="mb-7 overflow-hidden rounded-3xl border border-[rgba(121,197,28,0.16)] bg-[#080b08] p-5 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] sm:text-xs" style={{ color: GREEN }}>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c] sm:text-xs">
                 Rapid Clear Solutions
               </p>
 
               <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-4xl">
-                Admin Dashboard
+                Admin Control Centre
               </h1>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40 sm:text-base">
-                Your marketplace control centre.
-                Monitor jobs, drivers, customers,
-                bids and payments in real time.
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
+                Manage marketplace jobs, drivers,
+                customers, bids, payments and
+                payouts from one place.
               </p>
             </div>
 
@@ -854,65 +753,45 @@ export default function AdminDashboard() {
                 void loadDashboard()
               }
               disabled={refreshing}
-              className="min-h-[48px] rounded-xl px-5 text-sm font-black transition disabled:opacity-50"
-              style={{
-                background: GREEN,
-                color: BG,
-              }}
-              onMouseEnter={(event) => {
-                event.currentTarget.style.background =
-                  GREEN_HOVER;
-              }}
-              onMouseLeave={(event) => {
-                event.currentTarget.style.background =
-                  GREEN;
-              }}
+              className="min-h-12 rounded-xl border border-white/[0.07] bg-white/[0.025] px-5 py-3 text-sm font-black text-zinc-200 transition hover:border-[#79c51c]/50 hover:text-[#91db32] disabled:opacity-50"
             >
               {refreshing
-                ? "UPDATING..."
-                : "REFRESH DASHBOARD"}
+                ? "Updating..."
+                : "Refresh Dashboard"}
             </button>
           </div>
 
-          <div
-            className="mt-5 flex flex-wrap items-center gap-3 border-t pt-4"
-            style={{
-              borderColor:
-                "rgba(255,255,255,0.07)",
-            }}
-          >
+          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/[0.07] pt-4">
             <RealtimeIndicator
               state={realtimeState}
               detailed
             />
 
-            <span className="text-xs text-white/30">
+            <span className="text-xs text-zinc-600">
               {realtimeState === "live"
-                ? "Live marketplace updates enabled."
-                : "Connecting to live updates..."}
+                ? "Live marketplace updates are enabled."
+                : "Connecting to live marketplace updates..."}
             </span>
 
             {lastLiveUpdate && (
-              <span className="text-xs text-white/20">
-                Updated{" "}
+              <span className="text-xs text-zinc-700">
+                Last update{" "}
                 {lastLiveUpdate.toLocaleTimeString(
                   [],
                   {
                     hour: "2-digit",
                     minute: "2-digit",
                     second: "2-digit",
-                  },
+                  }
                 )}
               </span>
             )}
           </div>
         </section>
 
-        {/* ERROR */}
-
         {errorMessage && (
-          <section className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 sm:p-5">
-            <p className="text-sm font-bold leading-6 text-red-200">
+          <section className="mb-7 rounded-2xl border border-red-400/20 bg-red-950/20 p-5">
+            <p className="text-sm font-semibold leading-6 text-red-300">
               {errorMessage}
             </p>
 
@@ -921,23 +800,19 @@ export default function AdminDashboard() {
               onClick={() =>
                 void loadDashboard()
               }
-              className="mt-3 text-xs font-black text-red-200 underline"
+              className="mt-3 text-sm font-black text-red-200 underline"
             >
-              TRY AGAIN
+              Try again
             </button>
           </section>
         )}
-
-        {/* ====================================================== */}
-        {/* MAIN STATS */}
-        {/* ====================================================== */}
 
         <SectionHeading
           eyebrow="Overview"
           title="Marketplace at a glance"
         />
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard
             title="Total Jobs"
             number={jobs.length}
@@ -956,8 +831,8 @@ export default function AdminDashboard() {
 
           <StatCard
             title="Customers"
-            number={customersCount}
-            description="Registered accounts"
+            number={uniqueCustomers(jobs)}
+            description="Customers with jobs"
             icon="CUS"
             href="/admin/customers"
           />
@@ -965,7 +840,7 @@ export default function AdminDashboard() {
           <StatCard
             title="Accepted Value"
             number={`£${formatMoney(
-              totalAcceptedValue,
+              totalAcceptedValue
             )}`}
             description="Accepted driver bids"
             icon="£"
@@ -973,17 +848,13 @@ export default function AdminDashboard() {
           />
         </section>
 
-        {/* ====================================================== */}
-        {/* ATTENTION */}
-        {/* ====================================================== */}
-
-        <div className="mt-7 sm:mt-9">
+        <div className="mt-8">
           <SectionHeading
             eyebrow="Action Centre"
             title="Needs your attention"
           />
 
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <ActionCard
               href="/admin/drivers"
               label="Driver Applications"
@@ -1023,7 +894,7 @@ export default function AdminDashboard() {
               description={
                 pendingPayoutRequests.length
                   ? `£${formatMoney(
-                      totalPendingPayouts,
+                      totalPendingPayouts
                     )} waiting to process`
                   : "No payout requests waiting"
               }
@@ -1034,11 +905,7 @@ export default function AdminDashboard() {
           </section>
         </div>
 
-        {/* ====================================================== */}
-        {/* OPERATIONS */}
-        {/* ====================================================== */}
-
-        <div className="mt-7 sm:mt-9">
+        <div className="mt-8">
           <SectionHeading
             eyebrow="Operations"
             title="Job Overview"
@@ -1083,17 +950,13 @@ export default function AdminDashboard() {
           </section>
         </div>
 
-        {/* ====================================================== */}
-        {/* DRIVERS */}
-        {/* ====================================================== */}
-
-        <div className="mt-7 sm:mt-9">
+        <div className="mt-8">
           <SectionHeading
             eyebrow="Workforce"
             title="Driver Overview"
           />
 
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <section className="grid gap-3 sm:grid-cols-3">
             <OverviewCard
               title="Pending Applications"
               number={pendingDrivers.length}
@@ -1117,11 +980,7 @@ export default function AdminDashboard() {
           </section>
         </div>
 
-        {/* ====================================================== */}
-        {/* FINANCE */}
-        {/* ====================================================== */}
-
-        <div className="mt-7 sm:mt-9">
+        <div className="mt-8">
           <SectionHeading
             eyebrow="Finance"
             title="Financial Overview"
@@ -1132,7 +991,7 @@ export default function AdminDashboard() {
             <FinanceCard
               title="Accepted Value"
               value={`£${formatMoney(
-                totalAcceptedValue,
+                totalAcceptedValue
               )}`}
               description="Accepted bids"
             />
@@ -1140,7 +999,7 @@ export default function AdminDashboard() {
             <FinanceCard
               title="RCS Fees"
               value={`£${formatMoney(
-                totalRcsFees,
+                totalRcsFees
               )}`}
               description="Platform fees"
             />
@@ -1148,26 +1007,22 @@ export default function AdminDashboard() {
             <FinanceCard
               title="Driver Payouts"
               value={`£${formatMoney(
-                totalDriverPayouts,
+                totalDriverPayouts
               )}`}
-              description="Driver earnings"
+              description="Stored payouts"
             />
 
             <FinanceCard
               title="Paid Jobs"
               value={String(
-                paidJobs.length,
+                paidJobs.length
               )}
               description="Payment received"
             />
           </section>
         </div>
 
-        {/* ====================================================== */}
-        {/* MANAGEMENT */}
-        {/* ====================================================== */}
-
-        <div className="mt-7 sm:mt-9">
+        <div className="mt-8">
           <SectionHeading
             eyebrow="Management"
             title="Marketplace Management"
@@ -1177,7 +1032,7 @@ export default function AdminDashboard() {
             <ManagementCard
               href="/admin/jobs"
               title="Jobs"
-              description="View and manage marketplace jobs."
+              description="View and manage all marketplace jobs."
               number={jobs.length}
             />
 
@@ -1192,7 +1047,7 @@ export default function AdminDashboard() {
               href="/admin/customers"
               title="Customers"
               description="View customers and their jobs."
-              number={customersCount}
+              number={uniqueCustomers(jobs)}
             />
 
             <ManagementCard
@@ -1205,7 +1060,7 @@ export default function AdminDashboard() {
             <ManagementCard
               href="/admin/payouts"
               title="Payouts"
-              description="Review driver payments."
+              description="Review and process driver payments."
               number={
                 pendingPayoutRequests.length
               }
@@ -1216,11 +1071,7 @@ export default function AdminDashboard() {
           </section>
         </div>
 
-        {/* ====================================================== */}
-        {/* RECENT ACTIVITY */}
-        {/* ====================================================== */}
-
-        <section className="mt-7 grid gap-7 lg:grid-cols-2">
+        <section className="mt-8 grid gap-8 lg:grid-cols-2">
           <RecentJobs
             jobs={jobs.slice(0, 5)}
           />
@@ -1230,25 +1081,14 @@ export default function AdminDashboard() {
           />
         </section>
 
-        {/* ====================================================== */}
-        {/* PAYOUT CONTROL */}
-        {/* ====================================================== */}
-
-        <section className="mt-7">
+        <section className="mt-8">
           <Link
             href="/admin/payouts"
-            className="admin-card block rounded-3xl border p-5 sm:p-7"
-            style={{
-              borderColor: BORDER,
-              background: SECTION,
-            }}
+            className="admin-card block rounded-3xl border border-[rgba(121,197,28,0.16)] bg-[#080b08] p-5 sm:p-7"
           >
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p
-                  className="text-[10px] font-black uppercase tracking-[0.2em]"
-                  style={{ color: GREEN }}
-                >
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
                   Driver Payments
                 </p>
 
@@ -1256,43 +1096,24 @@ export default function AdminDashboard() {
                   Driver Payout Control
                 </h2>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/35">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
                   Review payout requests, check
                   driver payment information and
-                  process driver payments.
+                  process weekly driver payments.
                 </p>
               </div>
 
-              <div
-                className="flex min-h-[48px] items-center justify-center rounded-xl px-5 text-sm font-black"
-                style={{
-                  background: GREEN,
-                  color: BG,
-                }}
-              >
-                OPEN PAYOUTS
+              <div className="flex min-h-12 items-center justify-center rounded-xl bg-[#79c51c] px-5 py-3 text-sm font-black text-[#050705]">
+                Open Payouts
               </div>
             </div>
           </Link>
         </section>
 
-        {/* ====================================================== */}
-        {/* FOOTER CONTROL */}
-        {/* ====================================================== */}
-
-        <section
-          className="mt-7 rounded-3xl border p-5 sm:p-7"
-          style={{
-            borderColor: BORDER,
-            background: CARD,
-          }}
-        >
+        <section className="mt-8 rounded-3xl border border-[rgba(121,197,28,0.16)] bg-[#0a0e0a] p-5 sm:p-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p
-                className="text-[10px] font-black uppercase tracking-[0.2em]"
-                style={{ color: GREEN }}
-              >
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
                 RCS Marketplace
               </p>
 
@@ -1300,29 +1121,19 @@ export default function AdminDashboard() {
                 Operations Control Centre
               </h2>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/35">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
                 Monitor customer jobs, driver
                 activity, marketplace payments and
-                driver payouts from one dashboard.
+                driver payouts.
               </p>
             </div>
 
-            <div
-              className="rounded-2xl border px-6 py-4 text-center"
-              style={{
-                borderColor: BORDER,
-                background:
-                  "rgba(121,197,28,0.06)",
-              }}
-            >
-              <p className="text-[10px] font-black uppercase tracking-widest text-white/25">
+            <div className="rounded-2xl border border-[rgba(121,197,28,0.16)] bg-[rgba(121,197,28,0.06)] px-6 py-4 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">
                 RCS Platform Fee
               </p>
 
-              <p
-                className="mt-1 text-3xl font-black"
-                style={{ color: GREEN }}
-              >
+              <p className="mt-1 text-3xl font-black text-[#79c51c]">
                 10%
               </p>
             </div>
@@ -1332,10 +1143,6 @@ export default function AdminDashboard() {
     </main>
   );
 }
-
-/* ============================================================ */
-/* COMPONENTS */
-/* ============================================================ */
 
 function SectionHeading({
   eyebrow,
@@ -1348,10 +1155,7 @@ function SectionHeading({
 }) {
   return (
     <div className="mb-4">
-      <p
-        className="text-[10px] font-black uppercase tracking-[0.18em] sm:text-xs"
-        style={{ color: GREEN }}
-      >
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c] sm:text-xs">
         {eyebrow}
       </p>
 
@@ -1360,7 +1164,7 @@ function SectionHeading({
       </h2>
 
       {description && (
-        <p className="mt-1 text-sm leading-6 text-white/30">
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
           {description}
         </p>
       )}
@@ -1372,46 +1176,26 @@ function AdminNavLink({
   href,
   label,
   active = false,
-  badge,
 }: {
   href: string;
   label: string;
   active?: boolean;
-  badge?: number;
 }) {
   return (
     <Link
       href={href}
-      className="flex min-h-[42px] shrink-0 items-center gap-2 rounded-xl border px-3.5 text-xs font-black transition sm:px-4 sm:text-sm"
+      className="shrink-0 rounded-xl border px-3.5 py-2.5 text-xs font-black transition sm:px-4 sm:text-sm"
       style={{
         background: active
           ? GREEN
           : "rgba(255,255,255,0.025)",
-        color: active
-          ? BG
-          : "rgba(255,255,255,0.55)",
+        color: active ? BG : "#a1a1aa",
         borderColor: active
           ? GREEN
           : SOFT_BORDER,
       }}
     >
       {label}
-
-      {badge !== undefined && (
-        <span
-          className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[9px] font-black"
-          style={{
-            background: active
-              ? BG
-              : "rgba(121,197,28,0.12)",
-            color: active
-              ? GREEN
-              : GREEN,
-          }}
-        >
-          {badge}
-        </span>
-      )}
     </Link>
   );
 }
@@ -1431,13 +1215,9 @@ function RealtimeIndicator({
     label = "Live";
     dot = GREEN;
     text = "#b8ef7a";
-  }
-
-  if (state === "reconnecting") {
+  } else if (state === "reconnecting") {
     label = "Reconnecting";
-  }
-
-  if (state === "offline") {
+  } else if (state === "offline") {
     label = "Offline";
     dot = "#f87171";
     text = "#fca5a5";
@@ -1469,9 +1249,7 @@ function RealtimeIndicator({
 
       <span
         className="text-[9px] font-black uppercase tracking-wider"
-        style={{
-          color: text,
-        }}
+        style={{ color: text }}
       >
         {label}
       </span>
@@ -1501,12 +1279,9 @@ function StatCard({
         borderColor: SOFT_BORDER,
       }}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p
-            className="truncate text-[9px] font-black uppercase tracking-wide sm:text-xs"
-            style={{ color: GREEN }}
-          >
+          <p className="truncate text-[10px] font-black uppercase tracking-wide text-[#79c51c] sm:text-xs">
             {title}
           </p>
 
@@ -1514,29 +1289,23 @@ function StatCard({
             {number}
           </p>
 
-          <p className="mt-1 truncate text-[10px] text-white/25 sm:text-xs">
+          <p className="mt-1 truncate text-[10px] text-zinc-600 sm:text-sm">
             {description}
           </p>
         </div>
 
         <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-[8px] font-black sm:h-11 sm:w-11 sm:text-[9px]"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-[rgba(121,197,28,0.08)] text-[9px] font-black text-[#79c51c] sm:h-12 sm:w-12"
           style={{
             borderColor: BORDER,
-            background:
-              "rgba(121,197,28,0.07)",
-            color: GREEN,
           }}
         >
           {icon}
         </div>
       </div>
 
-      <p
-        className="mt-3 text-[9px] font-black sm:text-xs"
-        style={{ color: GREEN }}
-      >
-        OPEN →
+      <p className="mt-3 text-[10px] font-black text-[#79c51c] sm:text-xs">
+        Open →
       </p>
     </Link>
   );
@@ -1561,35 +1330,25 @@ function ActionCard({
       className="admin-card rounded-2xl border p-4 sm:rounded-3xl sm:p-5"
       style={{
         background: highlighted
-          ? "rgba(121,197,28,0.07)"
+          ? "rgba(121,197,28,0.08)"
           : CARD,
         borderColor: highlighted
-          ? "rgba(121,197,28,0.30)"
+          ? "rgba(121,197,28,0.34)"
           : SOFT_BORDER,
       }}
     >
       <div className="flex items-center justify-between gap-4">
-        <p className="text-sm font-black">
+        <p className="text-xs font-black sm:text-sm">
           {label}
         </p>
 
-        <span
-          className="text-2xl font-black"
-          style={{ color: GREEN }}
-        >
+        <span className="text-xl font-black text-[#79c51c] sm:text-2xl">
           {value}
         </span>
       </div>
 
-      <p className="mt-2 text-xs leading-5 text-white/25">
+      <p className="mt-2 text-[11px] leading-5 text-zinc-600 sm:text-xs">
         {description}
-      </p>
-
-      <p
-        className="mt-3 text-[10px] font-black"
-        style={{ color: GREEN }}
-      >
-        OPEN →
       </p>
     </Link>
   );
@@ -1604,11 +1363,10 @@ function OverviewCard({
   title: string;
   number: number;
   description: string;
-  link: string;
+  link?: string;
 }) {
-  return (
-    <Link
-      href={link}
+  const content = (
+    <div
       className="admin-card rounded-2xl border p-4 sm:rounded-3xl sm:p-5"
       style={{
         background: CARD,
@@ -1619,17 +1377,22 @@ function OverviewCard({
         {title}
       </p>
 
-      <p
-        className="mt-2 text-2xl font-black sm:text-3xl"
-        style={{ color: GREEN }}
-      >
+      <p className="mt-2 text-2xl font-black text-[#79c51c] sm:text-3xl">
         {number}
       </p>
 
-      <p className="mt-1 text-[10px] leading-4 text-white/25 sm:text-xs">
+      <p className="mt-1 text-[10px] leading-4 text-zinc-600 sm:text-xs">
         {description}
       </p>
+    </div>
+  );
+
+  return link ? (
+    <Link href={link}>
+      {content}
     </Link>
+  ) : (
+    content
   );
 }
 
@@ -1650,10 +1413,7 @@ function FinanceCard({
         borderColor: SOFT_BORDER,
       }}
     >
-      <p
-        className="text-[9px] font-black uppercase tracking-wide sm:text-xs"
-        style={{ color: GREEN }}
-      >
+      <p className="text-[10px] font-black uppercase tracking-wide text-[#79c51c] sm:text-xs">
         {title}
       </p>
 
@@ -1661,7 +1421,7 @@ function FinanceCard({
         {value}
       </p>
 
-      <p className="mt-1 text-[10px] text-white/25 sm:text-xs">
+      <p className="mt-1 text-[10px] text-zinc-600 sm:text-sm">
         {description}
       </p>
     </div>
@@ -1687,40 +1447,34 @@ function ManagementCard({
       className="admin-card rounded-2xl border p-4 sm:rounded-3xl sm:p-6"
       style={{
         background: highlighted
-          ? "rgba(121,197,28,0.07)"
+          ? "rgba(121,197,28,0.08)"
           : CARD,
         borderColor: highlighted
-          ? "rgba(121,197,28,0.30)"
+          ? "rgba(121,197,28,0.34)"
           : SOFT_BORDER,
       }}
     >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-black sm:text-lg">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-black sm:text-xl">
           {title}
         </h3>
 
         <span
-          className="rounded-full border px-2 py-1 text-[9px] font-black"
+          className="rounded-full border bg-[rgba(121,197,28,0.06)] px-2.5 py-1 text-[10px] font-black text-[#79c51c] sm:px-3 sm:text-xs"
           style={{
             borderColor: BORDER,
-            background:
-              "rgba(121,197,28,0.06)",
-            color: GREEN,
           }}
         >
           {number}
         </span>
       </div>
 
-      <p className="mt-2 text-[10px] leading-5 text-white/25 sm:text-xs sm:leading-6">
+      <p className="mt-2 text-[10px] leading-5 text-zinc-600 sm:text-sm sm:leading-6">
         {description}
       </p>
 
-      <p
-        className="mt-3 text-[9px] font-black sm:text-xs"
-        style={{ color: GREEN }}
-      >
-        OPEN {title.toUpperCase()} →
+      <p className="mt-3 text-[10px] font-black text-[#79c51c] sm:text-xs">
+        Open {title} →
       </p>
     </Link>
   );
@@ -1735,10 +1489,7 @@ function RecentJobs({
     <section>
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
-          <p
-            className="text-[10px] font-black uppercase tracking-[0.18em]"
-            style={{ color: GREEN }}
-          >
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
             Latest Activity
           </p>
 
@@ -1749,10 +1500,9 @@ function RecentJobs({
 
         <Link
           href="/admin/jobs"
-          className="admin-link text-xs font-black sm:text-sm"
-          style={{ color: GREEN }}
+          className="admin-link text-xs font-black text-[#79c51c] sm:text-sm"
         >
-          VIEW ALL
+          View all
         </Link>
       </div>
 
@@ -1776,12 +1526,12 @@ function RecentJobs({
                     {job.reference}
                   </p>
 
-                  <p className="mt-1 truncate text-xs font-semibold text-white/45 sm:text-sm">
+                  <p className="mt-1 truncate text-xs font-semibold text-zinc-400 sm:text-sm">
                     {job.job_type ||
-                      "Waste removal"}
+                      "Job type not specified"}
                   </p>
 
-                  <p className="mt-1 text-[10px] text-white/20 sm:text-xs">
+                  <p className="mt-1 text-[11px] text-zinc-600">
                     {job.postcode ||
                       "No postcode"}
                   </p>
@@ -1808,10 +1558,7 @@ function RecentDrivers({
     <section>
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
-          <p
-            className="text-[10px] font-black uppercase tracking-[0.18em]"
-            style={{ color: GREEN }}
-          >
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
             Latest Activity
           </p>
 
@@ -1822,10 +1569,9 @@ function RecentDrivers({
 
         <Link
           href="/admin/drivers"
-          className="admin-link text-xs font-black sm:text-sm"
-          style={{ color: GREEN }}
+          className="admin-link text-xs font-black text-[#79c51c] sm:text-sm"
         >
-          VIEW ALL
+          View all
         </Link>
       </div>
 
@@ -1849,7 +1595,7 @@ function RecentDrivers({
                     {driver.full_name}
                   </p>
 
-                  <p className="mt-1 truncate text-xs text-white/25 sm:text-sm">
+                  <p className="mt-1 truncate text-xs text-zinc-600 sm:text-sm">
                     {driver.email}
                   </p>
                 </div>
@@ -1887,7 +1633,7 @@ function StatusBadge({
 
   if (
     ["open", "bidding", "pending"].includes(
-      safe,
+      safe
     )
   ) {
     background =
@@ -1910,7 +1656,7 @@ function StatusBadge({
     text = "#b8ef7a";
   } else if (
     ["rejected", "cancelled"].includes(
-      safe,
+      safe
     )
   ) {
     background =
@@ -1945,7 +1691,7 @@ function EmptyCard({
       style={{
         background: CARD,
         borderColor: SOFT_BORDER,
-        color: "rgba(255,255,255,0.20)",
+        color: "#52525b",
       }}
     >
       {text}
@@ -1957,7 +1703,7 @@ function normalise(
   value:
     | string
     | null
-    | undefined,
+    | undefined
 ) {
   return (
     value?.trim().toLowerCase() || ""
@@ -1968,7 +1714,7 @@ function formatStatus(
   value:
     | string
     | null
-    | undefined,
+    | undefined
 ) {
   return (
     normalise(value) || "unknown"
@@ -1977,10 +1723,27 @@ function formatStatus(
     .replace(
       /\b\w/g,
       (letter) =>
-        letter.toUpperCase(),
+        letter.toUpperCase()
     );
 }
 
-function formatMoney(value: number) {
-  return Number(value || 0).toFixed(2);
+function formatMoney(
+  value: number
+) {
+  return Number(
+    value || 0
+  ).toFixed(2);
+}
+
+function uniqueCustomers(
+  jobs: Job[]
+) {
+  return new Set(
+    jobs
+      .map(
+        (job) =>
+          job.customer_id
+      )
+      .filter(Boolean)
+  ).size;
 }

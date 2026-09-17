@@ -29,8 +29,6 @@ export default function NotificationBell() {
   const [permission, setPermission] =
     useState<NotificationPermission>("default");
 
-  const [soundEnabled, setSoundEnabled] = useState(false);
-
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   /*
@@ -79,75 +77,6 @@ export default function NotificationBell() {
 
   /*
    * =========================================================
-   * UNLOCK SOUND
-   *
-   * Browsers block audio autoplay until the user interacts.
-   * Clicking the bell unlocks the audio.
-   * =========================================================
-   */
-
-  async function enableSound() {
-    const audio = audioRef.current;
-
-    if (!audio) return;
-
-    try {
-      audio.volume = 0;
-
-      await audio.play();
-
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = 1;
-
-      setSoundEnabled(true);
-
-      console.log("Notification sound enabled");
-    } catch (error) {
-      console.error(
-        "Could not unlock notification sound:",
-        error
-      );
-
-      setSoundEnabled(false);
-    }
-  }
-
-  /*
-   * =========================================================
-   * PLAY SOUND
-   * =========================================================
-   */
-
-  async function playNotificationSound() {
-    const audio = audioRef.current;
-
-    if (!audio) {
-      console.error(
-        "Notification audio element not found"
-      );
-
-      return;
-    }
-
-    try {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = 1;
-
-      await audio.play();
-
-      console.log("Notification sound played");
-    } catch (error) {
-      console.error(
-        "Notification sound could not play:",
-        error
-      );
-    }
-  }
-
-  /*
-   * =========================================================
    * LOAD NOTIFICATIONS
    * =========================================================
    */
@@ -183,12 +112,7 @@ export default function NotificationBell() {
       if (error) {
         console.error(
           "Notification loading error:",
-          {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-          }
+          error
         );
       }
 
@@ -210,7 +134,11 @@ export default function NotificationBell() {
 
   /*
    * =========================================================
-   * REALTIME
+   * REALTIME NOTIFICATIONS
+   *
+   * IMPORTANT:
+   * The postgres_changes handler is added BEFORE
+   * .subscribe().
    * =========================================================
    */
 
@@ -231,23 +159,28 @@ export default function NotificationBell() {
           table: "customer_notifications",
           filter: `user_id=eq.${userId}`,
         },
-        async (payload) => {
+        (payload: {
+          eventType: string;
+          new: Record<string, unknown>;
+          old: Record<string, unknown>;
+        }) => {
           console.log(
-            "🔔 NEW CUSTOMER NOTIFICATION:",
+            "New customer notification:",
             payload
           );
 
           const newNotification =
-            payload.new as NotificationRow;
+            payload.new as unknown as NotificationRow;
 
           setNotifications((current) => {
-            const exists = current.some(
-              (notification) =>
-                notification.id ===
-                newNotification.id
-            );
+            const alreadyExists =
+              current.some(
+                (notification) =>
+                  notification.id ===
+                  newNotification.id
+              );
 
-            if (exists) {
+            if (alreadyExists) {
               return current;
             }
 
@@ -266,10 +199,19 @@ export default function NotificationBell() {
           );
 
           /*
-           * Sound
+           * Optional sound
            */
 
-          await playNotificationSound();
+          try {
+            if (audioRef.current) {
+              audioRef.current.currentTime = 0;
+              audioRef.current
+                .play()
+                .catch(() => {});
+            }
+          } catch {
+            // Ignore browser autoplay restrictions.
+          }
         }
       )
 
@@ -281,9 +223,13 @@ export default function NotificationBell() {
           table: "customer_notifications",
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: {
+          eventType: string;
+          new: Record<string, unknown>;
+          old: Record<string, unknown>;
+        }) => {
           const updated =
-            payload.new as NotificationRow;
+            payload.new as unknown as NotificationRow;
 
           setNotifications((current) =>
             current.map((notification) =>
@@ -295,9 +241,9 @@ export default function NotificationBell() {
         }
       )
 
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         console.log(
-          "🔔 Notification realtime status:",
+          "Customer notification realtime:",
           status
         );
       });
@@ -309,7 +255,7 @@ export default function NotificationBell() {
 
   /*
    * =========================================================
-   * BROWSER NOTIFICATIONS
+   * BROWSER NOTIFICATION
    * =========================================================
    */
 
@@ -331,7 +277,7 @@ export default function NotificationBell() {
         new Notification("RCS Waste", {
           body:
             "Notifications are now enabled.",
-          icon: "/rcs-logo.jpg",
+          icon: "/rapid-clear-logo.png",
         });
       }
     } catch (error) {
@@ -341,12 +287,6 @@ export default function NotificationBell() {
       );
     }
   }
-
-  /*
-   * =========================================================
-   * SHOW BROWSER NOTIFICATION
-   * =========================================================
-   */
 
   function showBrowserNotification(
     notification: NotificationRow
@@ -368,7 +308,7 @@ export default function NotificationBell() {
           notification.title || "RCS Waste",
           {
             body: notification.message,
-            icon: "/rcs-logo.jpg",
+            icon: "/rapid-clear-logo.png",
             tag: `rcs-${notification.id}`,
           }
         );
@@ -394,19 +334,14 @@ export default function NotificationBell() {
 
   /*
    * =========================================================
-   * MARK ONE READ
+   * MARK ONE AS READ
    * =========================================================
    */
 
   async function markAsRead(
     notification: NotificationRow
   ) {
-    if (
-      notification.read ||
-      !userId
-    ) {
-      return;
-    }
+    if (notification.read) return;
 
     const { error } = await supabase
       .from("customer_notifications")
@@ -439,12 +374,18 @@ export default function NotificationBell() {
 
   /*
    * =========================================================
-   * MARK ALL READ
+   * MARK ALL AS READ
    * =========================================================
    */
 
   async function markAllAsRead() {
     if (!userId) return;
+
+    const unreadIds = notifications
+      .filter((notification) => !notification.read)
+      .map((notification) => notification.id);
+
+    if (unreadIds.length === 0) return;
 
     const { error } = await supabase
       .from("customer_notifications")
@@ -493,39 +434,18 @@ export default function NotificationBell() {
 
   /*
    * =========================================================
-   * BELL CLICK
-   * =========================================================
-   */
-
-  async function handleBellClick() {
-    setOpen((value) => !value);
-
-    /*
-     * First user interaction unlocks sound.
-     */
-
-    if (!soundEnabled) {
-      await enableSound();
-    }
-  }
-
-  /*
-   * =========================================================
    * HELPERS
    * =========================================================
    */
 
-  const unreadCount =
-    notifications.filter(
-      (notification) => !notification.read
-    ).length;
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read
+  ).length;
 
-  function formatTime(
-    dateString: string
-  ) {
-    return new Date(
-      dateString
-    ).toLocaleString("en-GB", {
+  function formatTime(dateString: string) {
+    const date = new Date(dateString);
+
+    return date.toLocaleString("en-GB", {
       day: "numeric",
       month: "short",
       hour: "2-digit",
@@ -562,10 +482,7 @@ export default function NotificationBell() {
 
   return (
     <div className="relative">
-
-      {/* ================================================= */}
-      {/* NOTIFICATION SOUND                                */}
-      {/* ================================================= */}
+      {/* Hidden notification sound */}
 
       <audio
         ref={audioRef}
@@ -574,12 +491,12 @@ export default function NotificationBell() {
       />
 
       {/* ================================================= */}
-      {/* BELL                                               */}
+      {/* BELL BUTTON                                       */}
       {/* ================================================= */}
 
       <button
         type="button"
-        onClick={handleBellClick}
+        onClick={() => setOpen((value) => !value)}
         aria-label="Notifications"
         className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
       >
@@ -612,6 +529,8 @@ export default function NotificationBell() {
 
       {open && (
         <>
+          {/* Mobile backdrop */}
+
           <button
             type="button"
             aria-label="Close notifications"
@@ -620,11 +539,9 @@ export default function NotificationBell() {
           />
 
           <div className="absolute right-0 z-50 mt-3 w-[calc(100vw-2rem)] max-w-[390px] overflow-hidden rounded-2xl border border-white/10 bg-[#0d1a11] shadow-2xl sm:w-[390px]">
-
             {/* HEADER */}
 
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-
               <div>
                 <h3 className="font-black text-white">
                   Notifications
@@ -646,20 +563,18 @@ export default function NotificationBell() {
                   Mark all read
                 </button>
               )}
-
             </div>
 
-            {/* BROWSER NOTIFICATIONS */}
+            {/* ENABLE BROWSER NOTIFICATIONS */}
 
             {permission !== "granted" && (
               <div className="border-b border-white/10 bg-[#102218] p-4">
-
                 <p className="text-sm font-bold text-white">
                   Turn on notifications
                 </p>
 
                 <p className="mt-1 text-xs leading-5 text-white/50">
-                  Get notified when a driver
+                  Get a notification when a driver
                   submits a quote for your job.
                 </p>
 
@@ -670,55 +585,22 @@ export default function NotificationBell() {
                 >
                   Enable notifications
                 </button>
-
-              </div>
-            )}
-
-            {/* SOUND */}
-
-            {!soundEnabled && (
-              <div className="border-b border-white/10 bg-[#102218] p-4">
-
-                <p className="text-sm font-bold text-white">
-                  🔊 Enable notification sound
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-white/50">
-                  Click below to allow RCS to play a
-                  sound when a new quote arrives.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={enableSound}
-                  className="mt-3 rounded-lg border border-[#529027]/40 bg-[#529027]/10 px-4 py-2 text-xs font-black text-[#8bc45b] hover:bg-[#529027]/20"
-                >
-                  Enable sound
-                </button>
-
               </div>
             )}
 
             {/* NOTIFICATIONS */}
 
             <div className="max-h-[420px] overflow-y-auto">
-
               {loading ? (
-
                 <div className="p-8 text-center">
-
                   <div className="mx-auto h-6 w-6 animate-spin rounded-full border-3 border-white/10 border-t-[#529027]" />
 
                   <p className="mt-3 text-xs font-semibold text-white/40">
                     Loading notifications...
                   </p>
-
                 </div>
-
               ) : notifications.length === 0 ? (
-
                 <div className="p-8 text-center">
-
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#529027]/10 text-xl">
                     🔔
                   </div>
@@ -728,19 +610,14 @@ export default function NotificationBell() {
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-white/40">
-                    New driver quotes and job
-                    updates will appear here.
+                    New driver quotes and job updates
+                    will appear here.
                   </p>
-
                 </div>
-
               ) : (
-
                 <div>
-
                   {notifications.map(
                     (notification) => (
-
                       <button
                         type="button"
                         key={notification.id}
@@ -755,6 +632,7 @@ export default function NotificationBell() {
                             : "bg-[#529027]/5"
                         }`}
                       >
+                        {/* ICON */}
 
                         <div
                           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black ${
@@ -768,10 +646,10 @@ export default function NotificationBell() {
                           )}
                         </div>
 
+                        {/* CONTENT */}
+
                         <div className="min-w-0 flex-1">
-
                           <div className="flex items-start justify-between gap-2">
-
                             <p
                               className={`text-sm ${
                                 notification.read
@@ -785,7 +663,6 @@ export default function NotificationBell() {
                             {!notification.read && (
                               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#529027]" />
                             )}
-
                           </div>
 
                           <p className="mt-1 text-xs leading-5 text-white/50">
@@ -797,24 +674,16 @@ export default function NotificationBell() {
                               notification.created_at
                             )}
                           </p>
-
                         </div>
-
                       </button>
-
                     )
                   )}
-
                 </div>
-
               )}
-
             </div>
-
           </div>
         </>
       )}
-
     </div>
   );
 }
