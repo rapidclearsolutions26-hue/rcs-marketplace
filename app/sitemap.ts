@@ -1,0 +1,3 @@
+import type { MetadataRoute } from "next";
+const base = "https://rapidclearsolutions.co.uk";
+export default function sitemap(): MetadataRoute.Sitemap { const now = new Date(); const pages = ["/","/how-it-works","/contact","/waste-removal-birmingham","/waste-removal-dudley","/waste-removal-wolverhampton","/waste-removal-walsall","/waste-removal-sandwell","/waste-removal-solihull","/services/rubbish-removal","/services/house-clearance","/services/garden-waste-removal","/services/furniture-removal","/services/builders-waste"]; return pages.map(path => ({ url: `${base}${path}`, lastModified: now, changeFrequency: "weekly", priority: path === "/" ? 1 : 0.8 })); }
