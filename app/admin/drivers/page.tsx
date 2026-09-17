@@ -311,19 +311,23 @@ export default function AdminDriversPage() {
     ]);
 
   return (
-    <main className="min-h-screen bg-[#06100c] text-white">
-      <header className="border-b border-[#17382b] bg-[#081710]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
+    <main className="min-h-screen overflow-x-hidden bg-[#050705] text-white">
+      {/* ================================================= */}
+      {/* HEADER                                            */}
+      {/* ================================================= */}
+
+      <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl">
+        <div className="mx-auto flex min-h-[68px] max-w-7xl items-center justify-between gap-3 px-4 sm:min-h-[76px] sm:px-6 lg:px-8">
           <Link
             href="/admin/dashboard"
-            className="flex items-center"
+            className="shrink-0"
           >
             <Image
-              src="/rcs-logo.jpg"
+              src="/rapid-clear-logo.png"
               alt="Rapid Clear Solutions"
-              width={180}
-              height={70}
-              className="h-12 w-auto object-contain"
+              width={220}
+              height={90}
+              className="h-9 w-auto object-contain sm:h-12"
               priority
             />
           </Link>
@@ -335,7 +339,7 @@ export default function AdminDriversPage() {
                 void loadDrivers()
               }
               disabled={loading}
-              className="rounded-xl border border-[#29483a] bg-[#0b1b14] px-4 py-2 text-sm font-bold transition hover:border-[#79c51c] disabled:opacity-50"
+              className="rounded-xl border border-white/[0.10] bg-[#0a0e0a] px-3.5 py-2.5 text-xs font-black transition hover:border-[#79c51c] hover:text-[#79c51c] disabled:opacity-50 sm:px-4 sm:text-sm"
             >
               {loading
                 ? "Refreshing..."
@@ -344,7 +348,7 @@ export default function AdminDriversPage() {
 
             <Link
               href="/admin/dashboard"
-              className="hidden rounded-xl border border-[#29483a] bg-[#0b1b14] px-4 py-2 text-sm font-bold text-gray-300 transition hover:border-[#79c51c] hover:text-white sm:block"
+              className="hidden rounded-xl border border-white/[0.10] bg-[#0a0e0a] px-4 py-2.5 text-sm font-black text-gray-300 transition hover:border-[#79c51c] hover:text-[#79c51c] sm:block"
             >
               Dashboard
             </Link>
@@ -352,25 +356,38 @@ export default function AdminDriversPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
+      {/* ================================================= */}
+      {/* MAIN CONTENT                                      */}
+      {/* ================================================= */}
+
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        {/* PAGE INTRO */}
+
         <div className="mb-8">
           <Link
             href="/admin/dashboard"
-            className="text-sm font-bold text-[#79c51c] hover:text-[#91df31]"
+            className="inline-flex items-center text-xs font-black uppercase tracking-wider text-[#79c51c] transition hover:text-[#91db32]"
           >
             ← Back to Admin Dashboard
           </Link>
 
-          <div className="mt-5">
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-[#79c51c]">
-              RCS Marketplace
-            </p>
+          <div className="mt-6">
+            <div className="flex items-center gap-2.5">
+              <span className="h-2 w-2 rounded-full bg-[#79c51c]" />
 
-            <h1 className="mt-2 text-3xl font-black sm:text-4xl">
-              Driver Management
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#79c51c] sm:text-xs">
+                RCS Marketplace
+              </p>
+            </div>
+
+            <h1 className="mt-3 text-4xl font-black uppercase leading-[0.9] tracking-tight sm:text-6xl">
+              Driver
+              <span className="block text-[#79c51c]">
+                Management
+              </span>
             </h1>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-400">
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
               Review driver applications,
               verify documents and manage
               marketplace access.
@@ -378,7 +395,11 @@ export default function AdminDriversPage() {
           </div>
         </div>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* ================================================= */}
+        {/* STATS                                             */}
+        {/* ================================================= */}
+
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard
             title="Pending"
             number={stats.pending}
@@ -408,14 +429,18 @@ export default function AdminDriversPage() {
           />
         </section>
 
-        <section className="mt-6 rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        {/* ================================================= */}
+        {/* SEARCH + FILTERS                                  */}
+        {/* ================================================= */}
+
+        <section className="mt-6 rounded-3xl border border-white/[0.08] bg-[#080b08] p-5 sm:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
                 Driver Applications
               </p>
 
-              <h2 className="mt-1 text-xl font-black">
+              <h2 className="mt-2 text-2xl font-black uppercase">
                 {filteredDrivers.length}{" "}
                 driver
                 {filteredDrivers.length ===
@@ -426,20 +451,30 @@ export default function AdminDriversPage() {
               </h2>
             </div>
 
-            <input
-              type="text"
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value,
-                )
-              }
-              placeholder="Search name, email, company, reg..."
-              className="w-full rounded-xl border border-[#29483a] bg-[#06100c] px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-[#79c51c] lg:max-w-md"
-            />
+            <div className="w-full lg:max-w-md">
+              <label
+                htmlFor="driver-search"
+                className="mb-2 block text-[10px] font-black uppercase tracking-wider text-gray-600"
+              >
+                Search drivers
+              </label>
+
+              <input
+                id="driver-search"
+                type="text"
+                value={search}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value,
+                  )
+                }
+                placeholder="Name, email, company, reg..."
+                className="w-full rounded-xl border border-white/[0.10] bg-[#050705] px-4 py-3 text-sm text-white outline-none transition placeholder:text-gray-700 focus:border-[#79c51c]"
+              />
+            </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
             <FilterButton
               active={filter === "all"}
               onClick={() =>
@@ -487,21 +522,33 @@ export default function AdminDriversPage() {
           </div>
         </section>
 
+        {/* ================================================= */}
+        {/* ERROR                                             */}
+        {/* ================================================= */}
+
         {errorMessage && (
-          <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
+          <div className="mt-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
             <p className="text-sm font-bold text-red-300">
               {errorMessage}
             </p>
           </div>
         )}
 
-        <section className="mt-8">
-          <div className="mb-4">
-            <h2 className="text-2xl font-black">
+        {/* ================================================= */}
+        {/* DRIVER LIST                                       */}
+        {/* ================================================= */}
+
+        <section className="mt-10">
+          <div className="mb-5">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
+              Marketplace Network
+            </p>
+
+            <h2 className="mt-2 text-2xl font-black uppercase sm:text-3xl">
               Drivers
             </h2>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-600">
               {drivers.length} registered
               driver
               {drivers.length === 1
@@ -512,34 +559,34 @@ export default function AdminDriversPage() {
           </div>
 
           {loading ? (
-            <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-12 text-center">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-[#17382b] border-t-[#79c51c]" />
+            <div className="rounded-3xl border border-white/[0.08] bg-[#080b08] p-12 text-center">
+              <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-white/[0.08] border-t-[#79c51c]" />
 
-              <p className="mt-4 text-sm font-semibold text-gray-400">
+              <p className="mt-5 text-sm font-semibold text-gray-500">
                 Loading drivers...
               </p>
             </div>
           ) : filteredDrivers.length ===
             0 ? (
-            <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-12 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#29483a] bg-[#06100c]">
+            <div className="rounded-3xl border border-white/[0.08] bg-[#080b08] p-12 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.10] bg-[#050705]">
                 <span className="font-black text-[#79c51c]">
                   RCS
                 </span>
               </div>
 
-              <h3 className="mt-5 text-xl font-black">
+              <h3 className="mt-5 text-xl font-black uppercase">
                 No drivers found
               </h3>
 
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-gray-600">
                 {drivers.length === 0
                   ? "No drivers were returned by the admin system."
                   : "Try changing your search or filter."}
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredDrivers.map(
                 (driver) => (
                   <DriverCard
@@ -557,6 +604,10 @@ export default function AdminDriversPage() {
           )}
         </section>
       </div>
+
+      {/* ================================================= */}
+      {/* DRIVER MODAL                                      */}
+      {/* ================================================= */}
 
       {selectedDriver && (
         <DriverModal
@@ -598,18 +649,18 @@ function DriverCard({
     .join(" ");
 
   return (
-    <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5 transition hover:border-[#29483a]">
+    <div className="group rounded-2xl border border-white/[0.08] bg-[#080b08] p-4 transition hover:border-[#79c51c]/30 sm:p-5">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#29483a] bg-[#06100c]">
-            <span className="text-sm font-black text-[#79c51c]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.10] bg-[#050705] sm:h-14 sm:w-14">
+            <span className="text-xs font-black text-[#79c51c] sm:text-sm">
               RCS
             </span>
           </div>
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-xl font-black">
+              <h3 className="truncate text-lg font-black sm:text-xl">
                 {driver.full_name}
               </h3>
 
@@ -620,7 +671,7 @@ function DriverCard({
               />
             </div>
 
-            <p className="mt-1 truncate text-sm text-gray-400">
+            <p className="mt-1 truncate text-sm text-gray-500">
               {driver.email}
             </p>
 
@@ -630,7 +681,7 @@ function DriverCard({
               </p>
             )}
 
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 sm:text-sm">
               <span>
                 {driver.vehicle_type ||
                   "Vehicle not specified"}
@@ -658,7 +709,7 @@ function DriverCard({
         </div>
 
         <div className="flex shrink-0 flex-col gap-3 lg:min-w-[190px] lg:items-end">
-          <p className="text-sm text-gray-500">
+          <p className="text-xs text-gray-600 sm:text-sm">
             Applied{" "}
             <span className="font-bold text-gray-300">
               {formatDate(
@@ -670,7 +721,7 @@ function DriverCard({
           <button
             type="button"
             onClick={onView}
-            className="rounded-xl bg-[#79c51c] px-5 py-3 text-sm font-black text-[#06100c] transition hover:bg-[#91df31]"
+            className="w-full rounded-xl bg-[#79c51c] px-5 py-3 text-sm font-black text-black transition hover:bg-[#91db32] lg:w-auto"
           >
             View Application
           </button>
@@ -706,7 +757,7 @@ function DriverModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/85 p-2 backdrop-blur-sm sm:p-4"
       role="dialog"
       aria-modal="true"
       onMouseDown={(event) => {
@@ -718,17 +769,17 @@ function DriverModal({
         }
       }}
     >
-      <div className="my-8 w-full max-w-5xl overflow-hidden rounded-3xl border border-[#29483a] bg-[#0b1b14] shadow-2xl">
-        {/* HEADER */}
+      <div className="my-2 w-full max-w-5xl overflow-hidden rounded-3xl border border-white/[0.10] bg-[#080b08] shadow-2xl sm:my-8">
+        {/* MODAL HEADER */}
 
-        <div className="flex items-center justify-between border-b border-[#17382b] bg-[#081710] p-5 sm:p-6">
+        <div className="flex items-center justify-between border-b border-white/[0.08] bg-[#050705] p-4 sm:p-6">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
               Driver Application
             </p>
 
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <h2 className="truncate text-2xl font-black">
+            <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-3">
+              <h2 className="truncate text-xl font-black sm:text-2xl">
                 {driver.full_name}
               </h2>
 
@@ -743,18 +794,19 @@ function DriverModal({
           <button
             type="button"
             onClick={onClose}
-            className="ml-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#29483a] text-xl text-gray-400 transition hover:border-[#79c51c] hover:text-white"
+            aria-label="Close application"
+            className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.10] text-xl text-gray-500 transition hover:border-[#79c51c] hover:text-white"
           >
             ×
           </button>
         </div>
 
-        {/* BODY */}
+        {/* MODAL BODY */}
 
-        <div className="max-h-[80vh] overflow-y-auto p-5 sm:p-7">
+        <div className="max-h-[86vh] overflow-y-auto p-4 sm:p-7">
           {/* OVERVIEW */}
 
-          <section className="rounded-2xl border border-[#17382b] bg-[#06100c] p-5">
+          <section className="rounded-2xl border border-white/[0.08] bg-[#050705] p-5">
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               <Info
                 label="Status"
@@ -790,6 +842,8 @@ function DriverModal({
             </div>
           </section>
 
+          {/* PERSONAL */}
+
           <DetailSection title="Personal Details">
             <Detail
               label="Full name"
@@ -817,6 +871,8 @@ function DriverModal({
             />
           </DetailSection>
 
+          {/* BUSINESS */}
+
           <DetailSection title="Business Details">
             <Detail
               label="Business name"
@@ -843,6 +899,8 @@ function DriverModal({
               }
             />
           </DetailSection>
+
+          {/* WASTE LICENCE */}
 
           <DetailSection title="Waste Carrier Licence">
             <Detail
@@ -881,6 +939,8 @@ function DriverModal({
             />
           </DetailSection>
 
+          {/* INSURANCE */}
+
           <DetailSection title="Insurance">
             <Detail
               label="Provider"
@@ -917,6 +977,8 @@ function DriverModal({
               }
             />
           </DetailSection>
+
+          {/* VEHICLE */}
 
           <DetailSection title="Vehicle">
             <Detail
@@ -958,15 +1020,21 @@ function DriverModal({
           {/* VEHICLE PHOTO */}
 
           <section className="mt-8">
-            <h3 className="text-lg font-black">
-              Vehicle Photo
-            </h3>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#79c51c]">
+                Vehicle Evidence
+              </p>
 
-            <p className="mt-1 text-sm text-gray-500">
-              Uploaded vehicle evidence.
-            </p>
+              <h3 className="mt-2 text-xl font-black uppercase">
+                Vehicle Photo
+              </h3>
 
-            <div className="mt-4 overflow-hidden rounded-2xl border border-[#17382b] bg-[#06100c]">
+              <p className="mt-1 text-sm text-gray-600">
+                Uploaded vehicle evidence.
+              </p>
+            </div>
+
+            <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#050705]">
               {documents?.van_photo ? (
                 <img
                   src={
@@ -982,7 +1050,7 @@ function DriverModal({
                       Vehicle photo unavailable
                     </p>
 
-                    <p className="mt-1 text-xs text-gray-600">
+                    <p className="mt-1 text-xs text-gray-700">
                       The stored file could not
                       be found in driver-documents.
                     </p>
@@ -995,11 +1063,11 @@ function DriverModal({
           {/* VERIFICATION */}
 
           <section className="mt-8">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
               Verification
             </p>
 
-            <h3 className="mt-1 text-xl font-black">
+            <h3 className="mt-2 text-xl font-black uppercase">
               Application Checklist
             </h3>
 
@@ -1038,16 +1106,16 @@ function DriverModal({
 
           {/* ACTIONS */}
 
-          <section className="mt-8 border-t border-[#17382b] pt-6">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+          <section className="mt-8 border-t border-white/[0.08] pt-6">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#79c51c]">
               Admin Controls
             </p>
 
-            <h3 className="mt-1 text-xl font-black">
+            <h3 className="mt-2 text-xl font-black uppercase">
               Manage Driver
             </h3>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm leading-6 text-gray-600">
               Changing the status controls this
               driver's marketplace access.
             </p>
@@ -1062,7 +1130,7 @@ function DriverModal({
                     "approved",
                   )
                 }
-                className="rounded-xl bg-[#79c51c] px-5 py-4 text-sm font-black text-[#06100c] transition hover:bg-[#91df31] disabled:opacity-50"
+                className="min-h-[52px] rounded-xl bg-[#79c51c] px-5 py-4 text-sm font-black text-black transition hover:bg-[#91db32] disabled:opacity-50"
               >
                 {updating
                   ? "Updating..."
@@ -1078,7 +1146,7 @@ function DriverModal({
                     "rejected",
                   )
                 }
-                className="rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm font-black text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+                className="min-h-[52px] rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm font-black text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
               >
                 Reject Driver
               </button>
@@ -1092,7 +1160,7 @@ function DriverModal({
                     "suspended",
                   )
                 }
-                className="rounded-xl border border-[#29483a] bg-[#06100c] px-5 py-4 text-sm font-black text-gray-300 transition hover:border-yellow-500/50 hover:text-yellow-300 disabled:opacity-50"
+                className="min-h-[52px] rounded-xl border border-white/[0.10] bg-[#050705] px-5 py-4 text-sm font-black text-gray-300 transition hover:border-yellow-500/50 hover:text-yellow-300 disabled:opacity-50"
               >
                 Suspend Driver
               </button>
@@ -1132,19 +1200,30 @@ function StatCard({
           ? "text-red-300"
           : "text-gray-300";
 
+  const border =
+    highlight === "green"
+      ? "border-[#79c51c]/20"
+      : highlight === "yellow"
+        ? "border-yellow-500/20"
+        : highlight === "red"
+          ? "border-red-500/20"
+          : "border-white/[0.08]";
+
   return (
-    <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5">
+    <div
+      className={`rounded-2xl border bg-[#080b08] p-5 ${border}`}
+    >
       <p
-        className={`text-xs font-black uppercase tracking-[0.18em] ${accent}`}
+        className={`text-[10px] font-black uppercase tracking-[0.18em] ${accent}`}
       >
         {title}
       </p>
 
-      <p className="mt-3 text-3xl font-black">
+      <p className="mt-3 text-3xl font-black sm:text-4xl">
         {number}
       </p>
 
-      <p className="mt-1 text-sm text-gray-500">
+      <p className="mt-1 text-xs text-gray-600 sm:text-sm">
         {description}
       </p>
     </div>
@@ -1168,10 +1247,10 @@ function FilterButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border px-4 py-2 text-sm font-bold transition ${
+      className={`shrink-0 rounded-xl border px-4 py-2.5 text-xs font-black transition sm:text-sm ${
         active
           ? "border-[#79c51c] bg-[#79c51c]/10 text-[#79c51c]"
-          : "border-[#29483a] bg-[#06100c] text-gray-400 hover:border-[#79c51c]/60 hover:text-white"
+          : "border-white/[0.10] bg-[#050705] text-gray-500 hover:border-[#79c51c]/50 hover:text-white"
       }`}
     >
       {children}
@@ -1216,7 +1295,7 @@ function StatusBadge({
 
   return (
     <span
-      className={`inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase ${className}`}
+      className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider sm:px-3 sm:text-xs ${className}`}
     >
       {formatStatus(safeStatus)}
     </span>
@@ -1236,11 +1315,11 @@ function Info({
 }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-600">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-700">
         {label}
       </p>
 
-      <div className="mt-2">
+      <div className="mt-2 break-words text-sm">
         {value}
       </div>
     </div>
@@ -1260,11 +1339,15 @@ function DetailSection({
 }) {
   return (
     <section className="mt-8">
-      <h3 className="text-lg font-black">
-        {title}
-      </h3>
+      <div className="flex items-center gap-2.5">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#79c51c]" />
 
-      <div className="mt-4 grid gap-5 rounded-2xl border border-[#17382b] bg-[#06100c] p-5 sm:grid-cols-2">
+        <h3 className="text-lg font-black uppercase">
+          {title}
+        </h3>
+      </div>
+
+      <div className="mt-4 grid gap-5 rounded-2xl border border-white/[0.08] bg-[#080b08] p-5 sm:grid-cols-2">
         {children}
       </div>
     </section>
@@ -1288,11 +1371,11 @@ function Detail({
 }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.12em] text-gray-600">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-700">
         {label}
       </p>
 
-      <p className="mt-1 break-words text-sm font-bold text-gray-200">
+      <p className="mt-1 break-words text-sm font-bold text-gray-300">
         {value === null ||
         value === undefined ||
         value === ""
@@ -1318,7 +1401,7 @@ function AdminDocumentLink({
 }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.12em] text-gray-600">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-700">
         Document
       </p>
 
@@ -1327,7 +1410,7 @@ function AdminDocumentLink({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1 inline-block text-sm font-black text-[#79c51c] transition hover:text-[#91df31] hover:underline"
+          className="mt-1 inline-block text-sm font-black text-[#79c51c] transition hover:text-[#91db32] hover:underline"
         >
           {label} →
         </a>
@@ -1337,7 +1420,7 @@ function AdminDocumentLink({
             File unavailable
           </p>
 
-          <p className="mt-1 break-all text-xs text-gray-600">
+          <p className="mt-1 break-all text-xs leading-5 text-gray-700">
             Stored path exists, but the file could
             not be found in driver-documents.
           </p>
@@ -1363,7 +1446,7 @@ function VerificationItem({
   complete: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-[#17382b] bg-[#0b1b14] p-4">
+    <div className="rounded-xl border border-white/[0.08] bg-[#080b08] p-4">
       <div className="flex items-center gap-3">
         <div
           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ${
