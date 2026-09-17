@@ -25,6 +25,7 @@ type Job = {
   assigned_driver_id: string | null;
   assigned_bid_id: number | null;
   created_at: string;
+  cancellation_reason: string | null;
 };
 
 type Bid = {
@@ -497,16 +498,20 @@ export default function CustomerJobPage() {
 
   const jobStatus = job.status || "open";
   const journeyStatus = job.journey_status || "";
+  const isCancelled = ["cancelled", "canceled"].includes(
+    jobStatus.trim().toLowerCase()
+  );
 
   const driverSelected =
-    Boolean(job.accepted_bid_id) ||
+    !isCancelled &&
+    (Boolean(job.accepted_bid_id) ||
     Boolean(job.assigned_driver_id) ||
     Boolean(job.assigned_bid_id) ||
     [
       "assigned",
       "in_progress",
       "completed",
-    ].includes(jobStatus);
+    ].includes(jobStatus));
 
   const waitingForDriverBids =
     !driverSelected &&
@@ -677,6 +682,42 @@ export default function CustomerJobPage() {
           </div>
         </section>
 
+        {isCancelled && (
+          <section className="mt-4 overflow-hidden rounded-3xl border border-red-900/50 bg-red-950/20 sm:mt-6">
+            <div className="p-5 sm:p-7">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-900/50 text-xl font-black text-red-200 sm:h-12 sm:w-12">
+                  !
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-red-300 sm:text-xs">
+                    Collection cancelled
+                  </p>
+                  <h2 className="mt-1 text-xl font-black text-white sm:text-2xl">
+                    We’re sorry, we couldn’t find an available driver
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-zinc-300">
+                    {job.cancellation_reason ||
+                      "We're sorry, but we couldn't find an available RCS driver for this collection. Please contact RCS if you'd like help arranging an alternative collection."}
+                  </p>
+                  <a
+                    href={`https://wa.me/447555980651?text=${encodeURIComponent(
+                      `Hi Rapid Clear Solutions, I need help with cancelled job ${
+                        job.reference || `RC-${String(job.id).padStart(6, "0")}`
+                      }.`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-5 inline-flex min-h-[48px] items-center justify-center rounded-xl bg-[#79c51c] px-5 py-3 text-sm font-black text-black transition hover:bg-[#91db32]"
+                  >
+                    Contact RCS on WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* =================================================== */}
         {/* DRIVER ON WAY */}
         {/* =================================================== */}
@@ -747,6 +788,7 @@ export default function CustomerJobPage() {
         {/* MOBILE QUOTES — MOVED UP */}
         {/* =================================================== */}
 
+        {!isCancelled && (
         <section
           id="driver-quotes"
           className="mt-4 rounded-3xl border border-[#283326] bg-[#121812] p-5 shadow-2xl sm:mt-7 sm:p-8 lg:hidden"
@@ -804,6 +846,7 @@ export default function CustomerJobPage() {
             </div>
           )}
         </section>
+        )}
 
         {/* =================================================== */}
         {/* DESKTOP MAIN GRID */}
@@ -904,7 +947,8 @@ export default function CustomerJobPage() {
           {/* RIGHT */}
 
           <section className="space-y-7">
-
+            {!isCancelled && (
+            <>
             <DesktopQuotes
               bids={bids}
               drivers={drivers}
@@ -927,7 +971,8 @@ export default function CustomerJobPage() {
               collectionInProgress={collectionInProgress}
               afterPhotosUploaded={afterPhotosUploaded}
             />
-
+            </>
+            )}
           </section>
         </div>
 
@@ -1034,6 +1079,8 @@ export default function CustomerJobPage() {
             </div>
           </details>
 
+          {!isCancelled && (
+          <>
           {/* ================================================= */}
           {/* MOBILE LIVE STATUS */}
           {/* ================================================= */}
@@ -1089,6 +1136,8 @@ export default function CustomerJobPage() {
               />
             </div>
           </details>
+          </>
+          )}
 
           {/* ================================================= */}
           {/* MOBILE EVIDENCE */}

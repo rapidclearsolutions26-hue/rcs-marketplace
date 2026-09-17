@@ -29,13 +29,15 @@ type Job = {
   assigned_driver_id?: string | null;
   assigned_bid_id?: number | null;
   created_at?: string | null;
+  cancellation_reason?: string | null;
 };
 
 type Filter =
   | "all"
   | "waiting"
   | "active"
-  | "completed";
+  | "completed"
+  | "cancelled";
 
 const JOB_SELECT = `
   id,
@@ -52,7 +54,8 @@ const JOB_SELECT = `
   accepted_bid_id,
   assigned_driver_id,
   assigned_bid_id,
-  created_at
+  created_at,
+  cancellation_reason
 `;
 
 const PAGE_GREEN = "#79c51c";
@@ -69,6 +72,11 @@ function normaliseStatus(
     .toLowerCase();
 }
 
+function isCancelled(status?: string | null) {
+  const value = normaliseStatus(status);
+  return ["cancelled", "canceled"].includes(value);
+}
+
 function isCompleted(
   status?: string | null,
 ) {
@@ -81,8 +89,6 @@ function isCompleted(
     "collected",
     "collection completed",
     "closed",
-    "cancelled",
-    "canceled",
   ].includes(value);
 }
 
@@ -169,6 +175,10 @@ function statusLabel(
     return "Waiting for quotes";
   }
 
+  if (isCancelled(value)) {
+    return "Cancelled";
+  }
+
   if (isCompleted(value)) {
     return "Completed";
   }
@@ -193,6 +203,15 @@ function statusClasses(
 ) {
   const value =
     normaliseStatus(status);
+
+  if (isCancelled(value)) {
+    return {
+      dot: "#f87171",
+      text: "#fca5a5",
+      background: "rgba(127,29,29,0.14)",
+      border: "rgba(248,113,113,0.28)",
+    };
+  }
 
   if (isCompleted(value)) {
     return {
@@ -377,9 +396,12 @@ export default function CustomerJobsPage() {
     let waiting = 0;
     let active = 0;
     let completed = 0;
+    let cancelled = 0;
 
     for (const job of jobs) {
-      if (
+      if (isCancelled(job.status)) {
+        cancelled += 1;
+      } else if (
         isCompleted(job.status)
       ) {
         completed += 1;
@@ -397,6 +419,7 @@ export default function CustomerJobsPage() {
       waiting,
       active,
       completed,
+      cancelled,
     };
   }, [jobs]);
 
@@ -404,6 +427,10 @@ export default function CustomerJobsPage() {
     useMemo(() => {
       return jobs.filter(
         (job) => {
+          if (filter === "cancelled") {
+            return isCancelled(job.status);
+          }
+
           if (
             filter ===
             "completed"
@@ -425,6 +452,7 @@ export default function CustomerJobsPage() {
             filter === "waiting"
           ) {
             return (
+              !isCancelled(job.status) &&
               !isCompleted(
                 job.status,
               ) &&
@@ -752,6 +780,10 @@ export default function CustomerJobsPage() {
               label: "Completed",
               value: counts.completed,
             },
+            {
+              label: "Cancelled",
+              value: counts.cancelled,
+            },
           ].map(
             (
               item,
@@ -830,6 +862,10 @@ export default function CustomerJobsPage() {
                 [
                   "completed",
                   "Completed",
+                ],
+                [
+                  "cancelled",
+                  "Cancelled",
                 ],
               ] as const
             ).map(
@@ -1130,6 +1166,24 @@ export default function CustomerJobsPage() {
                       </div>
                     </Link>
 
+                    {isCancelled(job.status) && (
+                      <div
+                        className="mt-4 rounded-2xl border p-4"
+                        style={{
+                          background: "rgba(127,29,29,0.12)",
+                          borderColor: "rgba(248,113,113,0.22)",
+                        }}
+                      >
+                        <p className="text-sm font-black text-red-300">
+                          We’re sorry, we couldn’t find a driver
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-zinc-400">
+                          {job.cancellation_reason ||
+                            "Unfortunately, we were unable to fulfil this collection. Please contact RCS if you need help arranging an alternative collection."}
+                        </p>
+                      </div>
+                    )}
+
                     {/* ACTIONS */}
 
                     <div
@@ -1139,7 +1193,19 @@ export default function CustomerJobsPage() {
                           "rgba(255,255,255,0.06)",
                       }}
                     >
-                      {locked ? (
+                      {isCancelled(job.status) ? (
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-semibold text-red-300">
+                            Collection cancelled
+                          </span>
+                          <Link
+                            href={`/customer/jobs/${job.id}`}
+                            className="rounded-xl border border-red-900/40 bg-red-950/10 px-3.5 py-2 text-xs font-black text-red-300 transition hover:border-red-500/50"
+                          >
+                            View Job
+                          </Link>
+                        </div>
+                      ) : locked ? (
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-xs font-semibold text-zinc-600">
                             {isCompleted(
