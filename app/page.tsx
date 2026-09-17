@@ -9,41 +9,76 @@ const services = [
     number: "01",
     title: "House Clearance",
     image: "/house-clearance.jpg",
+    href: "/services/house-clearance",
   },
   {
     number: "02",
     title: "Garden Waste",
     image: "/garden-waste.jpg",
+    href: "/services/garden-waste-removal",
   },
   {
     number: "03",
     title: "Builders Waste",
     image: "/builders-waste.jpg",
+    href: "/services/builders-waste",
   },
   {
     number: "04",
     title: "Furniture Removal",
     image: "/furniture-removal.jpg",
+    href: "/services/furniture-removal",
   },
   {
     number: "05",
     title: "Shed & Garage",
     image: "/shed-garage.jpg",
+    href: "/customer/post-job",
   },
   {
     number: "06",
     title: "General Rubbish",
     image: "/general-rubbish.jpg",
+    href: "/services/rubbish-removal",
   },
   {
     number: "07",
     title: "Scrap Collection",
     image: "/scrap-collection.jpg",
+    href: "/customer/post-job",
   },
   {
     number: "08",
     title: "Commercial Waste",
     image: "/commercial-waste.jpg",
+    href: "/customer/post-job",
+  },
+];
+
+const locations = [
+  {
+    name: "Birmingham",
+    href: "/waste-removal-birmingham",
+  },
+  {
+    name: "Dudley",
+    href: "/waste-removal-dudley",
+  },
+  {
+    name: "Sandwell",
+    href: "/waste-removal-sandwell",
+  },
+  {
+    name: "Solihull",
+    href: "/waste-removal-solihull",
+  },
+  {
+    name: "Walsall",
+    href: "/waste-removal-walsall",
+  },
+  {
+    name: "Wolverhampton",
+    href: "/waste-removal-wolverhampton",
   },
 ];
 
@@ -98,13 +133,6 @@ export default function HomePage() {
               className="text-sm font-medium text-gray-300 transition hover:text-[#79c51c]"
             >
               For Drivers
-            </Link>
-
-            <Link
-              href="/contact"
-              className="text-sm font-medium text-gray-300 transition hover:text-[#79c51c]"
-            >
-              Contact
             </Link>
           </nav>
 
@@ -198,12 +226,6 @@ export default function HomePage() {
                 label="Driver Login"
                 onClick={() => setMenuOpen(false)}
               />
-
-              <MobileLink
-                href="/contact"
-                label="Contact"
-                onClick={() => setMenuOpen(false)}
-              />
             </nav>
           </div>
         )}
@@ -252,8 +274,10 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-8 max-w-xl text-base leading-7 text-gray-300 sm:text-lg sm:leading-8">
-              Post your waste-removal job, upload your photos and receive
-              quotes from approved RCS drivers through our marketplace.
+              Waste removal and rubbish clearance made simple across
+              Birmingham and the West Midlands. Post your job, upload photos
+              and receive quotes from approved RCS drivers through our
+              marketplace.
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -330,8 +354,9 @@ export default function HomePage() {
               </h2>
 
               <p className="mt-6 max-w-xl text-sm leading-7 text-gray-500 sm:text-base">
-                From household clearances to garden waste, furniture and
-                builders waste, find the service that suits your job.
+                From household clearances and garden waste to furniture,
+                builders waste and general rubbish removal, find the service
+                that suits your job.
               </p>
             </div>
 
@@ -350,6 +375,7 @@ export default function HomePage() {
                 number={service.number}
                 title={service.title}
                 image={service.image}
+                href={service.href}
               />
             ))}
           </div>
@@ -557,29 +583,87 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================= */}
-      {/* COVERAGE */}
+      {/* LOCAL SEO COVERAGE */}
       {/* ========================================================= */}
 
-      <section className="bg-[#050705] py-20 sm:py-24">
+      <section className="bg-[#050705] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-8 sm:p-12">
+          <div className="max-w-3xl">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
+              Areas We Cover
+            </p>
+
+            <h2 className="mt-4 text-5xl font-black uppercase leading-[0.9] tracking-[-0.045em] sm:text-6xl">
+              Waste removal across
+              <span className="block text-gray-500">
+                the West Midlands.
+              </span>
+            </h2>
+
+            <p className="mt-6 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
+              Rapid Clear Solutions provides an online marketplace for waste
+              removal and rubbish clearance across Birmingham and surrounding
+              West Midlands areas. Select your area below to find local
+              information and post your collection.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {locations.map((location) => (
+              <Link
+                key={location.href}
+                href={location.href}
+                className="group rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-6 transition hover:border-[#79c51c]/50 hover:bg-[#0d120d]"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.15em] text-[#79c51c]">
+                      Waste Removal
+                    </p>
+
+                    <h3 className="mt-2 text-xl font-black uppercase">
+                      {location.name}
+                    </h3>
+                  </div>
+
+                  <span className="text-lg text-[#79c51c] transition group-hover:translate-x-1">
+                    →
+                  </span>
+                </div>
+
+                <p className="mt-4 text-sm leading-6 text-gray-600">
+                  Rubbish removal and clearance services in {location.name}.
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* COVERAGE CTA */}
+      {/* ========================================================= */}
+
+      <section className="bg-[#050705] pb-20 sm:pb-28">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-[#79c51c]/20 bg-[#0a0e0a] p-8 sm:p-12">
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                  Coverage
+                  Need a collection?
                 </p>
 
                 <h2 className="mt-4 text-4xl font-black uppercase leading-[0.92] sm:text-5xl">
-                  Waste removal
+                  Post your waste
                   <span className="block text-gray-500">
-                    where you need it.
+                    removal job online.
                   </span>
                 </h2>
 
                 <p className="mt-5 max-w-2xl text-sm leading-7 text-gray-500">
-                  RCS is building a network of waste-removal drivers across
-                  the UK. Availability depends on the drivers operating in
-                  your area.
+                  Tell us what needs removing, add your postcode and upload
+                  photos. Your job can then be made available to approved RCS
+                  drivers.
                 </p>
               </div>
 
@@ -587,7 +671,7 @@ export default function HomePage() {
                 href="/customer/post-job"
                 className="shrink-0 rounded-lg bg-[#79c51c] px-7 py-4 text-center text-sm font-black text-black transition hover:bg-[#91db32]"
               >
-                CHECK YOUR AREA →
+                GET A QUOTE →
               </Link>
             </div>
           </div>
@@ -714,13 +798,6 @@ export default function HomePage() {
                 </Link>
 
                 <Link
-                  href="/contact"
-                  className="transition hover:text-[#79c51c]"
-                >
-                  Contact
-                </Link>
-
-                <Link
                   href="/services"
                   className="transition hover:text-[#79c51c]"
                 >
@@ -782,14 +859,16 @@ function ServiceCard({
   number,
   title,
   image,
+  href,
 }: {
   number: string;
   title: string;
   image: string;
+  href: string;
 }) {
   return (
     <Link
-      href="/customer/post-job"
+      href={href}
       className="group relative h-[190px] overflow-hidden rounded-xl border border-white/[0.09] bg-[#0a0e0a] sm:h-[205px]"
     >
       <Image
