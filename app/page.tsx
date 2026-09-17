@@ -56,34 +56,50 @@ const services = [
 ];
 
 const locations = [
+  ["Birmingham", "/waste-removal-birmingham"],
+  ["Dudley", "/waste-removal-dudley"],
+  ["Sandwell", "/waste-removal-sandwell"],
+  ["Solihull", "/waste-removal-solihull"],
+  ["Walsall", "/waste-removal-walsall"],
+  ["Wolverhampton", "/waste-removal-wolverhampton"],
+];
+
+const faqs = [
   {
-    name: "Birmingham",
-    href: "/waste-removal-birmingham",
+    question: "How do I get a waste removal quote?",
+    answer:
+      "Post your waste-removal job through the RCS Marketplace, provide your postcode and job details and upload photos. Available RCS drivers can then review the information and submit quotes.",
   },
   {
-    name: "Dudley",
-    href: "/waste-removal-dudley",
+    question: "What types of waste can I post?",
+    answer:
+      "RCS can be used for a range of collections including general rubbish, house clearances, garden waste, furniture, builders waste, shed and garage clearances and other suitable waste-removal jobs.",
   },
   {
-    name: "Sandwell",
-    href: "/waste-removal-sandwell",
+    question: "Can I upload photos of my waste?",
+    answer:
+      "Yes. Photos can be uploaded when posting your job. Providing clear photographs can help drivers understand the size and type of collection required.",
   },
   {
-    name: "Solihull",
-    href: "/waste-removal-solihull",
+    question: "What areas does RCS cover?",
+    answer:
+      "RCS currently has local information pages covering Birmingham, Dudley, Sandwell, Solihull, Walsall and Wolverhampton. Driver availability can vary by postcode and collection requirements.",
   },
   {
-    name: "Walsall",
-    href: "/waste-removal-walsall",
+    question: "Do I need an account before getting a quote?",
+    answer:
+      "You can start by posting your waste-removal job. The RCS customer process can then create your customer account so you can manage your quotes and collection.",
   },
   {
-    name: "Wolverhampton",
-    href: "/waste-removal-wolverhampton",
+    question: "How does the RCS Marketplace work?",
+    answer:
+      "Customers post their waste-removal requirements and approved RCS drivers can review suitable jobs and submit quotes. Customers can then review the available quote information and arrange their collection.",
   },
 ];
 
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050705] text-white">
@@ -103,8 +119,6 @@ export default function HomePage() {
               className="h-10 w-auto object-contain sm:h-14"
             />
           </Link>
-
-          {/* DESKTOP NAV */}
 
           <nav className="hidden items-center gap-7 lg:flex">
             <Link
@@ -136,8 +150,6 @@ export default function HomePage() {
             </Link>
           </nav>
 
-          {/* DESKTOP ACTIONS */}
-
           <div className="hidden items-center gap-2 lg:flex">
             <Link
               href="/customer/login"
@@ -161,8 +173,6 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* MOBILE */}
-
           <div className="flex items-center gap-2 lg:hidden">
             <Link
               href="/customer/post-job"
@@ -185,8 +195,6 @@ export default function HomePage() {
             </button>
           </div>
         </div>
-
-        {/* MOBILE MENU */}
 
         {menuOpen && (
           <div className="border-t border-white/[0.07] bg-[#050705] px-4 py-5 lg:hidden">
@@ -247,9 +255,7 @@ export default function HomePage() {
           />
 
           <div className="absolute inset-0 bg-[#050705]/70" />
-
           <div className="absolute inset-0 bg-gradient-to-r from-[#050705] via-[#050705]/80 to-[#050705]/20" />
-
           <div className="absolute inset-0 bg-gradient-to-t from-[#050705] via-transparent to-[#050705]/20" />
         </div>
 
@@ -274,10 +280,9 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-8 max-w-xl text-base leading-7 text-gray-300 sm:text-lg sm:leading-8">
-              Waste removal and rubbish clearance made simple across
-              Birmingham and the West Midlands. Post your job, upload photos
-              and receive quotes from approved RCS drivers through our
-              marketplace.
+              Waste removal and rubbish clearance across Birmingham and the
+              West Midlands. Post your job, upload photos and receive quotes
+              from approved RCS drivers through our marketplace.
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -300,7 +305,7 @@ export default function HomePage() {
               <span>House Clearance</span>
               <span>Garden Waste</span>
               <span>Builders Waste</span>
-              <span>Commercial Waste</span>
+              <span>Furniture Removal</span>
             </div>
           </div>
         </div>
@@ -354,9 +359,9 @@ export default function HomePage() {
               </h2>
 
               <p className="mt-6 max-w-xl text-sm leading-7 text-gray-500 sm:text-base">
-                From household clearances and garden waste to furniture,
+                From house clearances and garden waste to furniture,
                 builders waste and general rubbish removal, find the service
-                that suits your job.
+                that suits your collection.
               </p>
             </div>
 
@@ -379,14 +384,51 @@ export default function HomePage() {
               />
             ))}
           </div>
+        </div>
+      </section>
 
-          <div className="mt-10 text-center">
-            <Link
-              href="/services"
-              className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c] transition hover:text-[#91db32]"
-            >
-              Explore all RCS services →
-            </Link>
+      {/* ========================================================= */}
+      {/* REAL RCS WORK */}
+      {/* ========================================================= */}
+
+      <section className="border-y border-white/[0.07] bg-[#080b08] py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+          <div className="max-w-3xl">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
+              Real RCS Work
+            </p>
+
+            <h2 className="mt-4 text-5xl font-black uppercase leading-[0.9] tracking-[-0.045em] sm:text-6xl md:text-7xl">
+              From waste
+              <span className="block text-gray-500">
+                to cleared.
+              </span>
+            </h2>
+
+            <p className="mt-6 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
+              See examples of the type of clearance work that can be posted
+              through Rapid Clear Solutions.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-5 lg:grid-cols-3">
+            <BeforeAfterCard
+              image="/before-after-garden.png"
+              title="Garden Clearance"
+              text="Garden waste and outdoor clearance."
+            />
+
+            <BeforeAfterCard
+              image="/before-after-room.png"
+              title="Room Clearance"
+              text="Household waste and room clearances."
+            />
+
+            <BeforeAfterCard
+              image="/before-after-storage.png"
+              title="Storage Clearance"
+              text="Clear unwanted items from storage areas."
+            />
           </div>
         </div>
       </section>
@@ -397,10 +439,10 @@ export default function HomePage() {
 
       <section
         id="how-it-works"
-        className="border-y border-white/[0.07] bg-[#080b08] py-20 sm:py-28"
+        className="bg-[#050705] py-20 sm:py-28"
       >
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="max-w-2xl">
+          <div className="max-w-3xl">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
               How It Works
             </p>
@@ -412,9 +454,9 @@ export default function HomePage() {
               </span>
             </h2>
 
-            <p className="mt-6 text-base leading-7 text-gray-500">
-              RCS makes it simple to get your waste-removal job in front of
-              approved drivers.
+            <p className="mt-6 max-w-2xl text-base leading-7 text-gray-500">
+              RCS brings customers and approved waste-removal drivers
+              together through one online marketplace.
             </p>
           </div>
 
@@ -428,14 +470,97 @@ export default function HomePage() {
             <ProcessCard
               number="02"
               title="Receive Quotes"
-              text="Your job is placed into the RCS Marketplace where approved drivers can review the details and submit their quotes."
+              text="Your job can be made available through the RCS Marketplace where approved drivers can review the details and submit quotes."
             />
 
             <ProcessCard
               number="03"
               title="Choose & Book"
-              text="Compare the quotes available to you, select the option you want and manage your collection through your RCS account."
+              text="Review the quote information available to you, choose your preferred option and manage your collection through your RCS account."
             />
+          </div>
+
+          <div className="mt-10 text-center">
+            <Link
+              href="/customer/post-job"
+              className="inline-flex rounded-lg bg-[#79c51c] px-7 py-4 text-sm font-black text-black transition hover:bg-[#91db32]"
+            >
+              POST YOUR JOB →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* WHY CHOOSE RCS */}
+      {/* ========================================================= */}
+
+      <section className="border-y border-white/[0.07] bg-[#080b08] py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+          <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-20">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
+                Why RCS?
+              </p>
+
+              <h2 className="mt-4 text-5xl font-black uppercase leading-[0.9] tracking-[-0.04em] sm:text-6xl">
+                A simpler way
+                <span className="block text-gray-500">
+                  to arrange waste removal.
+                </span>
+              </h2>
+
+              <p className="mt-6 max-w-xl text-base leading-8 text-gray-500">
+                Rapid Clear Solutions combines waste-removal services with an
+                online marketplace designed to make the process easier for
+                customers and drivers.
+              </p>
+
+              <Link
+                href="/customer/post-job"
+                className="mt-8 inline-flex rounded-lg bg-[#79c51c] px-7 py-4 text-sm font-black text-black transition hover:bg-[#91db32]"
+              >
+                GET A QUOTE →
+              </Link>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <WhyCard
+                number="01"
+                title="Online Job Posting"
+                text="Post your waste-removal requirements online instead of making multiple enquiries."
+              />
+
+              <WhyCard
+                number="02"
+                title="Photo Uploads"
+                text="Upload photographs to help drivers understand the waste and collection requirements."
+              />
+
+              <WhyCard
+                number="03"
+                title="Driver Marketplace"
+                text="Approved RCS drivers can review suitable jobs and submit their quotes."
+              />
+
+              <WhyCard
+                number="04"
+                title="Online Management"
+                text="Manage your quotes and collections through your RCS customer account."
+              />
+
+              <WhyCard
+                number="05"
+                title="Local Coverage"
+                text="RCS has dedicated local information for Birmingham and surrounding West Midlands areas."
+              />
+
+              <WhyCard
+                number="06"
+                title="Built for Customers"
+                text="The process is designed to make posting a waste-removal job straightforward."
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -534,10 +659,10 @@ export default function HomePage() {
               </h2>
 
               <p className="mt-7 max-w-xl text-base leading-8 text-gray-500">
-                RCS is built to connect customers who need waste removed
-                with approved drivers who want more work. Instead of making
-                multiple enquiries, customers can post their requirements
-                once and let the marketplace do the work.
+                RCS connects customers who need waste removed with approved
+                drivers who want suitable work. Customers can post their
+                requirements once and make the job available through the
+                marketplace.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -563,7 +688,7 @@ export default function HomePage() {
               <MarketplaceItem
                 number="01"
                 title="Simple for customers"
-                text="Post your job once instead of contacting multiple waste companies."
+                text="Post your waste-removal requirements online and upload photographs."
               />
 
               <MarketplaceItem
@@ -574,8 +699,8 @@ export default function HomePage() {
 
               <MarketplaceItem
                 number="03"
-                title="Built to scale"
-                text="RCS can grow as more customers and approved drivers join the network."
+                title="Designed to grow"
+                text="RCS is building an online network connecting customers and waste-removal drivers."
               />
             </div>
           </div>
@@ -583,17 +708,58 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================= */}
-      {/* LOCAL SEO COVERAGE */}
+      {/* REVIEWS */}
       {/* ========================================================= */}
 
       <section className="bg-[#050705] py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+            <div className="max-w-3xl">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
+                Customer Reviews
+              </p>
+
+              <h2 className="mt-4 text-5xl font-black uppercase leading-[0.9] tracking-[-0.04em] sm:text-6xl">
+                What our
+                <span className="block text-gray-500">
+                  customers say.
+                </span>
+              </h2>
+
+              <p className="mt-6 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
+                Genuine customer feedback will appear here as more RCS
+                collections are completed.
+              </p>
+            </div>
+
+            <Link
+              href="/customer/post-job"
+              className="w-fit rounded-lg border border-[#79c51c]/40 px-5 py-3.5 text-sm font-black text-[#79c51c] transition hover:border-[#79c51c] hover:bg-[#79c51c]/10"
+            >
+              USE RCS →
+            </Link>
+          </div>
+
+          <div className="mt-12 grid gap-4 md:grid-cols-3">
+            <ReviewPlaceholder />
+            <ReviewPlaceholder />
+            <ReviewPlaceholder />
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* COVERAGE */}
+      {/* ========================================================= */}
+
+      <section className="border-y border-white/[0.07] bg-[#080b08] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
               Areas We Cover
             </p>
 
-            <h2 className="mt-4 text-5xl font-black uppercase leading-[0.9] tracking-[-0.045em] sm:text-6xl">
+            <h2 className="mt-4 text-5xl font-black uppercase leading-[0.9] tracking-[-0.045em] sm:text-6xl md:text-7xl">
               Waste removal across
               <span className="block text-gray-500">
                 the West Midlands.
@@ -603,16 +769,15 @@ export default function HomePage() {
             <p className="mt-6 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
               Rapid Clear Solutions provides an online marketplace for waste
               removal and rubbish clearance across Birmingham and surrounding
-              West Midlands areas. Select your area below to find local
-              information and post your collection.
+              West Midlands areas.
             </p>
           </div>
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {locations.map((location) => (
+            {locations.map(([name, href]) => (
               <Link
-                key={location.href}
-                href={location.href}
+                key={href}
+                href={href}
                 className="group rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-6 transition hover:border-[#79c51c]/50 hover:bg-[#0d120d]"
               >
                 <div className="flex items-center justify-between">
@@ -622,7 +787,7 @@ export default function HomePage() {
                     </p>
 
                     <h3 className="mt-2 text-xl font-black uppercase">
-                      {location.name}
+                      {name}
                     </h3>
                   </div>
 
@@ -632,7 +797,7 @@ export default function HomePage() {
                 </div>
 
                 <p className="mt-4 text-sm leading-6 text-gray-600">
-                  Rubbish removal and clearance services in {location.name}.
+                  Rubbish removal and clearance information for {name}.
                 </p>
               </Link>
             ))}
@@ -641,39 +806,60 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================= */}
-      {/* COVERAGE CTA */}
+      {/* FAQ */}
       {/* ========================================================= */}
 
-      <section className="bg-[#050705] pb-20 sm:pb-28">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-[#79c51c]/20 bg-[#0a0e0a] p-8 sm:p-12">
-            <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                  Need a collection?
-                </p>
+      <section className="bg-[#050705] py-20 sm:py-28">
+        <div className="mx-auto max-w-4xl px-5 sm:px-6">
+          <div className="text-center">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
+              Frequently Asked Questions
+            </p>
 
-                <h2 className="mt-4 text-4xl font-black uppercase leading-[0.92] sm:text-5xl">
-                  Post your waste
-                  <span className="block text-gray-500">
-                    removal job online.
-                  </span>
-                </h2>
+            <h2 className="mt-4 text-5xl font-black uppercase leading-[0.9] tracking-[-0.04em] sm:text-6xl">
+              Got questions?
+            </h2>
 
-                <p className="mt-5 max-w-2xl text-sm leading-7 text-gray-500">
-                  Tell us what needs removing, add your postcode and upload
-                  photos. Your job can then be made available to approved RCS
-                  drivers.
-                </p>
-              </div>
+            <p className="mx-auto mt-6 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
+              Find out how the RCS waste-removal marketplace works.
+            </p>
+          </div>
 
-              <Link
-                href="/customer/post-job"
-                className="shrink-0 rounded-lg bg-[#79c51c] px-7 py-4 text-center text-sm font-black text-black transition hover:bg-[#91db32]"
-              >
-                GET A QUOTE →
-              </Link>
-            </div>
+          <div className="mt-12 space-y-3">
+            {faqs.map((faq, index) => {
+              const isOpen = openFaq === index;
+
+              return (
+                <div
+                  key={faq.question}
+                  className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080b08]"
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenFaq(isOpen ? null : index)
+                    }
+                    className="flex w-full items-center justify-between gap-5 p-6 text-left"
+                  >
+                    <span className="text-sm font-black sm:text-base">
+                      {faq.question}
+                    </span>
+
+                    <span className="shrink-0 text-xl font-light text-[#79c51c]">
+                      {isOpen ? "−" : "+"}
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-white/[0.07] px-6 pb-6 pt-5">
+                      <p className="text-sm leading-7 text-gray-500">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -698,8 +884,8 @@ export default function HomePage() {
           </h2>
 
           <p className="mx-auto mt-7 max-w-xl text-base leading-7 text-gray-500 sm:text-lg">
-            Post your job in minutes and get your waste-removal requirements
-            in front of approved RCS drivers.
+            Post your job in minutes, upload your photos and get your
+            waste-removal requirements in front of approved RCS drivers.
           </p>
 
           <Link
@@ -718,8 +904,6 @@ export default function HomePage() {
       <footer className="border-t border-white/[0.07] bg-[#030403]">
         <div className="mx-auto max-w-7xl px-5 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-14 sm:px-6 lg:px-8">
           <div className="grid gap-12 md:grid-cols-4">
-            {/* BRAND */}
-
             <div className="md:col-span-2">
               <Link href="/">
                 <Image
@@ -743,8 +927,6 @@ export default function HomePage() {
                 GET A QUOTE →
               </Link>
             </div>
-
-            {/* CUSTOMERS */}
 
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-white">
@@ -774,8 +956,6 @@ export default function HomePage() {
                 </Link>
               </div>
             </div>
-
-            {/* RCS */}
 
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-white">
@@ -813,8 +993,6 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-
-          {/* FOOTER BOTTOM */}
 
           <div className="mt-12 flex flex-col gap-4 border-t border-white/[0.06] pt-6 text-xs text-gray-700 sm:flex-row sm:items-center sm:justify-between">
             <span>
@@ -873,7 +1051,7 @@ function ServiceCard({
     >
       <Image
         src={image}
-        alt={title}
+        alt={`${title} waste removal service`}
         fill
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
         className="object-cover opacity-50 transition duration-500 group-hover:scale-105 group-hover:opacity-65"
@@ -895,6 +1073,78 @@ function ServiceCard({
         </div>
       </div>
     </Link>
+  );
+}
+
+/* ========================================================= */
+/* BEFORE / AFTER */
+/* ========================================================= */
+
+function BeforeAfterCard({
+  image,
+  title,
+  text,
+}: {
+  image: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <article className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0e0a]">
+      <div className="relative aspect-[4/3] overflow-hidden">
+        <Image
+          src={image}
+          alt={`${title} before and after`}
+          fill
+          sizes="(max-width: 1024px) 100vw, 33vw"
+          className="object-cover transition duration-500 hover:scale-105"
+        />
+
+        <div className="absolute left-4 top-4 rounded-lg bg-[#050705]/90 px-3 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-[#79c51c] backdrop-blur-sm">
+          Before & After
+        </div>
+      </div>
+
+      <div className="p-6">
+        <h3 className="text-xl font-black uppercase">
+          {title}
+        </h3>
+
+        <p className="mt-2 text-sm leading-6 text-gray-600">
+          {text}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+/* ========================================================= */
+/* WHY CARD */
+/* ========================================================= */
+
+function WhyCard({
+  number,
+  title,
+  text,
+}: {
+  number: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <article className="rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-6 transition hover:border-[#79c51c]/30">
+      <span className="text-xs font-black text-[#79c51c]">
+        {number}
+      </span>
+
+      <h3 className="mt-7 text-lg font-black uppercase">
+        {title}
+      </h3>
+
+      <p className="mt-3 text-sm leading-7 text-gray-600">
+        {text}
+      </p>
+    </article>
   );
 }
 
@@ -999,6 +1249,38 @@ function MarketplaceItem({
         </p>
       </div>
     </div>
+  );
+}
+
+/* ========================================================= */
+/* REVIEW PLACEHOLDER */
+/* ========================================================= */
+
+function ReviewPlaceholder() {
+  return (
+    <article className="rounded-2xl border border-dashed border-white/[0.12] bg-[#080b08] p-7">
+      <div className="flex gap-1 text-[#79c51c]">
+        <span>★</span>
+        <span>★</span>
+        <span>★</span>
+        <span>★</span>
+        <span>★</span>
+      </div>
+
+      <p className="mt-5 text-sm leading-7 text-gray-600">
+        Genuine RCS customer feedback will be displayed here.
+      </p>
+
+      <div className="mt-6 border-t border-white/[0.07] pt-5">
+        <p className="text-xs font-black uppercase tracking-[0.15em] text-gray-500">
+          Customer Review
+        </p>
+
+        <p className="mt-1 text-xs text-gray-700">
+          Reviews coming soon
+        </p>
+      </div>
+    </article>
   );
 }
 
