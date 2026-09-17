@@ -80,8 +80,6 @@ const JOB_SELECT = `
   created_at
 `;
 
-const WHATSAPP_NUMBER = "447555980651";
-
 const DEFAULT_CANCELLATION_REASON =
   "We're sorry, we couldn't find a driver for your collection. Unfortunately, we're unable to fulfil your waste collection at this time. We apologise for the inconvenience. You can contact RCS if you'd like us to help arrange an alternative collection.";
 
@@ -408,12 +406,12 @@ export default function CustomerDashboard() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#06100c] text-white">
+      <main className="min-h-screen bg-[#050705] text-white">
         <div className="flex min-h-screen items-center justify-center px-5">
           <div className="text-center">
-            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[#17382b] border-t-[#1BBB8C]" />
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-white/[0.08] border-t-[#79c51c]" />
             <p className="mt-5 text-lg font-black">Loading customer dashboard...</p>
-            <p className="mt-2 text-sm text-[#71867c]">Checking your jobs and quotes</p>
+            <p className="mt-2 text-sm text-[#6b7280]">Checking your jobs and quotes</p>
           </div>
         </div>
       </main>
@@ -421,8 +419,8 @@ export default function CustomerDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#06100c] text-white">
-      <header className="pwa-header sticky top-0 z-40 border-b border-[#17382b] bg-[#081710]/95 backdrop-blur-xl">
+    <main className="min-h-screen bg-[#050705] text-white">
+      <header className="pwa-header sticky top-0 z-40 border-b border-white/[0.08] bg-[#080b08]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
           <Link href="/" className="flex items-center">
             <Image
@@ -440,7 +438,7 @@ export default function CustomerDashboard() {
               <button
                 type="button"
                 onClick={() => void handleInstallApp()}
-                className="hidden rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold text-[#aabbb4] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C] sm:block"
+                className="hidden rounded-xl border border-white/[0.12] px-4 py-2 text-sm font-bold text-[#aabbb4] transition hover:border-[#79c51c] hover:text-[#79c51c] sm:block"
               >
                 INSTALL APP
               </button>
@@ -450,11 +448,11 @@ export default function CustomerDashboard() {
               <button
                 type="button"
                 onClick={() => setShowNotifications(true)}
-                className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#29483a] text-lg text-[#aabbb4] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+                className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.12] text-lg text-[#aabbb4] transition hover:border-[#79c51c] hover:text-[#79c51c]"
                 aria-label="Open notifications"
               >
                 ●
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#1BBB8C] px-1 text-[9px] font-black text-[#06100c]">
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#79c51c] px-1 text-[9px] font-black text-[#050705]">
                   {visibleNotifications.length > 9 ? "9+" : visibleNotifications.length}
                 </span>
               </button>
@@ -469,7 +467,7 @@ export default function CustomerDashboard() {
               type="button"
               onClick={() => void loadDashboard()}
               disabled={refreshing}
-              className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold text-[#aabbb4] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C] disabled:opacity-50"
+              className="rounded-xl border border-white/[0.12] px-4 py-2 text-sm font-bold text-[#aabbb4] transition hover:border-[#79c51c] hover:text-[#79c51c] disabled:opacity-50"
             >
               {refreshing ? "Refreshing..." : "Refresh"}
             </button>
@@ -477,7 +475,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               onClick={() => void handleLogout()}
-              className="rounded-xl border border-[#29483a] px-4 py-2 text-sm font-bold text-[#c5d1cb] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+              className="rounded-xl border border-white/[0.12] px-4 py-2 text-sm font-bold text-[#c5d1cb] transition hover:border-[#79c51c] hover:text-[#79c51c]"
             >
               Log out
             </button>
@@ -488,13 +486,13 @@ export default function CustomerDashboard() {
       <div className="mx-auto max-w-7xl px-5 py-8 sm:py-10">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#1BBB8C]">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
               RCS Marketplace
             </p>
             <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
               Customer Dashboard
             </h1>
-            <p className="mt-2 max-w-2xl text-[#82958c]">
+            <p className="mt-2 max-w-2xl text-[#71717a]">
               Welcome{accountName ? `, ${firstName(accountName)}` : ""}. Manage your waste removal jobs, compare driver quotes and track your collections.
             </p>
           </div>
@@ -582,38 +580,46 @@ export default function CustomerDashboard() {
           )}
         </section>
 
-        <section className="mt-10 grid gap-5 lg:grid-cols-3">
+        <section className="mt-10 grid gap-5 lg:grid-cols-4">
           <Link
             href="/customer/post-job"
-            className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl transition hover:border-[#1BBB8C]/60"
+            className="rounded-3xl border border-white/[0.08] bg-[#0a0e0a] p-6 shadow-xl transition hover:border-[#79c51c]/60"
           >
-            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#1BBB8C]">Marketplace</p>
+            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#79c51c]">Marketplace</p>
             <h2 className="mt-2 text-xl font-black">Post a New Job</h2>
-            <p className="mt-2 text-sm leading-6 text-[#71867c]">Tell us what needs removing and let approved RCS drivers submit quotes.</p>
-            <span className="mt-5 inline-block rounded-xl bg-[#1BBB8C] px-5 py-3 font-black text-[#06100c]">Post Job →</span>
+            <p className="mt-2 text-sm leading-6 text-gray-500">Tell us what needs removing and let approved RCS drivers submit quotes.</p>
+            <span className="mt-5 inline-block rounded-xl bg-[#79c51c] px-5 py-3 font-black text-[#050705]">Post Job →</span>
           </Link>
 
           <Link
             href="/customer/quotes"
-            className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl transition hover:border-[#1BBB8C]/60"
+            className="rounded-3xl border border-white/[0.08] bg-[#0a0e0a] p-6 shadow-xl transition hover:border-[#79c51c]/60"
           >
-            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#1BBB8C]">Quotes</p>
+            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#79c51c]">Quotes</p>
             <h2 className="mt-2 text-xl font-black">Compare Driver Quotes</h2>
-            <p className="mt-2 text-sm leading-6 text-[#71867c]">Open your quote list and review prices from drivers.</p>
-            <span className="mt-5 inline-block rounded-xl border border-[#29483a] px-5 py-3 font-black text-white hover:border-[#1BBB8C] hover:text-[#1BBB8C]">View Quotes →</span>
+            <p className="mt-2 text-sm leading-6 text-gray-500">Open your quote list and review prices from drivers.</p>
+            <span className="mt-5 inline-block rounded-xl border border-white/[0.12] px-5 py-3 font-black text-white hover:border-[#79c51c] hover:text-[#79c51c]">View Quotes →</span>
           </Link>
 
-          <a
-            href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hi RCS, I need some help with my customer account.")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl transition hover:border-[#1BBB8C]/60"
+          <Link
+            href="/customer/support"
+            className="rounded-3xl border border-[#79c51c]/25 bg-[#0a0e0a] p-6 shadow-xl transition hover:border-[#79c51c]/60 hover:bg-[#0c1209]"
           >
-            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#1BBB8C]">Support</p>
-            <h2 className="mt-2 text-xl font-black">Contact RCS</h2>
-            <p className="mt-2 text-sm leading-6 text-[#71867c]">Need help with a booking, quote or account? Message RCS on WhatsApp.</p>
-            <span className="mt-5 inline-block rounded-xl border border-[#1BBB8C]/30 px-5 py-3 font-black text-[#1BBB8C]">Message RCS →</span>
-          </a>
+            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#79c51c]">RCS Support</p>
+            <h2 className="mt-2 text-xl font-black">Chat with RCS</h2>
+            <p className="mt-2 text-sm leading-6 text-gray-500">Message our support team from inside your account instead of being sent straight to WhatsApp.</p>
+            <span className="mt-5 inline-block rounded-xl bg-[#79c51c] px-5 py-3 font-black text-[#050705] hover:bg-[#91db32]">Open Support Chat →</span>
+          </Link>
+
+          <Link
+            href="/customer/post-job"
+            className="rounded-3xl border border-white/[0.08] bg-[#0a0e0a] p-6 shadow-xl transition hover:border-[#79c51c]/50 hover:bg-[#0c1209]"
+          >
+            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#79c51c]">More collections</p>
+            <h2 className="mt-2 text-xl font-black">Book another collection</h2>
+            <p className="mt-2 text-sm leading-6 text-gray-500">Need another clearance? Start a new job in a couple of minutes.</p>
+            <span className="mt-5 inline-block rounded-xl border border-white/[0.12] px-5 py-3 font-black text-white hover:border-[#79c51c] hover:text-[#79c51c]">New Job →</span>
+          </Link>
         </section>
 
         <section className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -623,7 +629,7 @@ export default function CustomerDashboard() {
           <InfoCard label="Cancelled Jobs" value={String(cancelledJobs.length)} />
         </section>
 
-        <div className="mt-10 flex items-center justify-between border-t border-[#17382b] pt-5 text-xs text-[#53675e]">
+        <div className="mt-10 flex items-center justify-between border-t border-white/[0.08] pt-5 text-xs text-[#52525b]">
           <span>Rapid Clear Solutions</span>
           <span>{lastUpdatedAt ? `Updated ${formatRelativeTime(lastUpdatedAt, now)}` : "Live dashboard"}</span>
         </div>
@@ -635,18 +641,18 @@ export default function CustomerDashboard() {
           onClick={() => setShowNotifications(false)}
         >
           <div
-            className="max-h-[88vh] w-full max-w-lg overflow-hidden rounded-t-3xl border border-[#29483a] bg-[#0b1b14] shadow-2xl sm:rounded-3xl"
+            className="max-h-[88vh] w-full max-w-lg overflow-hidden rounded-t-3xl border border-white/[0.12] bg-[#0a0e0a] shadow-2xl sm:rounded-3xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[#17382b] p-5">
+            <div className="flex items-center justify-between border-b border-white/[0.08] p-5">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.15em] text-[#1BBB8C]">RCS Updates</p>
+                <p className="text-xs font-black uppercase tracking-[0.15em] text-[#79c51c]">RCS Updates</p>
                 <h2 className="mt-1 text-xl font-black">Notifications</h2>
               </div>
               <button
                 type="button"
                 onClick={() => setShowNotifications(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#29483a] text-xl text-[#71867c] hover:border-[#1BBB8C] hover:text-white"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.12] text-xl text-[#6b7280] hover:border-[#79c51c] hover:text-white"
                 aria-label="Close notifications"
               >
                 ×
@@ -655,10 +661,10 @@ export default function CustomerDashboard() {
 
             <div className="max-h-[70vh] overflow-y-auto p-5">
               {visibleNotifications.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[#29483a] bg-[#081710] p-8 text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#123529] text-sm font-black text-[#1BBB8C]">RCS</div>
+                <div className="rounded-2xl border border-dashed border-white/[0.12] bg-[#080b08] p-8 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#79c51c/10] text-sm font-black text-[#79c51c]">RCS</div>
                   <p className="mt-4 text-sm font-black">You are all caught up</p>
-                  <p className="mt-1 text-xs text-[#657a70]">No current dashboard updates.</p>
+                  <p className="mt-1 text-xs text-[#6b7280]">No current dashboard updates.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -695,15 +701,15 @@ function StatCard({
     <div
       className={`rounded-3xl border p-6 shadow-xl ${
         highlight
-          ? "border-[#3f8d24] bg-[#10230f]"
-          : "border-[#17382b] bg-[#0b1b14]"
+          ? "border-[#79c51c] bg-[#0c1209]"
+          : "border-white/[0.08] bg-[#0a0e0a]"
       }`}
     >
-      <p className="text-sm font-bold text-[#8b9d95]">{title}</p>
-      <p className={`mt-3 text-4xl font-black ${highlight ? "text-[#1BBB8C]" : "text-white"}`}>
+      <p className="text-sm font-bold text-[#a1a1aa]">{title}</p>
+      <p className={`mt-3 text-4xl font-black ${highlight ? "text-[#79c51c]" : "text-white"}`}>
         {value}
       </p>
-      <p className="mt-2 text-sm text-[#64786e]">{description}</p>
+      <p className="mt-2 text-sm text-[#6b7280]">{description}</p>
     </div>
   );
 }
@@ -717,7 +723,7 @@ function SectionHeading({
 }) {
   return (
     <div className="mb-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1BBB8C]">{eyebrow}</p>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">{eyebrow}</p>
       <h2 className="mt-1 text-2xl font-black">{title}</h2>
     </div>
   );
@@ -735,13 +741,13 @@ function EmptyState({
   action: string;
 }) {
   return (
-    <div className="rounded-3xl border border-dashed border-[#29483a] bg-[#081710] px-6 py-12 text-center">
-      <div className="mx-auto h-1.5 w-14 rounded-full bg-[#1BBB8C]" />
+    <div className="rounded-3xl border border-dashed border-white/[0.12] bg-[#080b08] px-6 py-12 text-center">
+      <div className="mx-auto h-1.5 w-14 rounded-full bg-[#79c51c]" />
       <h3 className="mt-5 text-xl font-black">{title}</h3>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#71857b]">{description}</p>
       <Link
         href={href}
-        className="mt-6 inline-flex rounded-xl bg-[#1BBB8C] px-6 py-3.5 font-black text-[#06100c] hover:bg-[#16a77c]"
+        className="mt-6 inline-flex rounded-xl bg-[#79c51c] px-6 py-3.5 font-black text-[#050705] hover:bg-[#91db32]"
       >
         {action}
       </Link>
@@ -751,16 +757,16 @@ function EmptyState({
 
 function QuoteJobCard({ job }: { job: Job }) {
   return (
-    <div className="overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl">
-      <div className="border-b border-[#17382b] p-6">
+    <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0a0e0a] shadow-xl">
+      <div className="border-b border-white/[0.08] p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+            <p className="text-xs font-black uppercase tracking-wider text-[#79c51c]">
               {job.reference || `RC-${String(job.id).padStart(6, "0")}`}
             </p>
             <h3 className="mt-2 text-xl font-black">{job.job_type || "Waste Collection"}</h3>
           </div>
-          <span className="rounded-full border border-[#285342] bg-[#10291f] px-3 py-1 text-xs font-black text-[#1BBB8C]">
+          <span className="rounded-full border border-[#285342] bg-[#10291f] px-3 py-1 text-xs font-black text-[#79c51c]">
             QUOTES
           </span>
         </div>
@@ -773,7 +779,7 @@ function QuoteJobCard({ job }: { job: Job }) {
         {job.description && <JobLine label="Description" value={job.description} />}
         <Link
           href="/customer/quotes"
-          className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
+          className="block w-full rounded-xl bg-[#79c51c] px-5 py-3.5 text-center font-black text-[#050705] hover:bg-[#91db32]"
         >
           Review Quotes
         </Link>
@@ -795,11 +801,11 @@ function CustomerActiveJobCard({
   const countdown = getCollectionCountdown(job.preferred_date, job.preferred_time, now);
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-[#3f8d24] bg-[#0b1b14] shadow-xl">
-      <div className="border-b border-[#214333] bg-[#10230f] p-6">
+    <div className="overflow-hidden rounded-3xl border border-[#79c51c] bg-[#0a0e0a] shadow-xl">
+      <div className="border-b border-white/[0.09] bg-[#0c1209] p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+            <p className="text-xs font-black uppercase tracking-wider text-[#79c51c]">
               {job.reference || `RC-${String(job.id).padStart(6, "0")}`}
             </p>
             <h3 className="mt-2 text-xl font-black">{job.job_type || "Waste Collection"}</h3>
@@ -815,13 +821,13 @@ function CustomerActiveJobCard({
         </div>
 
         {countdown && (
-          <div className="rounded-2xl border border-[#3f8d24]/50 bg-[#162b13] p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-[#71867c]">Collection countdown</p>
-            <p className="mt-1 text-2xl font-black text-[#1BBB8C]">{countdown}</p>
+          <div className="rounded-2xl border border-[#79c51c]/50 bg-[#162b13] p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-[#6b7280]">Collection countdown</p>
+            <p className="mt-1 text-2xl font-black text-[#79c51c]">{countdown}</p>
           </div>
         )}
 
-        <div className="rounded-2xl border border-[#214333] bg-[#07130e] p-4">
+        <div className="rounded-2xl border border-white/[0.09] bg-[#07130e] p-4">
           <p className="text-sm font-black text-white">Collection progress</p>
           <div className="mt-4">
             <CollectionTracker stage={stage} />
@@ -834,12 +840,12 @@ function CustomerActiveJobCard({
         </div>
 
         {driver && (
-          <div className="rounded-2xl border border-[#214333] bg-[#07130e] p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-[#1BBB8C]">Your driver</p>
+          <div className="rounded-2xl border border-white/[0.09] bg-[#07130e] p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-[#79c51c]">Your driver</p>
             <p className="mt-1 text-lg font-black">
               {driver.trading_name || driver.company_name || driver.full_name || "RCS Driver"}
             </p>
-            <p className="mt-1 text-sm text-[#82958c]">
+            <p className="mt-1 text-sm text-[#71717a]">
               {driver.vehicle_type || "RCS vehicle"}
               {driver.vehicle_registration ? ` • ${driver.vehicle_registration}` : ""}
             </p>
@@ -847,14 +853,14 @@ function CustomerActiveJobCard({
               {driver.phone && (
                 <a
                   href={`tel:${driver.phone}`}
-                  className="flex-1 rounded-xl border border-[#29483a] px-4 py-3 text-center text-sm font-black hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+                  className="flex-1 rounded-xl border border-white/[0.12] px-4 py-3 text-center text-sm font-black hover:border-[#79c51c] hover:text-[#79c51c]"
                 >
                   Call Driver
                 </a>
               )}
               <Link
                 href={`/customer/jobs/${job.id}`}
-                className="flex-1 rounded-xl bg-[#1BBB8C] px-4 py-3 text-center text-sm font-black text-[#06100c] hover:bg-[#16a77c]"
+                className="flex-1 rounded-xl bg-[#79c51c] px-4 py-3 text-center text-sm font-black text-[#050705] hover:bg-[#91db32]"
               >
                 Manage Job
               </Link>
@@ -865,7 +871,7 @@ function CustomerActiveJobCard({
         {!driver && (
           <Link
             href={`/customer/jobs/${job.id}`}
-            className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
+            className="block w-full rounded-xl bg-[#79c51c] px-5 py-3.5 text-center font-black text-[#050705] hover:bg-[#91db32]"
           >
             View Job
           </Link>
@@ -880,11 +886,11 @@ function CustomerJobCard({ job }: { job: Job }) {
   const cancelled = status === "cancelled" || status === "canceled";
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl">
+    <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0a0e0a] shadow-xl">
       <div className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+            <p className="text-xs font-black uppercase tracking-wider text-[#79c51c]">
               {job.reference || `RC-${String(job.id).padStart(6, "0")}`}
             </p>
             <h3 className="mt-2 truncate text-xl font-black">{job.job_type || "Waste Collection"}</h3>
@@ -910,7 +916,7 @@ function CustomerJobCard({ job }: { job: Job }) {
 
         <Link
           href={`/customer/jobs/${job.id}`}
-          className="mt-6 block w-full rounded-xl border border-[#29483a] px-5 py-3.5 text-center font-black text-white hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+          className="mt-6 block w-full rounded-xl border border-white/[0.12] px-5 py-3.5 text-center font-black text-white hover:border-[#79c51c] hover:text-[#79c51c]"
         >
           View Job
         </Link>
@@ -921,8 +927,8 @@ function CustomerJobCard({ job }: { job: Job }) {
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5">
-      <p className="text-xs font-black uppercase tracking-[0.12em] text-[#657a70]">{label}</p>
+    <div className="rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-5">
+      <p className="text-xs font-black uppercase tracking-[0.12em] text-[#6b7280]">{label}</p>
       <p className="mt-2 break-words text-base font-black text-white">{value}</p>
     </div>
   );
@@ -930,9 +936,9 @@ function InfoCard({ label, value }: { label: string; value: string }) {
 
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[#214333] bg-[#08150f] p-4">
-      <p className="text-xs font-black uppercase tracking-wide text-[#657a70]">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-[#d5dfda]">{value}</p>
+    <div className="rounded-2xl border border-white/[0.09] bg-[#08150f] p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-[#6b7280]">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-[#e4e4e7]">{value}</p>
     </div>
   );
 }
@@ -940,8 +946,8 @@ function InfoBox({ label, value }: { label: string; value: string }) {
 function JobLine({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-wide text-[#657a70]">{label}</p>
-      <p className="mt-1 line-clamp-2 text-sm font-semibold text-[#d5dfda]">{value}</p>
+      <p className="text-xs font-black uppercase tracking-wide text-[#6b7280]">{label}</p>
+      <p className="mt-1 line-clamp-2 text-sm font-semibold text-[#e4e4e7]">{value}</p>
     </div>
   );
 }
@@ -949,7 +955,7 @@ function JobLine({ label, value }: { label: string; value: string }) {
 function StatusBadge({ status }: { status: string }) {
   const normalised = normaliseStatus(status);
   let label = formatStatus(status);
-  let className = "border-[#29483a] bg-[#18271f] text-[#b8c6c0]";
+  let className = "border-white/[0.12] bg-[#18271f] text-[#d4d4d8]";
 
   if (["pending", "new", "open"].includes(normalised)) {
     label = normalised === "new" ? "NEW" : "WAITING";
@@ -963,7 +969,7 @@ function StatusBadge({ status }: { status: string }) {
 
   if (["assigned", "accepted", "booked"].includes(normalised)) {
     label = "BOOKED";
-    className = "border-[#3f8d24] bg-[#183017] text-[#1BBB8C]";
+    className = "border-[#79c51c] bg-[#0c1209] text-[#79c51c]";
   }
 
   if (["on_the_way", "on the way", "driver_on_way", "driver on way"].includes(normalised)) {
@@ -978,7 +984,7 @@ function StatusBadge({ status }: { status: string }) {
 
   if (["completed", "complete"].includes(normalised)) {
     label = "COMPLETED";
-    className = "border-[#3f8d24] bg-[#183017] text-[#1BBB8C]";
+    className = "border-[#79c51c] bg-[#0c1209] text-[#79c51c]";
   }
 
   if (["cancelled", "canceled", "rejected"].includes(normalised)) {
@@ -1009,8 +1015,8 @@ function CollectionTracker({ stage }: { stage: CollectionStage }) {
         const active = currentIndex >= index;
         return (
           <div key={item.key}>
-            <div className={`h-1.5 rounded-full ${active ? "bg-[#1BBB8C]" : "bg-[#17382b]"}`} />
-            <p className={`mt-2 truncate text-[10px] font-black uppercase tracking-wider ${active ? "text-[#1BBB8C]" : "text-[#657a70]"}`}>
+            <div className={`h-1.5 rounded-full ${active ? "bg-[#79c51c]" : "bg-[rgba(255,255,255,0.08)]"}`} />
+            <p className={`mt-2 truncate text-[10px] font-black uppercase tracking-wider ${active ? "text-[#79c51c]" : "text-[#6b7280]"}`}>
               {item.label}
             </p>
           </div>
@@ -1030,21 +1036,21 @@ function NotificationCard({
   onOpen: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-[#17382b] bg-[#081710] p-4">
+    <div className="rounded-2xl border border-white/[0.08] bg-[#080b08] p-4">
       <p className="text-sm font-black">{notification.title}</p>
-      <p className="mt-1 text-sm leading-6 text-[#71867c]">{notification.text}</p>
+      <p className="mt-1 text-sm leading-6 text-[#6b7280]">{notification.text}</p>
       <div className="mt-4 flex gap-2">
         <Link
           href={notification.href}
           onClick={onOpen}
-          className="rounded-xl bg-[#1BBB8C] px-4 py-2.5 text-xs font-black text-[#06100c]"
+          className="rounded-xl bg-[#79c51c] px-4 py-2.5 text-xs font-black text-[#050705]"
         >
           View
         </Link>
         <button
           type="button"
           onClick={onDismiss}
-          className="rounded-xl border border-[#29483a] px-4 py-2.5 text-xs font-black text-[#71867c] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+          className="rounded-xl border border-white/[0.12] px-4 py-2.5 text-xs font-black text-[#6b7280] hover:border-[#79c51c] hover:text-[#79c51c]"
         >
           Dismiss
         </button>
