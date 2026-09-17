@@ -354,9 +354,7 @@ export default function CustomerDashboard() {
   const cancelledJobs = useMemo(() => {
     return jobs.filter((job) => {
       const status = normaliseStatus(job.status);
-      const journeyStatus = normaliseStatus(
-        job.journey_status
-      );
+      const journeyStatus = normaliseStatus(job.journey_status);
 
       return (
         status === "cancelled" ||
@@ -381,6 +379,7 @@ export default function CustomerDashboard() {
       <main className="min-h-screen bg-[#050705] text-white">
         <div className="flex min-h-screen items-center justify-center px-6">
           <div className="text-center">
+
             <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-[#162015] border-t-[#79c51c]" />
 
             <p className="mt-5 text-lg font-black">
@@ -390,6 +389,7 @@ export default function CustomerDashboard() {
             <p className="mt-2 text-sm text-[#718067]">
               Getting your latest jobs
             </p>
+
           </div>
         </div>
       </main>
@@ -405,9 +405,12 @@ export default function CustomerDashboard() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050705] pb-28 text-white">
 
+      {/* ================================================= */}
       {/* HEADER */}
+      {/* ================================================= */}
 
       <header className="pwa-header sticky top-0 z-40 border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl">
+
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
 
           <Link
@@ -445,14 +448,21 @@ export default function CustomerDashboard() {
             </button>
 
           </div>
+
         </div>
+
       </header>
 
+
+      {/* ================================================= */}
       {/* CONTENT */}
+      {/* ================================================= */}
 
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
 
+        {/* ================================================= */}
         {/* WELCOME */}
+        {/* ================================================= */}
 
         <section className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#080b08] p-6 sm:p-8">
 
@@ -465,11 +475,13 @@ export default function CustomerDashboard() {
               <div>
 
                 <div className="flex items-center gap-2">
+
                   <span className="h-2 w-2 rounded-full bg-[#79c51c] shadow-[0_0_15px_rgba(121,197,28,0.7)]" />
 
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
                     Customer Portal
                   </p>
+
                 </div>
 
                 <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">
@@ -496,9 +508,13 @@ export default function CustomerDashboard() {
             </div>
 
           </div>
+
         </section>
 
+
+        {/* ================================================= */}
         {/* POST JOB */}
+        {/* ================================================= */}
 
         <Link
           href="/customer/post-job"
@@ -512,6 +528,7 @@ export default function CustomerDashboard() {
             </span>
 
             <div>
+
               <p className="text-base font-black sm:text-lg">
                 POST A NEW JOB
               </p>
@@ -519,6 +536,7 @@ export default function CustomerDashboard() {
               <p className="mt-0.5 text-xs font-bold text-[#17220f]/70">
                 Tell us what needs clearing
               </p>
+
             </div>
 
           </div>
@@ -529,7 +547,10 @@ export default function CustomerDashboard() {
 
         </Link>
 
+
+        {/* ================================================= */}
         {/* ACTION REQUIRED */}
+        {/* ================================================= */}
 
         {actionRequiredCount > 0 && (
           <section className="mt-5">
@@ -578,7 +599,10 @@ export default function CustomerDashboard() {
           </section>
         )}
 
+
+        {/* ================================================= */}
         {/* ACTIVE COLLECTION */}
+        {/* ================================================= */}
 
         {activeJobs.length > 0 && (
           <section className="mt-9">
@@ -604,7 +628,10 @@ export default function CustomerDashboard() {
           </section>
         )}
 
+
+        {/* ================================================= */}
         {/* CANCELLED COLLECTIONS */}
+        {/* ================================================= */}
 
         {cancelledJobs.length > 0 && (
           <section className="mt-9">
@@ -639,7 +666,10 @@ export default function CustomerDashboard() {
           </section>
         )}
 
+
+        {/* ================================================= */}
         {/* QUICK ACCESS */}
+        {/* ================================================= */}
 
         <section className="mt-9">
 
@@ -691,6 +721,7 @@ export default function CustomerDashboard() {
               </span>
 
               <span>
+
                 <span className="block text-sm font-black">
                   {refreshing
                     ? "Refreshing..."
@@ -700,6 +731,7 @@ export default function CustomerDashboard() {
                 <span className="mt-1 block text-xs text-[#718067]">
                   Check for updates
                 </span>
+
               </span>
 
             </button>
@@ -708,7 +740,10 @@ export default function CustomerDashboard() {
 
         </section>
 
+
+        {/* ================================================= */}
         {/* SUMMARY */}
+        {/* ================================================= */}
 
         <section className="mt-8">
 
@@ -741,7 +776,10 @@ export default function CustomerDashboard() {
 
         </section>
 
+
+        {/* ================================================= */}
         {/* WHATSAPP SUPPORT */}
+        {/* ================================================= */}
 
         <section className="mt-8">
 
@@ -792,7 +830,10 @@ export default function CustomerDashboard() {
 
         </section>
 
+
+        {/* ================================================= */}
         {/* ERROR */}
+        {/* ================================================= */}
 
         {errorMessage && (
           <div className="mt-6 rounded-2xl border border-red-900/60 bg-[#180909] p-5">
@@ -812,7 +853,10 @@ export default function CustomerDashboard() {
           </div>
         )}
 
+
+        {/* ================================================= */}
         {/* RECENT JOBS */}
+        {/* ================================================= */}
 
         <section className="mt-10">
 
@@ -853,7 +897,10 @@ export default function CustomerDashboard() {
 
         </section>
 
-        {/* FOOTER */}
+
+        {/* ================================================= */}
+        {/* FOOTER SUPPORT */}
+        {/* ================================================= */}
 
         <div className="mt-12 border-t border-white/[0.06] pt-7 text-center">
 
@@ -869,7 +916,10 @@ export default function CustomerDashboard() {
 
       </div>
 
+
+      {/* ================================================= */}
       {/* CUSTOMER APP NAV */}
+      {/* ================================================= */}
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.08] bg-[#050705]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
 
@@ -909,7 +959,10 @@ export default function CustomerDashboard() {
 
       </nav>
 
+
+      {/* ================================================= */}
       {/* INSTALL APP MODAL */}
+      {/* ================================================= */}
 
       {showInstallModal && (
         <div
@@ -952,6 +1005,7 @@ export default function CustomerDashboard() {
               </button>
 
             </div>
+
 
             {installPrompt ? (
               <>
@@ -1033,11 +1087,10 @@ export default function CustomerDashboard() {
   );
 }
 
-/*
- * =========================================================
- * ACTIVE JOB CARD
- * =========================================================
- */
+
+/* ========================================================= */
+/* ACTIVE JOB CARD                                           */
+/* ========================================================= */
 
 function ActiveJobCard({
   job,
@@ -1122,11 +1175,10 @@ function ActiveJobCard({
   );
 }
 
-/*
- * =========================================================
- * CANCELLED JOB CARD
- * =========================================================
- */
+
+/* ========================================================= */
+/* CANCELLED JOB CARD                                        */
+/* ========================================================= */
 
 function CancelledJobCard({
   job,
@@ -1190,8 +1242,7 @@ function CancelledJobCard({
 
               {job.preferred_date && (
                 <span className="text-xs font-bold text-[#716363]">
-                  Collection date:{" "}
-                  {formatDate(job.preferred_date)}
+                  Collection date: {formatDate(job.preferred_date)}
                 </span>
               )}
 
@@ -1210,27 +1261,36 @@ function CancelledJobCard({
       </Link>
 
       <div className="border-t border-red-900/30 bg-[#120909] p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-black text-[#c6baba]">
+              Need help?
+            </p>
 
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#79c51c] px-5 text-sm font-black text-[#050705] transition hover:bg-[#91db32]"
-        >
-          Contact RCS on WhatsApp
-        </a>
+            <p className="mt-1 text-xs text-[#716363]">
+              Contact RCS if you need assistance.
+            </p>
+          </div>
 
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-xl border border-[#79c51c]/40 px-4 py-2.5 text-xs font-black text-[#79c51c] transition hover:border-[#79c51c] hover:bg-[#79c51c]/10"
+          >
+            Contact RCS
+          </a>
+        </div>
       </div>
 
     </article>
   );
 }
 
-/*
- * =========================================================
- * CUSTOMER JOB CARD
- * =========================================================
- */
+
+/* ========================================================= */
+/* CUSTOMER JOB CARD                                         */
+/* ========================================================= */
 
 function CustomerJobCard({
   job,
@@ -1283,7 +1343,7 @@ function CustomerJobCard({
               "Postcode not provided"}
           </p>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className="mt-2 flex items-center gap-2">
 
             <StatusBadge
               status={job.status || "pending"}
@@ -1315,11 +1375,10 @@ function CustomerJobCard({
   );
 }
 
-/*
- * =========================================================
- * QUICK ACTION
- * =========================================================
- */
+
+/* ========================================================= */
+/* QUICK ACTION                                              */
+/* ========================================================= */
 
 function QuickAction({
   href,
@@ -1370,11 +1429,10 @@ function QuickAction({
   );
 }
 
-/*
- * =========================================================
- * BOTTOM NAV
- * =========================================================
- */
+
+/* ========================================================= */
+/* BOTTOM NAV                                                */
+/* ========================================================= */
 
 function BottomNavItem({
   href,
@@ -1419,11 +1477,10 @@ function BottomNavItem({
   );
 }
 
-/*
- * =========================================================
- * SUMMARY ITEM
- * =========================================================
- */
+
+/* ========================================================= */
+/* SUMMARY ITEM                                              */
+/* ========================================================= */
 
 function SummaryItem({
   value,
@@ -1455,11 +1512,10 @@ function SummaryItem({
   );
 }
 
-/*
- * =========================================================
- * MINI DETAIL
- * =========================================================
- */
+
+/* ========================================================= */
+/* MINI DETAIL                                               */
+/* ========================================================= */
 
 function MiniDetail({
   label,
@@ -1483,19 +1539,17 @@ function MiniDetail({
   );
 }
 
-/*
- * =========================================================
- * STATUS BADGE
- * =========================================================
- */
+
+/* ========================================================= */
+/* STATUS BADGE                                              */
+/* ========================================================= */
 
 function StatusBadge({
   status,
 }: {
   status: string;
 }) {
-  const normalised =
-    normaliseStatus(status);
+  const normalised = normaliseStatus(status);
 
   let className =
     "border-white/10 bg-white/[0.04] text-[#b8c3b3]";
@@ -1580,11 +1634,10 @@ function StatusBadge({
   );
 }
 
-/*
- * =========================================================
- * SECTION TITLE
- * =========================================================
- */
+
+/* ========================================================= */
+/* SECTION TITLE                                             */
+/* ========================================================= */
 
 function SectionTitle({
   eyebrow,
@@ -1608,11 +1661,10 @@ function SectionTitle({
   );
 }
 
-/*
- * =========================================================
- * EMPTY STATE
- * =========================================================
- */
+
+/* ========================================================= */
+/* EMPTY STATE                                               */
+/* ========================================================= */
 
 function EmptyJobs() {
   return (
@@ -1642,11 +1694,10 @@ function EmptyJobs() {
   );
 }
 
-/*
- * =========================================================
- * HELPERS
- * =========================================================
- */
+
+/* ========================================================= */
+/* HELPERS                                                   */
+/* ========================================================= */
 
 function normaliseStatus(
   status: string | null
