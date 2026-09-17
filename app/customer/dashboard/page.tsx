@@ -46,7 +46,7 @@ type AssignedDriver = {
   company_name: string | null;
 };
 
-type DashboardNotification = {
+type NotificationItem = {
   id: string;
   title: string;
   text: string;
@@ -91,17 +91,15 @@ export default function CustomerDashboard() {
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [assignedDrivers, setAssignedDrivers] = useState<Record<string, AssignedDriver>>({});
+  const [accountName, setAccountName] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [accountEmail, setAccountEmail] = useState("");
-  const [accountName, setAccountName] = useState("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [showInstallModal, setShowInstallModal] = useState(false);
-  const [showAccountModal, setShowAccountModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [dismissedNotifications, setDismissedNotifications] = useState<string[]>([]);
 
@@ -122,15 +120,15 @@ export default function CustomerDashboard() {
     try {
       const raw = window.localStorage.getItem("rcs-dashboard-dismissed-notifications");
       if (raw) {
-        const value: unknown = JSON.parse(raw);
-        if (Array.isArray(value)) {
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
           setDismissedNotifications(
-            value.filter((item): item is string => typeof item === "string"),
+            parsed.filter((item): item is string => typeof item === "string"),
           );
         }
       }
     } catch {
-      // Ignore storage errors.
+      // Ignore local storage errors.
     }
 
     checkInstalled();
@@ -150,7 +148,7 @@ export default function CustomerDashboard() {
         JSON.stringify(dismissedNotifications),
       );
     } catch {
-      // Ignore storage errors.
+      // Ignore local storage errors.
     }
   }, [dismissedNotifications]);
 
@@ -217,13 +215,12 @@ export default function CustomerDashboard() {
             .in("id", assignedIds);
 
           if (!driverError) {
-            const map: Record<string, AssignedDriver> = {};
+            const driverMap: Record<string, AssignedDriver> = {};
             ((drivers || []) as AssignedDriver[]).forEach((driver) => {
-              map[driver.id] = driver;
+              driverMap[driver.id] = driver;
             });
-            setAssignedDrivers(map);
+            setAssignedDrivers(driverMap);
           } else {
-            console.warn("Assigned driver lookup unavailable:", driverError);
             setAssignedDrivers({});
           }
         } else {
@@ -255,40 +252,9 @@ export default function CustomerDashboard() {
     return () => window.clearInterval(interval);
   }, [loadDashboard]);
 
-  async function handleLogout() {
-    try {
-      await supabase.auth.signOut();
-      router.replace("/customer/login");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
-      setErrorMessage("Unable to log out. Please try again.");
-    }
-  }
-
-  async function handleInstallApp() {
-    if (installPrompt) {
-      try {
-        await installPrompt.prompt();
-        const choice = await installPrompt.userChoice;
-        if (choice.outcome === "accepted") {
-          setInstallPrompt(null);
-          setShowInstallModal(false);
-        }
-      } catch (error) {
-        console.error("PWA install error:", error);
-      }
-      return;
-    }
-
-    setShowInstallModal(true);
-  }
-
   const pendingJobs = useMemo(
     () =>
-      jobs.filter((job) =>
-        ["pending", "new", "open"].includes(normaliseStatus(job.status)),
-      ),
+      jobs.filter((job) => ["pending", "new", "open"].includes(normaliseStatus(job.status))),
     [jobs],
   );
 
@@ -312,11 +278,13 @@ export default function CustomerDashboard() {
             "on_the_way",
             "on the way",
             "driver_on_way",
+            "driver on way",
           ].includes(status) ||
           [
             "on_the_way",
             "on the way",
             "driver_on_way",
+            "driver on way",
             "in_progress",
             "in progress",
             "collecting",
@@ -350,35 +318,34 @@ export default function CustomerDashboard() {
     [jobs],
   );
 
-  const featuredActiveJob = activeJobs[0] || null;
   const recentJobs = jobs.slice(0, 4);
 
-  const notifications = useMemo<DashboardNotification[]>(() => {
-    const list: DashboardNotification[] = [];
+  const notifications = useMemo<NotificationItem[]>(() => {
+    const items: NotificationItem[] = [];
 
     if (biddingJobs.length > 0) {
-      list.push({
+      items.push({
         id: `quotes-${biddingJobs.map((job) => job.id).join("-")}`,
         type: "quote",
         title: biddingJobs.length === 1 ? "Driver quote waiting" : `${biddingJobs.length} driver quotes waiting`,
-        text: "Review the quotes on your customer portal.",
+        text: "Review the quotes from approved RCS drivers.",
         href: "/customer/quotes",
       });
     }
 
     activeJobs.slice(0, 3).forEach((job) => {
       const stage = getCollectionStage(job);
-      list.push({
+      items.push({
         id: `active-${job.id}-${job.status}-${job.journey_status}`,
         type: "collection",
         title: stage === "on_way" ? "Driver on the way" : "Collection active",
-        text: `${job.reference || `Job #${job.id}`} needs your attention in the dashboard.`,
+        text: `${job.reference || `Job #${job.id}`} is active in your customer portal.`,
         href: `/customer/jobs/${job.id}`,
       });
     });
 
     cancelledJobs.slice(0, 2).forEach((job) => {
-      list.push({
+      items.push({
         id: `cancelled-${job.id}-${job.cancelled_at || job.status}`,
         type: "cancelled",
         title: "Collection cancelled",
@@ -388,7 +355,7 @@ export default function CustomerDashboard() {
     });
 
     completedJobs.slice(0, 2).forEach((job) => {
-      list.push({
+      items.push({
         id: `completed-${job.id}-${job.status}`,
         type: "completed",
         title: "Collection completed",
@@ -397,7 +364,7 @@ export default function CustomerDashboard() {
       });
     });
 
-    return list;
+    return items;
   }, [activeJobs, biddingJobs, cancelledJobs, completedJobs]);
 
   const visibleNotifications = notifications.filter(
@@ -410,7 +377,34 @@ export default function CustomerDashboard() {
     );
   }
 
-  const displayName = accountName || accountEmail || "Customer";
+  async function handleLogout() {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      router.replace("/customer/login");
+      router.refresh();
+    }
+  }
+
+  async function handleInstallApp() {
+    if (installPrompt) {
+      try {
+        await installPrompt.prompt();
+        const choice = await installPrompt.userChoice;
+        if (choice.outcome === "accepted") {
+          setInstallPrompt(null);
+        }
+      } catch (error) {
+        console.error("PWA install error:", error);
+      }
+      return;
+    }
+
+    setShowNotifications(false);
+    window.alert("On iPhone: open this website in Safari, tap Share, then choose Add to Home Screen.");
+  }
 
   if (loading) {
     return (
@@ -452,32 +446,24 @@ export default function CustomerDashboard() {
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={() => setShowNotifications(true)}
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#29483a] text-lg text-[#aabbb4] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
-              aria-label="Open notifications"
-            >
-              ◔
-              {visibleNotifications.length > 0 && (
+            {visibleNotifications.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowNotifications(true)}
+                className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#29483a] text-lg text-[#aabbb4] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+                aria-label="Open notifications"
+              >
+                ●
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#1BBB8C] px-1 text-[9px] font-black text-[#06100c]">
                   {visibleNotifications.length > 9 ? "9+" : visibleNotifications.length}
                 </span>
-              )}
-            </button>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => setShowAccountModal(true)}
-              className="hidden items-center gap-2 rounded-xl border border-[#29483a] px-3 py-2 text-left transition hover:border-[#1BBB8C] sm:flex"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#123529] text-[10px] font-black text-[#1BBB8C]">
-                {getInitials(displayName)}
-              </span>
-              <span className="max-w-[140px] truncate text-xs font-black text-[#c5d1cb]">
-                {displayName}
-              </span>
-            </button>
+            <div className="hidden text-right sm:block">
+              <p className="text-xs text-[#687d73]">Customer</p>
+              <p className="text-sm font-bold">{accountName || "Customer"}</p>
+            </div>
 
             <button
               type="button"
@@ -502,26 +488,15 @@ export default function CustomerDashboard() {
       <div className="mx-auto max-w-7xl px-5 py-8 sm:py-10">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#1BBB8C]">RCS Marketplace</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Customer Dashboard</h1>
-            <p className="mt-2 text-[#82958c]">
-              Welcome{accountName ? `, ${firstName(accountName)}` : ""}. Post jobs, compare quotes and manage your collections.
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#1BBB8C]">
+              RCS Marketplace
             </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/customer/post-job"
-              className="rounded-xl bg-[#1BBB8C] px-5 py-2.5 text-sm font-black text-[#06100c] transition hover:bg-[#16a77c]"
-            >
-              POST A NEW JOB
-            </Link>
-            <Link
-              href="/customer/quotes"
-              className="rounded-xl border border-[#29483a] px-5 py-2.5 text-sm font-black text-[#c5d1cb] transition hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
-            >
-              MY QUOTES{biddingJobs.length > 0 ? ` (${biddingJobs.length})` : ""}
-            </Link>
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+              Customer Dashboard
+            </h1>
+            <p className="mt-2 max-w-2xl text-[#82958c]">
+              Welcome{accountName ? `, ${firstName(accountName)}` : ""}. Manage your waste removal jobs, compare driver quotes and track your collections.
+            </p>
           </div>
         </div>
 
@@ -538,38 +513,39 @@ export default function CustomerDashboard() {
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard title="My Jobs" value={jobs.length} description="Total jobs posted" />
-          <StatCard title="Quotes Waiting" value={biddingJobs.length} description="Driver quotes to review" highlight={biddingJobs.length > 0} />
-          <StatCard title="Active Collections" value={activeJobs.length} description="Collections booked or in progress" />
+          <StatCard title="My Quotes" value={biddingJobs.length} description="Driver quotes waiting" highlight={biddingJobs.length > 0} />
+          <StatCard title="Active Jobs" value={activeJobs.length} description="Collections booked or in progress" />
           <StatCard title="Completed" value={completedJobs.length} description="Jobs completed" />
-        </div>
+        </section>
 
-        {biddingJobs.length > 0 && (
-          <section className="mt-10">
-            <SectionHeading eyebrow="Action Required" title="Driver Quotes Waiting" />
+        <section className="mt-10">
+          <SectionHeading eyebrow="Action Required" title="Driver Quotes" />
+
+          {biddingJobs.length === 0 ? (
+            <EmptyState
+              title="No quotes waiting"
+              description="When approved RCS drivers submit quotes for your jobs, they will appear here."
+              href="/customer/post-job"
+              action="Post a new job"
+            />
+          ) : (
             <div className="grid gap-5 lg:grid-cols-2">
               {biddingJobs.slice(0, 4).map((job) => (
                 <QuoteJobCard key={job.id} job={job} />
               ))}
             </div>
-            {biddingJobs.length > 4 && (
-              <Link
-                href="/customer/quotes"
-                className="mt-5 inline-flex rounded-xl border border-[#29483a] px-5 py-3 text-sm font-black text-[#c5d1cb] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
-              >
-                View all {biddingJobs.length} quotes
-              </Link>
-            )}
-          </section>
-        )}
+          )}
+        </section>
 
         <section className="mt-10">
-          <SectionHeading eyebrow="Booked & In Progress" title="Your Active Collections" />
+          <SectionHeading eyebrow="Booked & In Progress" title="Your Active Jobs" />
+
           {activeJobs.length === 0 ? (
             <EmptyState
-              title="No active collections"
-              description="Your booked and in-progress waste collections will appear here."
+              title="No active jobs"
+              description="Booked and in-progress waste collections will appear here."
               href="/customer/post-job"
               action="Post a new job"
             />
@@ -589,10 +565,11 @@ export default function CustomerDashboard() {
 
         <section className="mt-10">
           <SectionHeading eyebrow="Customer Portal" title="My Jobs" />
+
           {recentJobs.length === 0 ? (
             <EmptyState
               title="No jobs yet"
-              description="Post your first waste removal job and approved RCS drivers can send you quotes."
+              description="Post a job and approved RCS drivers can send you quotes."
               href="/customer/post-job"
               action="Post your first job"
             />
@@ -605,46 +582,48 @@ export default function CustomerDashboard() {
           )}
         </section>
 
-        <section className="mt-10 grid gap-4 sm:grid-cols-3">
+        <section className="mt-10 grid gap-5 lg:grid-cols-3">
           <Link
-            href="/customer/jobs"
-            className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5 transition hover:border-[#1BBB8C]/50"
+            href="/customer/post-job"
+            className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl transition hover:border-[#1BBB8C]/60"
           >
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#1BBB8C]">Jobs</p>
-            <p className="mt-2 text-lg font-black">Manage My Jobs</p>
-            <p className="mt-1 text-sm text-[#71867c]">View, edit and open your full job history.</p>
+            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#1BBB8C]">Marketplace</p>
+            <h2 className="mt-2 text-xl font-black">Post a New Job</h2>
+            <p className="mt-2 text-sm leading-6 text-[#71867c]">Tell us what needs removing and let approved RCS drivers submit quotes.</p>
+            <span className="mt-5 inline-block rounded-xl bg-[#1BBB8C] px-5 py-3 font-black text-[#06100c]">Post Job →</span>
           </Link>
+
           <Link
             href="/customer/quotes"
-            className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5 transition hover:border-[#1BBB8C]/50"
+            className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl transition hover:border-[#1BBB8C]/60"
           >
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#1BBB8C]">Quotes</p>
-            <p className="mt-2 text-lg font-black">Compare Driver Quotes</p>
-            <p className="mt-1 text-sm text-[#71867c]">Review driver prices and choose a collection.</p>
+            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#1BBB8C]">Quotes</p>
+            <h2 className="mt-2 text-xl font-black">Compare Driver Quotes</h2>
+            <p className="mt-2 text-sm leading-6 text-[#71867c]">Open your quote list and review prices from drivers.</p>
+            <span className="mt-5 inline-block rounded-xl border border-[#29483a] px-5 py-3 font-black text-white hover:border-[#1BBB8C] hover:text-[#1BBB8C]">View Quotes →</span>
           </Link>
+
           <a
             href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hi RCS, I need some help with my customer account.")}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-2xl border border-[#1BBB8C]/20 bg-[#08150f] p-5 transition hover:border-[#1BBB8C]/60"
+            className="rounded-3xl border border-[#17382b] bg-[#0b1b14] p-6 shadow-xl transition hover:border-[#1BBB8C]/60"
           >
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#1BBB8C]">Support</p>
-            <p className="mt-2 text-lg font-black">Message RCS</p>
-            <p className="mt-1 text-sm text-[#71867c]">Contact the RCS team on WhatsApp.</p>
+            <p className="text-xs font-black uppercase tracking-[0.15em] text-[#1BBB8C]">Support</p>
+            <h2 className="mt-2 text-xl font-black">Contact RCS</h2>
+            <p className="mt-2 text-sm leading-6 text-[#71867c]">Need help with a booking, quote or account? Message RCS on WhatsApp.</p>
+            <span className="mt-5 inline-block rounded-xl border border-[#1BBB8C]/30 px-5 py-3 font-black text-[#1BBB8C]">Message RCS →</span>
           </a>
         </section>
 
-        <section className="mt-10 pb-12">
-          <SectionHeading eyebrow="Account" title="Customer Information" />
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <InfoCard label="Account" value={displayName} />
-            <InfoCard label="Email" value={accountEmail || "Not available"} />
-            <InfoCard label="Waiting jobs" value={String(pendingJobs.length)} />
-            <InfoCard label="Cancelled jobs" value={String(cancelledJobs.length)} />
-          </div>
+        <section className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <InfoCard label="Account" value={accountName || "Customer"} />
+          <InfoCard label="Email" value={accountEmail || "Not available"} />
+          <InfoCard label="Waiting Jobs" value={String(pendingJobs.length)} />
+          <InfoCard label="Cancelled Jobs" value={String(cancelledJobs.length)} />
         </section>
 
-        <div className="flex items-center justify-between border-t border-[#17382b] pt-5 text-xs text-[#53675e]">
+        <div className="mt-10 flex items-center justify-between border-t border-[#17382b] pt-5 text-xs text-[#53675e]">
           <span>Rapid Clear Solutions</span>
           <span>{lastUpdatedAt ? `Updated ${formatRelativeTime(lastUpdatedAt, now)}` : "Live dashboard"}</span>
         </div>
@@ -652,11 +631,11 @@ export default function CustomerDashboard() {
 
       {showNotifications && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           onClick={() => setShowNotifications(false)}
         >
           <div
-            className="w-full max-w-lg overflow-hidden rounded-3xl border border-[#29483a] bg-[#0b1b14] shadow-2xl"
+            className="max-h-[88vh] w-full max-w-lg overflow-hidden rounded-t-3xl border border-[#29483a] bg-[#0b1b14] shadow-2xl sm:rounded-3xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[#17382b] p-5">
@@ -673,39 +652,23 @@ export default function CustomerDashboard() {
                 ×
               </button>
             </div>
+
             <div className="max-h-[70vh] overflow-y-auto p-5">
               {visibleNotifications.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[#29483a] bg-[#081710] p-8 text-center">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#123529] text-sm font-black text-[#1BBB8C]">RCS</div>
-                  <p className="mt-4 text-sm font-black">You're all caught up</p>
+                  <p className="mt-4 text-sm font-black">You are all caught up</p>
                   <p className="mt-1 text-xs text-[#657a70]">No current dashboard updates.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {visibleNotifications.map((notification) => (
-                    <div
+                    <NotificationCard
                       key={notification.id}
-                      className="rounded-2xl border border-[#17382b] bg-[#081710] p-4"
-                    >
-                      <p className="text-sm font-black">{notification.title}</p>
-                      <p className="mt-1 text-sm leading-6 text-[#71867c]">{notification.text}</p>
-                      <div className="mt-4 flex gap-2">
-                        <Link
-                          href={notification.href}
-                          onClick={() => setShowNotifications(false)}
-                          className="rounded-xl bg-[#1BBB8C] px-4 py-2.5 text-xs font-black text-[#06100c]"
-                        >
-                          View
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => dismissNotification(notification.id)}
-                          className="rounded-xl border border-[#29483a] px-4 py-2.5 text-xs font-black text-[#9aaca4] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
-                        >
-                          Dismiss
-                        </button>
-                      </div>
-                    </div>
+                      notification={notification}
+                      onDismiss={() => dismissNotification(notification.id)}
+                      onOpen={() => setShowNotifications(false)}
+                    />
                   ))}
                 </div>
               )}
@@ -713,297 +676,7 @@ export default function CustomerDashboard() {
           </div>
         </div>
       )}
-
-      {showAccountModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
-          onClick={() => setShowAccountModal(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-3xl border border-[#29483a] bg-[#0b1b14] p-6 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#123529] text-sm font-black text-[#1BBB8C]">
-                  {getInitials(displayName)}
-                </div>
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.15em] text-[#1BBB8C]">Your Account</p>
-                  <h2 className="mt-1 text-xl font-black">{displayName}</h2>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAccountModal(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#29483a] text-lg text-[#71867c] hover:border-[#1BBB8C] hover:text-white"
-                aria-label="Close account"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <InfoCard label="Email" value={accountEmail || "Not available"} />
-              <InfoCard label="Jobs" value={String(jobs.length)} />
-              <InfoCard label="Quotes waiting" value={String(biddingJobs.length)} />
-              <InfoCard label="Active collections" value={String(activeJobs.length)} />
-            </div>
-
-            {!isInstalled && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAccountModal(false);
-                  void handleInstallApp();
-                }}
-                className="mt-5 flex min-h-[52px] w-full items-center justify-center rounded-xl border border-[#1BBB8C]/40 bg-[#123529] text-sm font-black text-[#1BBB8C] hover:bg-[#153f31]"
-              >
-                INSTALL RCS APP
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className="mt-3 flex min-h-[52px] w-full items-center justify-center rounded-xl bg-[#1BBB8C] text-sm font-black text-[#06100c] hover:bg-[#16a77c]"
-            >
-              LOG OUT
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showInstallModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
-          onClick={() => setShowInstallModal(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-3xl border border-[#29483a] bg-[#0b1b14] p-6 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.15em] text-[#1BBB8C]">Rapid Clear Solutions</p>
-                <h2 className="mt-2 text-2xl font-black">Install the RCS app</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowInstallModal(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#29483a] text-lg font-black text-[#71867c] hover:border-[#1BBB8C] hover:text-white"
-                aria-label="Close install dialog"
-              >
-                ×
-              </button>
-            </div>
-
-            {installPrompt ? (
-              <>
-                <p className="mt-5 text-sm leading-6 text-[#71867c]">
-                  Add Rapid Clear Solutions to your home screen for quick access to your customer dashboard.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void handleInstallApp()}
-                  className="mt-6 flex min-h-[52px] w-full items-center justify-center rounded-xl bg-[#1BBB8C] px-5 text-sm font-black text-[#06100c] hover:bg-[#16a77c]"
-                >
-                  INSTALL APP
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="mt-5 text-sm leading-6 text-[#71867c]">
-                  On iPhone, open the site in Safari, tap Share, then choose <span className="font-bold text-white">Add to Home Screen</span>.
-                </p>
-                <div className="mt-5 rounded-2xl border border-[#29483a] bg-[#081710] p-4">
-                  <p className="text-sm font-black">Android</p>
-                  <p className="mt-2 text-sm leading-6 text-[#71867c]">
-                    Open the browser menu and choose <span className="font-bold text-white">Install app</span> or <span className="font-bold text-white">Add to Home screen</span>.
-                  </p>
-                </div>
-              </>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setShowInstallModal(false)}
-              className="mt-4 w-full rounded-xl border border-[#29483a] px-5 py-3 text-sm font-bold text-[#71867c] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
-            >
-              Maybe later
-            </button>
-          </div>
-        </div>
-      )}
     </main>
-  );
-}
-
-function CustomerActiveJobCard({
-  job,
-  driver,
-  now,
-}: {
-  job: Job;
-  driver: AssignedDriver | null;
-  now: Date;
-}) {
-  const stage = getCollectionStage(job);
-  const countdown = getCollectionCountdown(job.preferred_date, job.preferred_time, now);
-
-  return (
-    <article className="overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl">
-      <div className="border-b border-[#17382b] bg-[#10230f] p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
-              {job.reference || `RC-${String(job.id).padStart(6, "0")}`}
-            </p>
-            <h3 className="mt-2 text-xl font-black">{job.job_type || "Waste Collection"}</h3>
-          </div>
-          <StatusBadge status={job.status || "assigned"} />
-        </div>
-      </div>
-
-      <div className="space-y-5 p-6">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <JobLine label="Location" value={job.postcode || "Not provided"} />
-          <JobLine label="Collection date" value={job.preferred_date ? formatDateLong(job.preferred_date) : "Not provided"} />
-          <JobLine label="Time" value={job.preferred_time || "Any time"} />
-          <JobLine label="Load size" value={job.load_size || "Not specified"} />
-        </div>
-
-        {countdown && (
-          <div className="rounded-2xl border border-[#1BBB8C]/20 bg-[#081710] p-4">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#1BBB8C]">Collection countdown</p>
-            <p className="mt-1 text-xl font-black">{countdown}</p>
-          </div>
-        )}
-
-        <CollectionTracker stage={stage} />
-
-        {driver && (
-          <div className="rounded-2xl border border-[#17382b] bg-[#081710] p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#1BBB8C]">Your driver</p>
-                <p className="mt-1 text-base font-black">
-                  {driver.trading_name || driver.company_name || driver.full_name || "RCS Driver"}
-                </p>
-                <p className="mt-1 text-xs text-[#71867c]">
-                  {[driver.vehicle_type, driver.vehicle_registration].filter(Boolean).join(" • ") || "Driver details available in the job"}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                {driver.phone && (
-                  <a
-                    href={`tel:${driver.phone}`}
-                    className="rounded-xl border border-[#29483a] px-4 py-2.5 text-xs font-black text-[#c5d1cb] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
-                  >
-                    CALL DRIVER
-                  </a>
-                )}
-                <Link
-                  href={`/customer/jobs/${job.id}`}
-                  className="rounded-xl bg-[#1BBB8C] px-4 py-2.5 text-xs font-black text-[#06100c] hover:bg-[#16a77c]"
-                >
-                  TRACK JOB
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <Link
-          href={`/customer/jobs/${job.id}`}
-          className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
-        >
-          Manage Collection
-        </Link>
-      </div>
-    </article>
-  );
-}
-
-function QuoteJobCard({ job }: { job: Job }) {
-  return (
-    <div className="overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl">
-      <div className="border-b border-[#17382b] p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
-              {job.reference || `RC-${String(job.id).padStart(6, "0")}`}
-            </p>
-            <h3 className="mt-2 text-xl font-black">{job.job_type || "Waste Collection"}</h3>
-          </div>
-          <span className="rounded-full border border-[#29483a] bg-[#10291f] px-3 py-1 text-xs font-black text-[#1BBB8C]">
-            QUOTES WAITING
-          </span>
-        </div>
-      </div>
-
-      <div className="space-y-5 p-6">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <JobLine label="Location" value={job.postcode || "Not provided"} />
-          <JobLine label="Collection date" value={job.preferred_date ? formatDateLong(job.preferred_date) : "Not provided"} />
-          <JobLine label="Load size" value={job.load_size || "Not specified"} />
-        </div>
-
-        <div className="rounded-2xl border border-[#1BBB8C]/20 bg-[#081710] p-4">
-          <p className="text-sm font-black">Driver quotes are available</p>
-          <p className="mt-1 text-sm leading-6 text-[#71867c]">
-            Open the quotes page to compare the submitted prices and choose your collection.
-          </p>
-        </div>
-
-        <Link
-          href={`/customer/jobs/${job.id}`}
-          className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
-        >
-          View Quotes
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function CustomerJobCard({ job }: { job: Job }) {
-  const status = normaliseStatus(job.status);
-  const cancelled = ["cancelled", "canceled"].includes(status);
-  const completed = ["completed", "complete"].includes(status);
-
-  return (
-    <Link
-      href={`/customer/jobs/${job.id}`}
-      className="block overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl transition hover:border-[#1BBB8C]/50"
-    >
-      <div className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
-              {job.reference || `RC-${String(job.id).padStart(6, "0")}`}
-            </p>
-            <h3 className="mt-2 text-xl font-black">{job.job_type || "Waste Collection"}</h3>
-          </div>
-          <StatusBadge status={job.status || "pending"} />
-        </div>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <JobLine label="Location" value={job.postcode || "Not provided"} />
-          <JobLine label="Date" value={job.preferred_date ? formatDateShort(job.preferred_date) : "Not set"} />
-          <JobLine label="Time" value={job.preferred_time || "Any time"} />
-        </div>
-
-        <div className="mt-6 flex items-center justify-between gap-4 border-t border-[#17382b] pt-4">
-          <div>
-            <p className="text-xs text-[#657a70]">
-              {cancelled ? "This collection was cancelled." : completed ? "Collection completed." : "Open for full details."}
-            </p>
-          </div>
-          <span className="font-black text-[#1BBB8C]">Open job →</span>
-        </div>
-      </div>
-    </Link>
   );
 }
 
@@ -1022,7 +695,7 @@ function StatCard({
     <div
       className={`rounded-3xl border p-6 shadow-xl ${
         highlight
-          ? "border-[#1BBB8C]/50 bg-[#10230f]"
+          ? "border-[#3f8d24] bg-[#10230f]"
           : "border-[#17382b] bg-[#0b1b14]"
       }`}
     >
@@ -1035,7 +708,13 @@ function StatCard({
   );
 }
 
-function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
+function SectionHeading({
+  eyebrow,
+  title,
+}: {
+  eyebrow: string;
+  title: string;
+}) {
   return (
     <div className="mb-5">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1BBB8C]">{eyebrow}</p>
@@ -1057,17 +736,203 @@ function EmptyState({
 }) {
   return (
     <div className="rounded-3xl border border-dashed border-[#29483a] bg-[#081710] px-6 py-12 text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#123529] text-sm font-black text-[#1BBB8C]">
-        RCS
-      </div>
+      <div className="mx-auto h-1.5 w-14 rounded-full bg-[#1BBB8C]" />
       <h3 className="mt-5 text-xl font-black">{title}</h3>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#71857b]">{description}</p>
       <Link
         href={href}
-        className="mt-6 inline-flex min-h-[48px] items-center justify-center rounded-xl bg-[#1BBB8C] px-6 font-black text-[#06100c] hover:bg-[#16a77c]"
+        className="mt-6 inline-flex rounded-xl bg-[#1BBB8C] px-6 py-3.5 font-black text-[#06100c] hover:bg-[#16a77c]"
       >
         {action}
       </Link>
+    </div>
+  );
+}
+
+function QuoteJobCard({ job }: { job: Job }) {
+  return (
+    <div className="overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl">
+      <div className="border-b border-[#17382b] p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+              {job.reference || `RC-${String(job.id).padStart(6, "0")}`}
+            </p>
+            <h3 className="mt-2 text-xl font-black">{job.job_type || "Waste Collection"}</h3>
+          </div>
+          <span className="rounded-full border border-[#285342] bg-[#10291f] px-3 py-1 text-xs font-black text-[#1BBB8C]">
+            QUOTES
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-5 p-6">
+        <JobLine label="Location" value={job.postcode || "Postcode not provided"} />
+        <JobLine label="Collection date" value={job.preferred_date ? formatDate(job.preferred_date) : "Date not provided"} />
+        <JobLine label="Load size" value={job.load_size || "Not specified"} />
+        {job.description && <JobLine label="Description" value={job.description} />}
+        <Link
+          href="/customer/quotes"
+          className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
+        >
+          Review Quotes
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function CustomerActiveJobCard({
+  job,
+  driver,
+  now,
+}: {
+  job: Job;
+  driver: AssignedDriver | null;
+  now: Date;
+}) {
+  const stage = getCollectionStage(job);
+  const countdown = getCollectionCountdown(job.preferred_date, job.preferred_time, now);
+
+  return (
+    <div className="overflow-hidden rounded-3xl border border-[#3f8d24] bg-[#0b1b14] shadow-xl">
+      <div className="border-b border-[#214333] bg-[#10230f] p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+              {job.reference || `RC-${String(job.id).padStart(6, "0")}`}
+            </p>
+            <h3 className="mt-2 text-xl font-black">{job.job_type || "Waste Collection"}</h3>
+          </div>
+          <StatusBadge status={job.status || "assigned"} />
+        </div>
+      </div>
+
+      <div className="space-y-5 p-6">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <InfoBox label="Collection date" value={job.preferred_date ? formatDate(job.preferred_date) : "Not provided"} />
+          <InfoBox label="Time" value={job.preferred_time || "Any time"} />
+        </div>
+
+        {countdown && (
+          <div className="rounded-2xl border border-[#3f8d24]/50 bg-[#162b13] p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-[#71867c]">Collection countdown</p>
+            <p className="mt-1 text-2xl font-black text-[#1BBB8C]">{countdown}</p>
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-[#214333] bg-[#07130e] p-4">
+          <p className="text-sm font-black text-white">Collection progress</p>
+          <div className="mt-4">
+            <CollectionTracker stage={stage} />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <JobLine label="Location" value={job.postcode || "Not provided"} />
+          <JobLine label="Load size" value={job.load_size || "Not specified"} />
+        </div>
+
+        {driver && (
+          <div className="rounded-2xl border border-[#214333] bg-[#07130e] p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-[#1BBB8C]">Your driver</p>
+            <p className="mt-1 text-lg font-black">
+              {driver.trading_name || driver.company_name || driver.full_name || "RCS Driver"}
+            </p>
+            <p className="mt-1 text-sm text-[#82958c]">
+              {driver.vehicle_type || "RCS vehicle"}
+              {driver.vehicle_registration ? ` • ${driver.vehicle_registration}` : ""}
+            </p>
+            <div className="mt-4 flex gap-2">
+              {driver.phone && (
+                <a
+                  href={`tel:${driver.phone}`}
+                  className="flex-1 rounded-xl border border-[#29483a] px-4 py-3 text-center text-sm font-black hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+                >
+                  Call Driver
+                </a>
+              )}
+              <Link
+                href={`/customer/jobs/${job.id}`}
+                className="flex-1 rounded-xl bg-[#1BBB8C] px-4 py-3 text-center text-sm font-black text-[#06100c] hover:bg-[#16a77c]"
+              >
+                Manage Job
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {!driver && (
+          <Link
+            href={`/customer/jobs/${job.id}`}
+            className="block w-full rounded-xl bg-[#1BBB8C] px-5 py-3.5 text-center font-black text-[#06100c] hover:bg-[#16a77c]"
+          >
+            View Job
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CustomerJobCard({ job }: { job: Job }) {
+  const status = normaliseStatus(job.status);
+  const cancelled = status === "cancelled" || status === "canceled";
+
+  return (
+    <div className="overflow-hidden rounded-3xl border border-[#17382b] bg-[#0b1b14] shadow-xl">
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-wider text-[#1BBB8C]">
+              {job.reference || `RC-${String(job.id).padStart(6, "0")}`}
+            </p>
+            <h3 className="mt-2 truncate text-xl font-black">{job.job_type || "Waste Collection"}</h3>
+          </div>
+          <StatusBadge status={job.status || "pending"} />
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <JobLine label="Location" value={job.postcode || "Not provided"} />
+          <JobLine label="Collection date" value={job.preferred_date ? formatDate(job.preferred_date) : "Not provided"} />
+          <JobLine label="Load size" value={job.load_size || "Not specified"} />
+          <JobLine label="Time" value={job.preferred_time || "Any time"} />
+        </div>
+
+        {cancelled && (
+          <div className="mt-5 rounded-2xl border border-red-900/60 bg-[#230e0e] p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-red-300">Collection cancelled</p>
+            <p className="mt-2 text-sm leading-6 text-red-200/70">
+              {job.cancellation_reason || DEFAULT_CANCELLATION_REASON}
+            </p>
+          </div>
+        )}
+
+        <Link
+          href={`/customer/jobs/${job.id}`}
+          className="mt-6 block w-full rounded-xl border border-[#29483a] px-5 py-3.5 text-center font-black text-white hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+        >
+          View Job
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function InfoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5">
+      <p className="text-xs font-black uppercase tracking-[0.12em] text-[#657a70]">{label}</p>
+      <p className="mt-2 break-words text-base font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function InfoBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-[#214333] bg-[#08150f] p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-[#657a70]">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-[#d5dfda]">{value}</p>
     </div>
   );
 }
@@ -1076,63 +941,54 @@ function JobLine({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-xs font-black uppercase tracking-wide text-[#657a70]">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-[#d5dfda]">{value}</p>
-    </div>
-  );
-}
-
-function InfoCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-[#17382b] bg-[#0b1b14] p-5">
-      <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#657a70]">{label}</p>
-      <p className="mt-2 break-words text-base font-black text-white">{value}</p>
+      <p className="mt-1 line-clamp-2 text-sm font-semibold text-[#d5dfda]">{value}</p>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
   const normalised = normaliseStatus(status);
-  let className = "border-[#29483a] bg-[#102019] text-[#b8c6c0]";
-  let text = formatStatus(status);
+  let label = formatStatus(status);
+  let className = "border-[#29483a] bg-[#18271f] text-[#b8c6c0]";
 
   if (["pending", "new", "open"].includes(normalised)) {
-    className = "border-yellow-600/30 bg-yellow-500/10 text-yellow-300";
-    text = normalised === "new" ? "NEW" : "WAITING";
+    label = normalised === "new" ? "NEW" : "WAITING";
+    className = "border-amber-700/40 bg-amber-900/20 text-amber-300";
   }
 
   if (normalised === "bidding") {
-    className = "border-blue-600/30 bg-blue-500/10 text-blue-300";
-    text = "BIDDING";
+    label = "BIDDING";
+    className = "border-blue-700/40 bg-blue-900/20 text-blue-300";
   }
 
   if (["assigned", "accepted", "booked"].includes(normalised)) {
+    label = "BOOKED";
     className = "border-[#3f8d24] bg-[#183017] text-[#1BBB8C]";
-    text = "BOOKED";
   }
 
   if (["on_the_way", "on the way", "driver_on_way", "driver on way"].includes(normalised)) {
-    className = "border-blue-600/30 bg-blue-500/10 text-blue-300";
-    text = "ON THE WAY";
+    label = "ON THE WAY";
+    className = "border-blue-700/40 bg-blue-900/20 text-blue-300";
   }
 
-  if (["in_progress", "in progress"].includes(normalised)) {
-    className = "border-blue-600/30 bg-blue-500/10 text-blue-300";
-    text = "IN PROGRESS";
+  if (["in_progress", "in progress", "collecting", "arrived"].includes(normalised)) {
+    label = "IN PROGRESS";
+    className = "border-blue-700/40 bg-blue-900/20 text-blue-300";
   }
 
   if (["completed", "complete"].includes(normalised)) {
+    label = "COMPLETED";
     className = "border-[#3f8d24] bg-[#183017] text-[#1BBB8C]";
-    text = "COMPLETED";
   }
 
   if (["cancelled", "canceled", "rejected"].includes(normalised)) {
-    className = "border-red-600/30 bg-red-500/10 text-red-300";
-    text = normalised === "rejected" ? "REJECTED" : "CANCELLED";
+    label = normalised === "rejected" ? "REJECTED" : "CANCELLED";
+    className = "border-red-900/60 bg-red-900/20 text-red-300";
   }
 
   return (
-    <span className={`inline-flex shrink-0 rounded-full border px-3 py-1 text-xs font-black ${className}`}>
-      {text}
+    <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black ${className}`}>
+      {label}
     </span>
   );
 }
@@ -1144,6 +1000,7 @@ function CollectionTracker({ stage }: { stage: CollectionStage }) {
     { key: "collecting", label: "Collecting" },
     { key: "completed", label: "Completed" },
   ];
+
   const currentIndex = stages.findIndex((item) => item.key === stage);
 
   return (
@@ -1153,7 +1010,7 @@ function CollectionTracker({ stage }: { stage: CollectionStage }) {
         return (
           <div key={item.key}>
             <div className={`h-1.5 rounded-full ${active ? "bg-[#1BBB8C]" : "bg-[#17382b]"}`} />
-            <p className={`mt-2 truncate text-[9px] font-black uppercase tracking-wider ${active ? "text-[#1BBB8C]" : "text-[#53675e]"}`}>
+            <p className={`mt-2 truncate text-[10px] font-black uppercase tracking-wider ${active ? "text-[#1BBB8C]" : "text-[#657a70]"}`}>
               {item.label}
             </p>
           </div>
@@ -1163,9 +1020,43 @@ function CollectionTracker({ stage }: { stage: CollectionStage }) {
   );
 }
 
+function NotificationCard({
+  notification,
+  onDismiss,
+  onOpen,
+}: {
+  notification: NotificationItem;
+  onDismiss: () => void;
+  onOpen: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-[#17382b] bg-[#081710] p-4">
+      <p className="text-sm font-black">{notification.title}</p>
+      <p className="mt-1 text-sm leading-6 text-[#71867c]">{notification.text}</p>
+      <div className="mt-4 flex gap-2">
+        <Link
+          href={notification.href}
+          onClick={onOpen}
+          className="rounded-xl bg-[#1BBB8C] px-4 py-2.5 text-xs font-black text-[#06100c]"
+        >
+          View
+        </Link>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="rounded-xl border border-[#29483a] px-4 py-2.5 text-xs font-black text-[#71867c] hover:border-[#1BBB8C] hover:text-[#1BBB8C]"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function getCollectionStage(job: Job): CollectionStage {
   const status = normaliseStatus(job.status);
   const journey = normaliseStatus(job.journey_status);
+
   if (["completed", "complete"].includes(status) || journey === "completed") return "completed";
   if (
     ["in_progress", "in progress", "collecting", "arrived"].includes(status) ||
@@ -1185,14 +1076,17 @@ function getCollectionStage(job: Job): CollectionStage {
 function getCollectionCountdown(date: string | null, time: string | null, now: Date) {
   if (!date) return null;
   const target = parseCollectionDate(date, time);
-  if (!target) return formatDateLong(date);
+  if (!target) return formatDate(date);
+
   const difference = target.getTime() - now.getTime();
   if (difference <= 0) {
     return difference > -(1000 * 60 * 60 * 24) ? "Collection due now" : null;
   }
+
   const totalMinutes = Math.max(1, Math.round(difference / (1000 * 60)));
   const days = Math.floor(totalMinutes / (60 * 24));
   const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+
   if (days > 0) return `${days}d ${hours}h until collection`;
   if (hours > 0) return `${hours}h until collection`;
   return `${totalMinutes}m until collection`;
@@ -1208,6 +1102,7 @@ function parseCollectionDate(date: string, time: string | null) {
   let hours = Number(match[1]);
   const minutes = Number(match[2]);
   const meridiem = match[3]?.toUpperCase();
+
   if (meridiem === "PM" && hours < 12) hours += 12;
   if (meridiem === "AM" && hours === 12) hours = 0;
 
@@ -1222,7 +1117,7 @@ function formatStatus(status: string) {
   return status.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function formatDateLong(date: string) {
+function formatDate(date: string) {
   const parsed = new Date(`${date}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return date;
   return parsed.toLocaleDateString("en-GB", {
@@ -1233,15 +1128,6 @@ function formatDateLong(date: string) {
   });
 }
 
-function formatDateShort(date: string) {
-  const parsed = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return date;
-  return parsed.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
-}
-
 function formatRelativeTime(value: Date, now: Date) {
   const difference = Math.max(0, Math.floor((now.getTime() - value.getTime()) / 1000));
   if (difference < 5) return "just now";
@@ -1249,14 +1135,6 @@ function formatRelativeTime(value: Date, now: Date) {
   const minutes = Math.floor(difference / 60);
   if (minutes < 60) return `${minutes}m ago`;
   return `${Math.floor(minutes / 60)}h ago`;
-}
-
-function getInitials(value: string) {
-  const clean = value.trim();
-  if (!clean) return "R";
-  const parts = clean.split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function firstName(value: string) {
