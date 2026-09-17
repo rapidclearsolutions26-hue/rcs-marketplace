@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -24,7 +24,7 @@ type Job = {
 const supabase = createClient();
 const MAX_MESSAGE_LENGTH = 4000;
 
-export default function CustomerSupportPage() {
+function CustomerSupportPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedJobId = Number(searchParams.get("jobId") || 0) || null;
@@ -275,6 +275,25 @@ export default function CustomerSupportPage() {
         <p className="mt-4 text-center text-xs text-gray-700">RCS Support Chat keeps your customer support conversations inside your RCS account.</p>
       </div>
     </main>
+  );
+}
+
+export default function CustomerSupportPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#050705] text-white">
+          <div className="flex min-h-screen items-center justify-center px-5">
+            <div className="text-center">
+              <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-white/[0.08] border-t-[#79c51c]" />
+              <p className="mt-5 text-lg font-black">Loading RCS support...</p>
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <CustomerSupportPageContent />
+    </Suspense>
   );
 }
 
