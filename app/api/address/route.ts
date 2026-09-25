@@ -1,48 +1,53 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query');
+    const query = searchParams.get("query")?.trim();
 
-    if (!query || query.trim().length < 3) {
+    if (!query || query.length < 3) {
       return NextResponse.json(
-        { error: 'Enter at least 3 characters' },
-        { status: 400 }
+        { error: "Please enter at least 3 characters." },
+        { status: 400 },
       );
     }
 
     const apiKey = process.env.POSTCODER_API_KEY;
 
     if (!apiKey) {
-      console.error('POSTCODER_API_KEY is missing');
+      console.error("POSTCODER_API_KEY is missing");
 
       return NextResponse.json(
-        { error: 'Address service is not configured' },
-        { status: 500 }
+        { error: "Address service is not configured." },
+        { status: 500 },
       );
     }
 
-    const postcoderUrl =
+    const url =
       `https://ws.postcoder.com/pcw/${apiKey}/autocomplete/address` +
-      `?query=${encodeURIComponent(query.trim())}` +
+      `?query=${encodeURIComponent(query)}` +
       `&country=GBR`;
 
-    const response = await fetch(postcoderUrl, {
+    const response = await fetch(url, {
+      method: "GET",
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
       },
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (!response.ok) {
       const errorText = await response.text();
 
-      console.error('Postcoder error:', response.status, errorText);
+      console.error(
+        "Postcoder response:",
+        response.status,
+        errorText,
+      );
 
       return NextResponse.json(
-        { error: 'Address lookup failed' },
-        { status: response.status }
+        { error: "Address lookup failed." },
+        { status: response.status },
       );
     }
 
@@ -50,11 +55,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Address API error:', error);
+    console.error("Address lookup error:", error);
 
     return NextResponse.json(
-      { error: 'Unable to look up address' },
-      { status: 500 }
+      { error: "Unable to look up addresses." },
+      { status: 500 },
     );
   }
 }
