@@ -93,11 +93,12 @@ const faqs = [
 ];
 
 export default function HomePage() {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050705] pb-20 text-white lg:pb-0">
-      {/* HEADER */}
+      {/* SHARED HEADER */}
       <RCSHeader />
 
       {/* HERO */}
@@ -169,6 +170,144 @@ export default function HomePage() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* LOCAL AVAILABILITY */}
+      <section className="border-b border-white/[0.07] bg-[#080b08] py-10 sm:py-14">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+          <div className="rounded-3xl border border-white/[0.08] bg-[#0a0e0a] p-5 sm:p-7">
+            <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
+                  Waste removal near you
+                </p>
+
+                <h2 className="mt-2 text-2xl font-black uppercase leading-tight sm:text-3xl">
+                  Check your local area
+                </h2>
+
+                <p className="mt-2 max-w-xl text-sm leading-6 text-gray-500">
+                  Enter your postcode to see whether RCS can help with your
+                  waste-removal job.
+                </p>
+              </div>
+
+              <div className="flex w-full gap-2 sm:max-w-md">
+                <label htmlFor="homepage-postcode" className="sr-only">
+                  Postcode
+                </label>
+
+                <input
+                  id="homepage-postcode"
+                  type="text"
+                  inputMode="text"
+                  autoComplete="postal-code"
+                  placeholder="Enter postcode"
+                  className="min-h-[52px] min-w-0 flex-1 rounded-xl border border-white/[0.1] bg-[#050705] px-4 text-sm font-bold text-white outline-none placeholder:text-gray-600 focus:border-[#79c51c]"
+                />
+
+                <Link
+                  href="/customer/post-job"
+                  className="flex min-h-[52px] shrink-0 items-center justify-center rounded-xl bg-[#79c51c] px-5 text-xs font-black text-black transition hover:bg-[#91db32]"
+                >
+                  CHECK
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* LIVE MARKETPLACE ACTIVITY */}
+      <section className="bg-[#050705] py-10 sm:py-14">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+          <div className="mb-5 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
+                RCS Live
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black uppercase sm:text-3xl">
+                Marketplace activity
+              </h2>
+            </div>
+
+            <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-gray-500">
+              <span className="h-2 w-2 rounded-full bg-[#79c51c]" />
+              Live
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <LiveStat value="10" label="Drivers online" />
+            <LiveStat value="20" label="Jobs being quoted" />
+            <LiveStat value="5" label="New jobs today" />
+          </div>
+
+          <p className="mt-3 text-[10px] text-gray-700">
+            Current figures are temporary demo numbers and will be connected
+            to live RCS platform data.
+          </p>
+        </div>
+      </section>
+
+      {/* JOBS BEING QUOTED */}
+      <section className="border-y border-white/[0.07] bg-[#080b08] py-12 sm:py-16">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
+                Jobs being quoted
+              </p>
+
+              <h2 className="mt-2 text-3xl font-black uppercase leading-[0.95] sm:text-5xl">
+                See what customers are posting.
+              </h2>
+            </div>
+
+            <Link
+              href="/customer/post-job"
+              className="hidden text-xs font-black uppercase tracking-wider text-[#79c51c] sm:block"
+            >
+              POST YOUR JOB →
+            </Link>
+          </div>
+
+          <div className="-mx-5 mt-7 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+            <JobActivityCard
+              location="Birmingham"
+              type="House clearance"
+              details="Medium load"
+              quotes="3 quotes"
+            />
+
+            <JobActivityCard
+              location="Wolverhampton"
+              type="Garden waste"
+              details="Large load"
+              quotes="2 quotes"
+            />
+
+            <JobActivityCard
+              location="Walsall"
+              type="Furniture removal"
+              details="Sofa + furniture"
+              quotes="4 quotes"
+            />
+          </div>
+
+          <p className="mt-3 text-[10px] text-gray-700">
+            These are temporary example cards. They can be connected to live
+            customer jobs once the marketplace feed is enabled.
+          </p>
+
+          <Link
+            href="/customer/post-job"
+            className="mt-5 flex min-h-[52px] items-center justify-center rounded-xl border border-[#79c51c] text-xs font-black text-[#79c51c] sm:hidden"
+          >
+            POST YOUR WASTE JOB →
+          </Link>
         </div>
       </section>
 
@@ -759,6 +898,13 @@ export default function HomePage() {
               <Link href="/cookies" className="hover:text-[#79c51c]">
                 Cookies
               </Link>
+
+              <Link
+                href="/admin/login"
+                className="text-white/25 transition hover:text-[#79c51c]"
+              >
+                Admin Login
+              </Link>
             </div>
           </div>
         </div>
@@ -794,6 +940,67 @@ export default function HomePage() {
 /* -------------------------------- */
 /* COMPONENTS */
 /* -------------------------------- */
+
+function LiveStat({
+  value,
+  label,
+}: {
+  value: string;
+  label: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-4 sm:p-5">
+      <p className="text-2xl font-black text-[#79c51c] sm:text-3xl">
+        {value}
+      </p>
+
+      <p className="mt-1 text-[9px] font-black uppercase leading-tight tracking-wider text-gray-500 sm:text-xs">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function JobActivityCard({
+  location,
+  type,
+  details,
+  quotes,
+}: {
+  location: string;
+  type: string;
+  details: string;
+  quotes: string;
+}) {
+  return (
+    <article className="min-w-[82%] snap-start rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-5 sm:min-w-0">
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#79c51c]">
+          <span className="h-2 w-2 rounded-full bg-[#79c51c]" />
+          {location}
+        </span>
+
+        <span className="rounded-lg bg-[#79c51c]/10 px-2 py-1 text-[9px] font-black text-[#79c51c]">
+          LIVE
+        </span>
+      </div>
+
+      <h3 className="mt-6 text-lg font-black uppercase leading-tight">
+        {type}
+      </h3>
+
+      <p className="mt-2 text-sm text-gray-500">{details}</p>
+
+      <div className="mt-6 flex items-center justify-between border-t border-white/[0.07] pt-4">
+        <span className="text-xs font-black text-white">{quotes}</span>
+
+        <span className="text-[10px] font-black uppercase text-[#79c51c]">
+          View job →
+        </span>
+      </div>
+    </article>
+  );
+}
 
 function ServiceCard({
   number,
