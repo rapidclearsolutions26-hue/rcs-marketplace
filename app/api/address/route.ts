@@ -24,9 +24,15 @@ export async function GET(request: Request) {
     }
 
     const url =
-      `https://ws.postcoder.com/pcw/${apiKey}/autocomplete/address` +
+      `https://ws.postcoder.com/pcw/autocomplete/find` +
       `?query=${encodeURIComponent(query)}` +
-      `&country=GBR`;
+      `&country=uk` +
+      `&apikey=${encodeURIComponent(apiKey)}` +
+      `&enablefacets=false` +
+      `&usercategory=R` +
+      `&maximumresults=10` +
+      `&singlesummary=true` +
+      `&format=json`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -36,22 +42,36 @@ export async function GET(request: Request) {
       cache: "no-store",
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    const responseText = await response.text();
 
+    if (!response.ok) {
       console.error(
-        "Postcoder response:",
+        "Postcoder error:",
         response.status,
-        errorText,
+        responseText,
       );
 
       return NextResponse.json(
-        { error: "Address lookup failed." },
+        {
+          error: "Postcoder rejected the address request.",
+          status: response.status,
+        },
         { status: response.status },
       );
     }
 
-    const data = await response.json();
+    let data: unknown;
+
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error("Invalid Postcoder response:", responseText);
+
+      return NextResponse.json(
+        { error: "Postcoder returned an invalid response." },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json(data);
   } catch (error) {
