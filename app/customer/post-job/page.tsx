@@ -57,6 +57,14 @@ type UploadItem = {
   token: string;
 };
 
+type AddressSuggestion = {
+  id: string;
+  type?: string;
+  summaryline: string;
+  count?: number;
+  usercategory?: string;
+};
+
 async function readResponse(response: Response): Promise<any> {
   const text = await response.text();
 
@@ -99,6 +107,7 @@ async function compressImage(file: File): Promise<File> {
         maxDimension / width,
         maxDimension / height,
       );
+
       width = Math.round(width * scale);
       height = Math.round(height * scale);
     }
@@ -108,6 +117,7 @@ async function compressImage(file: File): Promise<File> {
     canvas.height = height;
 
     const context = canvas.getContext("2d");
+
     if (!context) {
       bitmap.close();
       return file;
@@ -148,13 +158,23 @@ export default function PostJobPage() {
   const [jobPosted, setJobPosted] = useState(false);
   const [jobReference, setJobReference] = useState("");
   const [jobId, setJobId] = useState<number | null>(null);
-  const [confirmationRequired, setConfirmationRequired] = useState(false);
+  const [confirmationRequired, setConfirmationRequired] =
+    useState(false);
 
   const [wasteType, setWasteType] = useState("");
   const [loadSize, setLoadSize] = useState("");
   const [location, setLocation] = useState("");
+
+  const [postcodeInput, setPostcodeInput] = useState("");
   const [postcode, setPostcode] = useState("");
   const [address, setAddress] = useState("");
+
+  const [addressSuggestions, setAddressSuggestions] = useState<
+    AddressSuggestion[]
+  >([]);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressSelected, setAddressSelected] = useState(false);
+
   const [collectionDate, setCollectionDate] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
   const [description, setDescription] = useState("");
@@ -172,13 +192,17 @@ export default function PostJobPage() {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
+
     return `${year}-${month}-${day}`;
   }, []);
 
   const whatsappHref = useMemo(() => {
     const message =
       "Hi RCS, I need some help with posting a waste removal job.";
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      message,
+    )}`;
   }, []);
 
   useEffect(() => {
@@ -226,7 +250,9 @@ export default function PostJobPage() {
           setCustomerEmail("");
         }
       } finally {
-        if (mounted) setCheckingSession(false);
+        if (mounted) {
+          setCheckingSession(false);
+        }
       }
     }
 
@@ -237,54 +263,175 @@ export default function PostJobPage() {
     };
   }, [supabase]);
 
+  useEffect(() => {
+    if (postcodeInput.trim().length < 3) {
+      setAddressSuggestions([]);
+      setAddressLoading(false);
+      return;
+    }
+
+    if (addressSelected) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timer = window.setTimeout(async () => {
+      try {
+        setAddressLoading(true);
+
+        const response = await fetch(
+          `/api/address?query=${encodeURIComponent(
+            postcodeInput.trim(),
+          )}`,
+          {
+            signal: controller.signal,
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error || "Unable to search for addresses.",
+          );
+        }
+
+        if (Array.isArray(data)) {
+          setAddressSuggestions(data.slice(0, 10));
+        } else {
+          setAddressSuggestions([]);
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        console.error("Address lookup error:", error);
+        setAddressSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) {
+          setAddressLoading(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [postcodeInput, addressSelected]);
+
   function clearError() {
     setErrorMessage("");
   }
 
   function goNext() {
     clearError();
-    setStep((current) => Math.min(TOTAL_STEPS, current + 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    setStep((current) =>
+      Math.min(TOTAL_STEPS, current + 1),
+    );
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
 
   function goBack() {
     clearError();
-    setStep((current) => Math.max(1, current - 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    setStep((current) =>
+      Math.max(1, current - 1),
+    );
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
 
   function selectWasteType(value: string) {
     setWasteType(value);
     clearError();
+
     setStep(2);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  function selectAddress(suggestion: AddressSuggestion) {
+    const selectedAddress = suggestion.summaryline.trim();
+
+    const postcodeMatch = selectedAddress.match(
+      /([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})$/i,
+    );
+
+    const selectedPostcode = postcodeMatch
+      ? postcodeMatch[1].toUpperCase()
+      : "";
+
+    setAddress(selectedAddress);
+    setPostcode(selectedPostcode);
+    setPostcodeInput(selectedPostcode);
+
+    setAddressSelected(true);
+    setAddressSuggestions([]);
+    clearError();
+  }
+
+  function changeAddress() {
+    setAddressSelected(false);
+    setAddress("");
+    setPostcode("");
+    setPostcodeInput("");
+
+    clearError();
   }
 
   function handlePhotos(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files || []);
+
     if (!selectedFiles.length) return;
 
     const invalidFile = selectedFiles.find(
       (file) =>
-        !file.type.startsWith("image/") || file.size > MAX_FILE_SIZE,
+        !file.type.startsWith("image/") ||
+        file.size > MAX_FILE_SIZE,
     );
 
     if (invalidFile) {
-      setErrorMessage("Only image files under 10MB can be uploaded.");
+      setErrorMessage(
+        "Only image files under 10MB can be uploaded.",
+      );
     } else {
       clearError();
     }
 
     const validFiles = selectedFiles.filter(
       (file) =>
-        file.type.startsWith("image/") && file.size <= MAX_FILE_SIZE,
+        file.type.startsWith("image/") &&
+        file.size <= MAX_FILE_SIZE,
     );
 
-    const availableSlots = Math.max(0, MAX_PHOTOS - photos.length);
-    const filesToAdd = validFiles.slice(0, availableSlots);
+    const availableSlots = Math.max(
+      0,
+      MAX_PHOTOS - photos.length,
+    );
+
+    const filesToAdd = validFiles.slice(
+      0,
+      availableSlots,
+    );
 
     if (validFiles.length > availableSlots) {
-      setErrorMessage(`You can upload a maximum of ${MAX_PHOTOS} photos.`);
+      setErrorMessage(
+        `You can upload a maximum of ${MAX_PHOTOS} photos.`,
+      );
     }
 
     setPhotos((current) => [
@@ -299,7 +446,9 @@ export default function PostJobPage() {
   }
 
   function removePhoto(id: string) {
-    setPhotos((current) => current.filter((photo) => photo.id !== id));
+    setPhotos((current) =>
+      current.filter((photo) => photo.id !== id),
+    );
   }
 
   function validateStep(currentStep: number) {
@@ -308,38 +457,77 @@ export default function PostJobPage() {
     }
 
     if (currentStep === 2) {
-      if (!postcode.trim()) return "Please enter the collection postcode.";
-      if (!address.trim()) return "Please enter the collection address.";
+      if (!postcode.trim()) {
+        return "Please select your collection address.";
+      }
+
+      if (!address.trim() || !addressSelected) {
+        return "Please select your exact collection address from the list.";
+      }
     }
 
     if (currentStep === 3) {
-      if (!collectionDate) return "Please choose a collection date.";
+      if (!collectionDate) {
+        return "Please choose a collection date.";
+      }
+
       if (collectionDate < today) {
         return "Please choose today or a future collection date.";
       }
     }
 
     if (currentStep === 4) {
-      if (!loadSize) return "Please tell us roughly how much waste there is.";
-      if (!location) return "Please tell us where the waste is located.";
-      if (!description.trim()) return "Please describe what needs removing.";
+      if (!loadSize) {
+        return "Please tell us roughly how much waste there is.";
+      }
+
+      if (!location) {
+        return "Please tell us where the waste is located.";
+      }
+
+      if (!description.trim()) {
+        return "Please describe what needs removing.";
+      }
+
+      if (photos.length < 1) {
+        return "Please add at least 1 photo so drivers can see what needs removing.";
+      }
     }
 
     if (currentStep === 5 && !isLoggedIn) {
-      if (!fullName.trim()) return "Please enter your full name.";
-      if (!email.trim()) return "Please enter your email address.";
+      if (!fullName.trim()) {
+        return "Please enter your full name.";
+      }
 
-      const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        email.trim(),
-      );
+      if (!email.trim()) {
+        return "Please enter your email address.";
+      }
 
-      if (!emailIsValid) return "Please enter a valid email address.";
-      if (!phone.trim()) return "Please enter your phone number.";
-      if (!password) return "Please create a password.";
+      const emailIsValid =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          email.trim(),
+        );
+
+      if (!emailIsValid) {
+        return "Please enter a valid email address.";
+      }
+
+      if (!phone.trim()) {
+        return "Please enter your phone number.";
+      }
+
+      if (!password) {
+        return "Please create a password.";
+      }
+
       if (password.length < 6) {
         return "Your password must be at least 6 characters.";
       }
-      if (!confirmPassword) return "Please confirm your password.";
+
+      if (!confirmPassword) {
+        return "Please confirm your password.";
+      }
+
       if (password !== confirmPassword) {
         return "Your passwords do not match.";
       }
@@ -353,46 +541,80 @@ export default function PostJobPage() {
 
     if (validationError) {
       setErrorMessage(validationError);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
       return;
     }
 
     goNext();
   }
 
-  async function postJson(body: unknown, accessToken?: string) {
-    const response = await fetch("/api/customer/post-job", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(accessToken
-          ? { Authorization: `Bearer ${accessToken}` }
-          : {}),
+  async function postJson(
+    body: unknown,
+    accessToken?: string,
+  ) {
+    const response = await fetch(
+      "/api/customer/post-job",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken
+            ? {
+                Authorization: `Bearer ${accessToken}`,
+              }
+            : {}),
+        },
+        body: JSON.stringify(body),
       },
-      body: JSON.stringify(body),
-    });
+    );
 
     const result = await readResponse(response);
-    return { response, result };
+
+    return {
+      response,
+      result,
+    };
   }
 
-  async function cancelPreparedJob(uploadSessionToken: string) {
+  async function cancelPreparedJob(
+    uploadSessionToken: string,
+  ) {
     try {
-      await postJson({ action: "cancel", uploadSessionToken });
+      await postJson({
+        action: "cancel",
+        uploadSessionToken,
+      });
     } catch (error) {
-      console.error("Unable to cancel prepared job:", error);
+      console.error(
+        "Unable to cancel prepared job:",
+        error,
+      );
     }
   }
 
-  async function submitJob(event: FormEvent<HTMLFormElement>) {
+  async function submitJob(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
+
     clearError();
     setUploadStatus("");
 
     const validationError = validateStep(5);
+
     if (validationError) {
       setErrorMessage(validationError);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
       return;
     }
 
@@ -405,42 +627,64 @@ export default function PostJobPage() {
       } = await supabase.auth.getSession();
 
       if (sessionError) {
-        console.error("Session error:", sessionError);
+        console.error(
+          "Session error:",
+          sessionError,
+        );
       }
 
       if (session?.user) {
         currentAccessToken = session.access_token;
+
         setIsLoggedIn(true);
-        setCustomerEmail(session.user.email || "");
+        setCustomerEmail(
+          session.user.email || "",
+        );
       } else {
         setIsLoggedIn(false);
       }
     } catch (error) {
-      console.error("Unable to read customer session:", error);
+      console.error(
+        "Unable to read customer session:",
+        error,
+      );
     }
 
     if (isLoggedIn && !currentAccessToken) {
       setErrorMessage(
         "Your customer session has expired. Please log in again before posting a new job.",
       );
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
       return;
     }
 
     setLoading(true);
+
     let uploadSessionToken = "";
 
     try {
-      setUploadStatus("Preparing your RCS job...");
+      setUploadStatus(
+        "Preparing your RCS job...",
+      );
 
-      const photoMetadata = photos.map(({ file }) => ({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-      }));
+      const photoMetadata = photos.map(
+        ({ file }) => ({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+        }),
+      );
 
       const combinedAccessNotes = [
-        location ? `Waste location: ${location}` : "",
+        location
+          ? `Waste location: ${location}`
+          : "",
+
         accessNotes.trim()
           ? `Access notes: ${accessNotes.trim()}`
           : "",
@@ -451,32 +695,75 @@ export default function PostJobPage() {
       const prepareResult = await postJson(
         {
           action: "prepare",
-          fullName: !isLoggedIn ? fullName.trim() : "",
-          email: !isLoggedIn ? email.trim().toLowerCase() : "",
-          phone: !isLoggedIn ? phone.trim() : "",
-          password: !isLoggedIn ? password : "",
+
+          fullName: !isLoggedIn
+            ? fullName.trim()
+            : "",
+
+          email: !isLoggedIn
+            ? email.trim().toLowerCase()
+            : "",
+
+          phone: !isLoggedIn
+            ? phone.trim()
+            : "",
+
+          password: !isLoggedIn
+            ? password
+            : "",
+
           jobType: wasteType,
-          description: description.trim(),
-          postcode: postcode.trim().toUpperCase(),
-          address: address.trim(),
+
+          description:
+            description.trim(),
+
+          postcode:
+            postcode.trim().toUpperCase(),
+
+          address:
+            address.trim(),
+
           loadSize,
+
           floor: "",
-          stairs: location === "Upstairs",
-          accessNotes: combinedAccessNotes,
-          preferredDate: collectionDate,
-          preferredTime: preferredTime || "Any time",
-          photos: photoMetadata,
+
+          stairs:
+            location === "Upstairs",
+
+          accessNotes:
+            combinedAccessNotes,
+
+          preferredDate:
+            collectionDate,
+
+          preferredTime:
+            preferredTime || "Any time",
+
+          photos:
+            photoMetadata,
         },
+
         currentAccessToken,
       );
 
-      const { response, result } = prepareResult;
+      const {
+        response,
+        result,
+      } = prepareResult;
 
-      if (response.status === 409 && result.code === "ACCOUNT_EXISTS") {
+      if (
+        response.status === 409 &&
+        result.code === "ACCOUNT_EXISTS"
+      ) {
         setErrorMessage(
           "An RCS customer account already exists with this email address. Please log in to your existing account before posting a new job.",
         );
-        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+
         return;
       }
 
@@ -484,75 +771,126 @@ export default function PostJobPage() {
         setErrorMessage(
           "Your customer session has expired. Please log in again.",
         );
-        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+
         return;
       }
 
       if (!response.ok) {
         throw new Error(
-          result.error || "We couldn't prepare your job. Please try again.",
+          result.error ||
+            "We couldn't prepare your job. Please try again.",
         );
       }
 
-      uploadSessionToken = result.uploadSessionToken || "";
+      uploadSessionToken =
+        result.uploadSessionToken || "";
 
       if (!uploadSessionToken) {
-        throw new Error("RCS could not create the secure upload session.");
+        throw new Error(
+          "RCS could not create the secure upload session.",
+        );
       }
 
-      const uploads: UploadItem[] = Array.isArray(result.uploads)
-        ? result.uploads
-        : [];
+      const uploads: UploadItem[] =
+        Array.isArray(result.uploads)
+          ? result.uploads
+          : [];
 
       const uploadedPaths: string[] = [];
 
       if (photos.length > 0) {
-        if (uploads.length !== photos.length) {
+        if (
+          uploads.length !== photos.length
+        ) {
           throw new Error(
             "RCS could not prepare all of your photo uploads.",
           );
         }
 
-        for (let index = 0; index < photos.length; index += 1) {
-          const originalFile = photos[index].file;
+        for (
+          let index = 0;
+          index < photos.length;
+          index += 1
+        ) {
+          const originalFile =
+            photos[index].file;
 
           setUploadStatus(
-            `Preparing photo ${index + 1} of ${photos.length}...`,
+            `Preparing photo ${
+              index + 1
+            } of ${photos.length}...`,
           );
 
-          const uploadFile = await compressImage(originalFile);
-          const upload = uploads[index];
+          const uploadFile =
+            await compressImage(
+              originalFile,
+            );
 
-          if (!upload?.path || !upload?.token) {
-            throw new Error(`RCS could not prepare photo ${index + 1}.`);
-          }
+          const upload =
+            uploads[index];
 
-          setUploadStatus(
-            `Uploading photo ${index + 1} of ${photos.length}...`,
-          );
-
-          const { error: uploadError } = await supabase.storage
-            .from(PHOTO_BUCKET)
-            .uploadToSignedUrl(upload.path, upload.token, uploadFile);
-
-          if (uploadError) {
-            console.error("Direct photo upload error:", uploadError);
+          if (
+            !upload?.path ||
+            !upload?.token
+          ) {
             throw new Error(
-              `We couldn't upload photo ${index + 1}. Please try again.`,
+              `RCS could not prepare photo ${
+                index + 1
+              }.`,
             );
           }
 
-          uploadedPaths.push(upload.path);
+          setUploadStatus(
+            `Uploading photo ${
+              index + 1
+            } of ${photos.length}...`,
+          );
+
+          const {
+            error: uploadError,
+          } =
+            await supabase.storage
+              .from(PHOTO_BUCKET)
+              .uploadToSignedUrl(
+                upload.path,
+                upload.token,
+                uploadFile,
+              );
+
+          if (uploadError) {
+            console.error(
+              "Direct photo upload error:",
+              uploadError,
+            );
+
+            throw new Error(
+              `We couldn't upload photo ${
+                index + 1
+              }. Please try again.`,
+            );
+          }
+
+          uploadedPaths.push(
+            upload.path,
+          );
         }
       }
 
-      setUploadStatus("Finishing your RCS job...");
+      setUploadStatus(
+        "Finishing your RCS job...",
+      );
 
-      const completeResult = await postJson({
-        action: "complete",
-        uploadSessionToken,
-        uploadedPaths,
-      });
+      const completeResult =
+        await postJson({
+          action: "complete",
+          uploadSessionToken,
+          uploadedPaths,
+        });
 
       if (!completeResult.response.ok) {
         throw new Error(
@@ -561,40 +899,66 @@ export default function PostJobPage() {
         );
       }
 
-      const completeData = completeResult.result;
+      const completeData =
+        completeResult.result;
 
       setJobReference(
-        completeData.reference || result.reference || "",
+        completeData.reference ||
+          result.reference ||
+          "",
       );
 
       setJobId(
         completeData.jobId
-          ? Number(completeData.jobId)
+          ? Number(
+              completeData.jobId,
+            )
           : result.jobId
-            ? Number(result.jobId)
+            ? Number(
+                result.jobId,
+              )
             : null,
       );
 
-      setConfirmationRequired(Boolean(result.emailConfirmationRequired));
+      setConfirmationRequired(
+        Boolean(
+          result.emailConfirmationRequired,
+        ),
+      );
+
       setUploadStatus("");
       setJobPosted(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch (error) {
-      console.error("POST JOB ERROR:", error);
+      console.error(
+        "POST JOB ERROR:",
+        error,
+      );
 
       if (uploadSessionToken) {
-        await cancelPreparedJob(uploadSessionToken);
+        await cancelPreparedJob(
+          uploadSessionToken,
+        );
       }
 
       setUploadStatus("");
 
       const message =
-        error instanceof Error && error.message
+        error instanceof Error &&
+        error.message
           ? error.message
           : "Something went wrong while posting your job. Please try again.";
 
       setErrorMessage(message);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } finally {
       setLoading(false);
     }
@@ -605,7 +969,10 @@ export default function PostJobPage() {
       <main className="min-h-screen bg-[#050705] text-white">
         <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050705]/95 backdrop-blur-xl">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-            <Link href="/" className="shrink-0">
+            <Link
+              href="/"
+              className="shrink-0"
+            >
               <Image
                 src="/rapid-clear-logo.png"
                 alt="Rapid Clear Solutions"
@@ -617,10 +984,16 @@ export default function PostJobPage() {
             </Link>
 
             <Link
-              href={isLoggedIn ? "/customer/dashboard" : "/customer/login"}
+              href={
+                isLoggedIn
+                  ? "/customer/dashboard"
+                  : "/customer/login"
+              }
               className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-black text-white transition hover:border-[#79c51c]/40 hover:bg-[#79c51c]/10"
             >
-              {isLoggedIn ? "Dashboard" : "Customer Login"}
+              {isLoggedIn
+                ? "Dashboard"
+                : "Customer Login"}
             </Link>
           </div>
         </header>
@@ -650,6 +1023,7 @@ export default function PostJobPage() {
                 <p className="text-xs font-black uppercase tracking-[0.15em] text-white/40">
                   Job reference
                 </p>
+
                 <p className="mt-2 text-2xl font-black text-[#79c51c]">
                   {jobReference}
                 </p>
@@ -661,19 +1035,27 @@ export default function PostJobPage() {
                 <h2 className="font-black text-[#bff58a]">
                   Please confirm your email
                 </h2>
+
                 <p className="mt-2 text-sm leading-6 text-white/55">
                   We&apos;ve sent a confirmation email to:
                 </p>
+
                 <p className="mt-2 break-all font-black text-white">
-                  {email.trim().toLowerCase()}
+                  {email
+                    .trim()
+                    .toLowerCase()}
                 </p>
+
                 <p className="mt-3 text-sm leading-6 text-white/55">
                   Open the email and click the confirmation link, then log in to your RCS customer account.
                 </p>
               </div>
             ) : (
               <div className="mt-7 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-5">
-                <h2 className="font-black text-[#bff58a]">Your job is now live</h2>
+                <h2 className="font-black text-[#bff58a]">
+                  Your job is now live
+                </h2>
+
                 <p className="mt-2 text-sm leading-6 text-white/55">
                   Approved RCS drivers can now review your job and submit their quotes.
                 </p>
@@ -681,27 +1063,37 @@ export default function PostJobPage() {
             )}
 
             <div className="mt-7 rounded-2xl border border-white/10 bg-[#050705] p-5">
-              <h2 className="font-black text-white">What happens next?</h2>
+              <h2 className="font-black text-white">
+                What happens next?
+              </h2>
+
               <div className="mt-5 space-y-5">
                 <NextStep
                   number="01"
-                  title={confirmationRequired ? "Confirm your email" : "Your job is now live"}
+                  title={
+                    confirmationRequired
+                      ? "Confirm your email"
+                      : "Your job is now live"
+                  }
                   text={
                     confirmationRequired
                       ? "Check your inbox and click the confirmation link we sent you."
                       : "Approved RCS drivers can now review your job."
                   }
                 />
+
                 <NextStep
                   number="02"
                   title="Drivers review your job"
                   text="RCS drivers can see the job details and submit their price."
                 />
+
                 <NextStep
                   number="03"
                   title="Compare driver quotes"
                   text="Review the quotes from your customer dashboard."
                 />
+
                 <NextStep
                   number="04"
                   title="Choose your driver"
@@ -711,10 +1103,16 @@ export default function PostJobPage() {
             </div>
 
             <Link
-              href={isLoggedIn && jobId ? `/customer/jobs/${jobId}` : "/customer/login"}
+              href={
+                isLoggedIn && jobId
+                  ? `/customer/jobs/${jobId}`
+                  : "/customer/login"
+              }
               className="mt-8 flex w-full items-center justify-center rounded-2xl bg-[#79c51c] px-6 py-5 text-lg font-black text-[#050705] shadow-lg shadow-[#79c51c]/10 transition hover:bg-[#91db32]"
             >
-              {isLoggedIn ? "VIEW YOUR JOB →" : "GO TO CUSTOMER LOGIN →"}
+              {isLoggedIn
+                ? "VIEW YOUR JOB →"
+                : "GO TO CUSTOMER LOGIN →"}
             </Link>
 
             <a
@@ -738,13 +1136,17 @@ export default function PostJobPage() {
     );
   }
 
-  const progress = (step / TOTAL_STEPS) * 100;
+  const progress =
+    (step / TOTAL_STEPS) * 100;
 
   return (
     <main className="min-h-screen bg-[#050705] text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050705]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/" className="shrink-0">
+          <Link
+            href="/"
+            className="shrink-0"
+          >
             <Image
               src="/rapid-clear-logo.png"
               alt="Rapid Clear Solutions"
@@ -764,11 +1166,18 @@ export default function PostJobPage() {
             >
               Help
             </a>
+
             <Link
-              href={isLoggedIn ? "/customer/dashboard" : "/customer/login"}
+              href={
+                isLoggedIn
+                  ? "/customer/dashboard"
+                  : "/customer/login"
+              }
               className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-black text-white transition hover:border-[#79c51c]/40 hover:bg-[#79c51c]/10"
             >
-              {isLoggedIn ? "Dashboard" : "Log in"}
+              {isLoggedIn
+                ? "Dashboard"
+                : "Log in"}
             </Link>
           </div>
         </div>
@@ -781,10 +1190,12 @@ export default function PostJobPage() {
               <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
                 RCS Marketplace
               </p>
+
               <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-4xl">
                 Post your waste job
               </h1>
             </div>
+
             <p className="shrink-0 text-sm font-black text-white/45">
               Step {step} of {TOTAL_STEPS}
             </p>
@@ -793,16 +1204,26 @@ export default function PostJobPage() {
           <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
             <div
               className="h-full rounded-full bg-[#79c51c] transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              style={{
+                width: `${progress}%`,
+              }}
             />
           </div>
 
           <div className="mt-2 flex items-center justify-between text-xs font-bold text-white/35">
-            <span>{Math.round(progress)}% complete</span>
+            <span>
+              {Math.round(progress)}%
+              complete
+            </span>
+
             <span>
               {step === TOTAL_STEPS
                 ? "Ready to post"
-                : `${TOTAL_STEPS - step} ${TOTAL_STEPS - step === 1 ? "step" : "steps"} left`}
+                : `${TOTAL_STEPS - step} ${
+                    TOTAL_STEPS - step === 1
+                      ? "step"
+                      : "steps"
+                  } left`}
             </span>
           </div>
         </div>
@@ -811,6 +1232,7 @@ export default function PostJobPage() {
           <div className="mb-5 rounded-2xl border border-white/10 bg-[#0a0e0a] p-4">
             <div className="flex items-center gap-3">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-[#79c51c]" />
+
               <p className="text-sm font-bold text-white/55">
                 Checking your RCS account...
               </p>
@@ -829,25 +1251,38 @@ export default function PostJobPage() {
         <form onSubmit={submitJob}>
           <section className="rounded-[2rem] border border-white/10 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
             {step === 1 && (
-              <StepOne wasteType={wasteType} onSelect={selectWasteType} />
+              <StepOne
+                wasteType={wasteType}
+                onSelect={selectWasteType}
+              />
             )}
 
             {step === 2 && (
               <StepTwo
-                postcode={postcode}
+                postcodeInput={postcodeInput}
                 address={address}
-                setPostcode={setPostcode}
-                setAddress={setAddress}
+                addressSelected={addressSelected}
+                addressSuggestions={addressSuggestions}
+                addressLoading={addressLoading}
+                setPostcodeInput={(value) => {
+                  setPostcodeInput(value);
+                  setAddressSelected(false);
+                  setAddress("");
+                  setPostcode("");
+                  clearError();
+                }}
+                onSelectAddress={selectAddress}
+                onChangeAddress={changeAddress}
               />
             )}
 
             {step === 3 && (
               <StepThree
                 collectionDate={collectionDate}
-                preferredTime={preferredTime}
                 today={today}
-                setCollectionDate={setCollectionDate}
-                setPreferredTime={setPreferredTime}
+                setCollectionDate={
+                  setCollectionDate
+                }
               />
             )}
 
@@ -860,32 +1295,49 @@ export default function PostJobPage() {
                 photos={photos}
                 setLoadSize={setLoadSize}
                 setLocation={setLocation}
-                setDescription={setDescription}
-                setAccessNotes={setAccessNotes}
+                setDescription={
+                  setDescription
+                }
+                setAccessNotes={
+                  setAccessNotes
+                }
                 onPhotos={handlePhotos}
-                onRemovePhoto={removePhoto}
+                onRemovePhoto={
+                  removePhoto
+                }
               />
             )}
 
             {step === 5 && (
               <StepFive
                 isLoggedIn={isLoggedIn}
-                customerEmail={customerEmail}
+                customerEmail={
+                  customerEmail
+                }
                 fullName={fullName}
                 email={email}
                 phone={phone}
                 password={password}
-                confirmPassword={confirmPassword}
-                setFullName={setFullName}
+                confirmPassword={
+                  confirmPassword
+                }
+                setFullName={
+                  setFullName
+                }
                 setEmail={setEmail}
                 setPhone={setPhone}
-                setPassword={setPassword}
-                setConfirmPassword={setConfirmPassword}
+                setPassword={
+                  setPassword
+                }
+                setConfirmPassword={
+                  setConfirmPassword
+                }
                 wasteType={wasteType}
                 postcode={postcode}
                 address={address}
-                collectionDate={collectionDate}
-                preferredTime={preferredTime}
+                collectionDate={
+                  collectionDate
+                }
                 loadSize={loadSize}
                 location={location}
               />
@@ -895,6 +1347,7 @@ export default function PostJobPage() {
               <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-4">
                 <div className="flex items-center gap-3">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-[#79c51c]" />
+
                   <p className="text-sm font-bold text-white/70">
                     {uploadStatus}
                   </p>
@@ -921,11 +1374,15 @@ export default function PostJobPage() {
                 </Link>
               )}
 
-              {step === 1 ? null : step < TOTAL_STEPS ? (
+              {step === 1 ? null : step <
+                TOTAL_STEPS ? (
                 <button
                   type="button"
                   onClick={continueStep}
-                  disabled={checkingSession || loading}
+                  disabled={
+                    checkingSession ||
+                    loading
+                  }
                   className="w-full rounded-2xl bg-[#79c51c] px-6 py-4 text-base font-black text-[#050705] shadow-lg shadow-[#79c51c]/10 transition hover:bg-[#91db32] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 >
                   Continue →
@@ -933,10 +1390,15 @@ export default function PostJobPage() {
               ) : (
                 <button
                   type="submit"
-                  disabled={checkingSession || loading}
+                  disabled={
+                    checkingSession ||
+                    loading
+                  }
                   className="w-full rounded-2xl bg-[#79c51c] px-6 py-4 text-base font-black text-[#050705] shadow-lg shadow-[#79c51c]/10 transition hover:bg-[#91db32] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 >
-                  {loading ? "POSTING YOUR JOB..." : "POST JOB & GET QUOTES →"}
+                  {loading
+                    ? "POSTING YOUR JOB..."
+                    : "POST JOB & GET QUOTES →"}
                 </button>
               )}
             </div>
@@ -984,13 +1446,16 @@ function StepOne({
 
       <div className="mt-7 grid gap-3 sm:grid-cols-2">
         {wasteTypes.map((item) => {
-          const selected = wasteType === item;
+          const selected =
+            wasteType === item;
 
           return (
             <button
               key={item}
               type="button"
-              onClick={() => onSelect(item)}
+              onClick={() =>
+                onSelect(item)
+              }
               className={`min-h-[64px] rounded-2xl border px-5 py-4 text-left text-base font-black transition ${
                 selected
                   ? "border-[#79c51c] bg-[#79c51c]/10 text-[#bff58a]"
@@ -998,8 +1463,11 @@ function StepOne({
               }`}
             >
               <span>{item}</span>
+
               {selected && (
-                <span className="float-right text-[#79c51c]">✓</span>
+                <span className="float-right text-[#79c51c]">
+                  ✓
+                </span>
               )}
             </button>
           );
@@ -1010,45 +1478,147 @@ function StepOne({
 }
 
 function StepTwo({
-  postcode,
+  postcodeInput,
   address,
-  setPostcode,
-  setAddress,
+  addressSelected,
+  addressSuggestions,
+  addressLoading,
+  setPostcodeInput,
+  onSelectAddress,
+  onChangeAddress,
 }: {
-  postcode: string;
+  postcodeInput: string;
   address: string;
-  setPostcode: (value: string) => void;
-  setAddress: (value: string) => void;
+  addressSelected: boolean;
+  addressSuggestions: AddressSuggestion[];
+  addressLoading: boolean;
+  setPostcodeInput: (
+    value: string,
+  ) => void;
+  onSelectAddress: (
+    suggestion: AddressSuggestion,
+  ) => void;
+  onChangeAddress: () => void;
 }) {
   return (
     <div>
       <StepHeading
         eyebrow="Step 2"
         title="Where is the waste?"
-        text="Tell us where the collection will take place."
+        text="Enter the postcode and select the exact property."
       />
 
       <div className="mt-7 space-y-5">
-        <Field label="Postcode" required>
+        <Field
+          label="Postcode"
+          required
+        >
           <input
-            value={postcode}
-            onChange={(event) => setPostcode(event.target.value)}
-            placeholder="e.g. B12 3AB"
+            value={postcodeInput}
+            onChange={(event) =>
+              setPostcodeInput(
+                event.target.value,
+              )
+            }
+            placeholder="e.g. DY4 9LJ"
             autoComplete="postal-code"
-            className={inputClass}
+            disabled={addressSelected}
+            className={`${inputClass} ${
+              addressSelected
+                ? "cursor-not-allowed opacity-60"
+                : ""
+            }`}
           />
         </Field>
 
-        <Field label="Address" required>
-          <textarea
-            value={address}
-            onChange={(event) => setAddress(event.target.value)}
-            placeholder="Enter the collection address"
-            rows={3}
-            autoComplete="street-address"
-            className={`${inputClass} resize-none`}
-          />
-        </Field>
+        {addressLoading && (
+          <div className="rounded-2xl border border-white/10 bg-[#050705] p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-[#79c51c]" />
+
+              <p className="text-sm font-bold text-white/50">
+                Finding properties...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!addressSelected &&
+          addressSuggestions.length > 0 && (
+            <div>
+              <p className="mb-2 text-sm font-black text-white/70">
+                Select your address
+              </p>
+
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#050705]">
+                {addressSuggestions.map(
+                  (suggestion) => (
+                    <button
+                      key={
+                        suggestion.id
+                      }
+                      type="button"
+                      onClick={() =>
+                        onSelectAddress(
+                          suggestion,
+                        )
+                      }
+                      className="flex w-full items-start justify-between gap-4 border-b border-white/10 px-4 py-4 text-left transition last:border-b-0 hover:bg-[#79c51c]/10"
+                    >
+                      <span className="text-sm font-bold leading-6 text-white/80">
+                        {
+                          suggestion.summaryline
+                        }
+                      </span>
+
+                      <span className="shrink-0 text-lg text-[#79c51c]">
+                        →
+                      </span>
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+          )}
+
+        {addressSelected && (
+          <div className="rounded-2xl border border-[#79c51c]/30 bg-[#79c51c]/5 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+              Collection address
+            </p>
+
+            <p className="mt-2 text-base font-black leading-6 text-white">
+              {address}
+            </p>
+
+            <button
+              type="button"
+              onClick={onChangeAddress}
+              className="mt-4 text-sm font-black text-[#9de450] underline underline-offset-4"
+            >
+              Change address
+            </button>
+          </div>
+        )}
+
+        {!addressLoading &&
+          !addressSelected &&
+          postcodeInput.trim()
+            .length >= 3 &&
+          addressSuggestions.length ===
+            0 && (
+            <div className="rounded-2xl border border-white/10 bg-[#050705] p-4">
+              <p className="text-sm font-bold text-white/45">
+                No properties found. Check the postcode and try again.
+              </p>
+            </div>
+          )}
+
+        <div className="rounded-2xl border border-white/10 bg-[#050705] p-4">
+          <p className="text-xs leading-5 text-white/35">
+            Start typing the postcode and select the exact property from the results. You don't need to type the address manually.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -1056,56 +1626,60 @@ function StepTwo({
 
 function StepThree({
   collectionDate,
-  preferredTime,
   today,
   setCollectionDate,
-  setPreferredTime,
 }: {
   collectionDate: string;
-  preferredTime: string;
   today: string;
-  setCollectionDate: (value: string) => void;
-  setPreferredTime: (value: string) => void;
+  setCollectionDate: (
+    value: string,
+  ) => void;
 }) {
   return (
     <div>
       <StepHeading
         eyebrow="Step 3"
         title="When do you need it removed?"
-        text="Give drivers an idea of when you would like the collection."
+        text="Choose the exact collection date you'd like."
       />
 
       <div className="mt-7 space-y-5">
-        <Field label="Preferred date" required>
+        <Field
+          label="Collection date"
+          required
+        >
           <input
             type="date"
             min={today}
             value={collectionDate}
-            onChange={(event) => setCollectionDate(event.target.value)}
+            onChange={(event) =>
+              setCollectionDate(
+                event.target.value,
+              )
+            }
             className={inputClass}
           />
         </Field>
 
-        <Field label="Preferred time">
-          <select
-            value={preferredTime}
-            onChange={(event) => setPreferredTime(event.target.value)}
-            className={inputClass}
-          >
-            <option value="" className="bg-[#050705]">
-              Any time
-            </option>
-            <option value="Morning" className="bg-[#050705]">
-              Morning
-            </option>
-            <option value="Afternoon" className="bg-[#050705]">
-              Afternoon
-            </option>
-            <option value="Evening" className="bg-[#050705]">
-              Evening
-            </option>
-          </select>
-        </Field>
+        {collectionDate && (
+          <div className="rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
+              Selected date
+            </p>
+
+            <p className="mt-2 text-xl font-black text-white">
+              {formatDate(
+                collectionDate,
+              )}
+            </p>
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-white/10 bg-[#050705] p-4">
+          <p className="text-sm font-bold leading-6 text-white/50">
+            Drivers will see this date when reviewing your job.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -1131,62 +1705,91 @@ function StepFour({
   photos: SelectedPhoto[];
   setLoadSize: (value: string) => void;
   setLocation: (value: string) => void;
-  setDescription: (value: string) => void;
-  setAccessNotes: (value: string) => void;
-  onPhotos: (event: ChangeEvent<HTMLInputElement>) => void;
-  onRemovePhoto: (id: string) => void;
+  setDescription: (
+    value: string,
+  ) => void;
+  setAccessNotes: (
+    value: string,
+  ) => void;
+  onPhotos: (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => void;
+  onRemovePhoto: (
+    id: string,
+  ) => void;
 }) {
   return (
     <div>
       <StepHeading
         eyebrow="Step 4"
-        title="Tell us a little more"
-        text="A few details and photos help drivers give you a more accurate price."
+        title="Show us the job"
+        text="Photos help drivers understand the job and give you a more accurate quote."
       />
 
       <div className="mt-7 space-y-6">
-        <Field label="Roughly how much waste is there?" required>
+        <Field
+          label="Roughly how much waste is there?"
+          required
+        >
           <div className="grid gap-2 sm:grid-cols-5">
-            {loadSizes.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setLoadSize(item)}
-                className={`rounded-2xl border px-3 py-4 text-sm font-black transition ${
-                  loadSize === item
-                    ? "border-[#79c51c] bg-[#79c51c]/10 text-[#bff58a]"
-                    : "border-white/10 bg-[#050705] text-white/70 hover:border-[#79c51c]/40"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
+            {loadSizes.map(
+              (item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() =>
+                    setLoadSize(item)
+                  }
+                  className={`rounded-2xl border px-3 py-4 text-sm font-black transition ${
+                    loadSize === item
+                      ? "border-[#79c51c] bg-[#79c51c]/10 text-[#bff58a]"
+                      : "border-white/10 bg-[#050705] text-white/70 hover:border-[#79c51c]/40"
+                  }`}
+                >
+                  {item}
+                </button>
+              ),
+            )}
           </div>
         </Field>
 
-        <Field label="Where is the waste located?" required>
+        <Field
+          label="Where is the waste located?"
+          required
+        >
           <div className="grid gap-2 sm:grid-cols-2">
-            {locations.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setLocation(item)}
-                className={`rounded-2xl border px-4 py-3.5 text-left text-sm font-black transition ${
-                  location === item
-                    ? "border-[#79c51c] bg-[#79c51c]/10 text-[#bff58a]"
-                    : "border-white/10 bg-[#050705] text-white/70 hover:border-[#79c51c]/40"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
+            {locations.map(
+              (item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() =>
+                    setLocation(item)
+                  }
+                  className={`rounded-2xl border px-4 py-3.5 text-left text-sm font-black transition ${
+                    location === item
+                      ? "border-[#79c51c] bg-[#79c51c]/10 text-[#bff58a]"
+                      : "border-white/10 bg-[#050705] text-white/70 hover:border-[#79c51c]/40"
+                  }`}
+                >
+                  {item}
+                </button>
+              ),
+            )}
           </div>
         </Field>
 
-        <Field label="What needs removing?" required>
+        <Field
+          label="What needs removing?"
+          required
+        >
           <textarea
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={(event) =>
+              setDescription(
+                event.target.value,
+              )
+            }
             placeholder="e.g. old sofa, garden waste and 3 bags of rubbish"
             rows={4}
             className={`${inputClass} resize-none`}
@@ -1196,7 +1799,11 @@ function StepFour({
         <Field label="Anything the driver should know?">
           <textarea
             value={accessNotes}
-            onChange={(event) => setAccessNotes(event.target.value)}
+            onChange={(event) =>
+              setAccessNotes(
+                event.target.value,
+              )
+            }
             placeholder="e.g. parking is at the front of the property"
             rows={3}
             className={`${inputClass} resize-none`}
@@ -1206,13 +1813,21 @@ function StepFour({
         <div>
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-sm font-black text-white/80">Add photos</p>
+              <p className="text-sm font-black text-white/80">
+                Add photos{" "}
+                <span className="text-[#79c51c]">
+                  *
+                </span>
+              </p>
+
               <p className="mt-1 text-xs leading-5 text-white/35">
-                Optional, but photos can help drivers price the job accurately.
+                At least 1 photo is required so drivers can see the job.
               </p>
             </div>
+
             <span className="text-xs font-bold text-white/30">
-              {photos.length}/{MAX_PHOTOS}
+              {photos.length}/
+              {MAX_PHOTOS}
             </span>
           </div>
 
@@ -1224,34 +1839,53 @@ function StepFour({
               onChange={onPhotos}
               className="sr-only"
             />
+
             <span>
               <span className="block text-lg font-black text-[#9de450]">
                 + Add photos
               </span>
+
               <span className="mt-1 block text-xs font-semibold text-white/35">
-                Up to 10 photos · 10MB each
+                1–10 photos · 10MB each
               </span>
             </span>
           </label>
 
+          {photos.length === 0 && (
+            <p className="mt-2 text-xs font-bold text-white/30">
+              You need at least 1 photo before continuing.
+            </p>
+          )}
+
           {photos.length > 0 && (
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-              {photos.map((photo) => (
-                <div
-                  key={photo.id}
-                  className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black"
-                >
-                  <PhotoPreview file={photo.file} />
-                  <button
-                    type="button"
-                    onClick={() => onRemovePhoto(photo.id)}
-                    className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-sm font-black text-white"
-                    aria-label={`Remove ${photo.file.name}`}
+              {photos.map(
+                (photo) => (
+                  <div
+                    key={photo.id}
+                    className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black"
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
+                    <PhotoPreview
+                      file={
+                        photo.file
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onRemovePhoto(
+                          photo.id,
+                        )
+                      }
+                      className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-sm font-black text-white"
+                      aria-label={`Remove ${photo.file.name}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ),
+              )}
             </div>
           )}
         </div>
@@ -1277,7 +1911,6 @@ function StepFive({
   postcode,
   address,
   collectionDate,
-  preferredTime,
   loadSize,
   location,
 }: {
@@ -1288,16 +1921,25 @@ function StepFive({
   phone: string;
   password: string;
   confirmPassword: string;
-  setFullName: (value: string) => void;
-  setEmail: (value: string) => void;
-  setPhone: (value: string) => void;
-  setPassword: (value: string) => void;
-  setConfirmPassword: (value: string) => void;
+  setFullName: (
+    value: string,
+  ) => void;
+  setEmail: (
+    value: string,
+  ) => void;
+  setPhone: (
+    value: string,
+  ) => void;
+  setPassword: (
+    value: string,
+  ) => void;
+  setConfirmPassword: (
+    value: string,
+  ) => void;
   wasteType: string;
   postcode: string;
   address: string;
   collectionDate: string;
-  preferredTime: string;
   loadSize: string;
   location: string;
 }) {
@@ -1305,7 +1947,11 @@ function StepFive({
     <div>
       <StepHeading
         eyebrow="Step 5"
-        title={isLoggedIn ? "Check your job details" : "Create your free account"}
+        title={
+          isLoggedIn
+            ? "Check your job details"
+            : "Create your free account"
+        }
         text={
           isLoggedIn
             ? "Everything looks good. Post your job and start receiving driver quotes."
@@ -1315,32 +1961,53 @@ function StepFive({
 
       {!isLoggedIn ? (
         <div className="mt-7 space-y-5">
-          <Field label="Full name" required>
+          <Field
+            label="Full name"
+            required
+          >
             <input
               value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
+              onChange={(event) =>
+                setFullName(
+                  event.target.value,
+                )
+              }
               placeholder="Your full name"
               autoComplete="name"
               className={inputClass}
             />
           </Field>
 
-          <Field label="Email address" required>
+          <Field
+            label="Email address"
+            required
+          >
             <input
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) =>
+                setEmail(
+                  event.target.value,
+                )
+              }
               placeholder="you@example.com"
               autoComplete="email"
               className={inputClass}
             />
           </Field>
 
-          <Field label="Phone number" required>
+          <Field
+            label="Phone number"
+            required
+          >
             <input
               type="tel"
               value={phone}
-              onChange={(event) => setPhone(event.target.value)}
+              onChange={(event) =>
+                setPhone(
+                  event.target.value,
+                )
+              }
               placeholder="07..."
               autoComplete="tel"
               className={inputClass}
@@ -1348,22 +2015,38 @@ function StepFive({
           </Field>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Create password" required>
+            <Field
+              label="Create password"
+              required
+            >
               <input
                 type="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) =>
+                  setPassword(
+                    event.target.value,
+                  )
+                }
                 placeholder="At least 6 characters"
                 autoComplete="new-password"
                 className={inputClass}
               />
             </Field>
 
-            <Field label="Confirm password" required>
+            <Field
+              label="Confirm password"
+              required
+            >
               <input
                 type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
+                value={
+                  confirmPassword
+                }
+                onChange={(event) =>
+                  setConfirmPassword(
+                    event.target.value,
+                  )
+                }
                 placeholder="Repeat your password"
                 autoComplete="new-password"
                 className={inputClass}
@@ -1379,7 +2062,10 @@ function StepFive({
 
           <p className="text-center text-sm font-semibold text-white/35">
             Already have an account?{" "}
-            <Link href="/customer/login" className="font-black text-[#79c51c] hover:text-[#9de450]">
+            <Link
+              href="/customer/login"
+              className="font-black text-[#79c51c] hover:text-[#9de450]"
+            >
               Log in here
             </Link>
           </p>
@@ -1389,9 +2075,11 @@ function StepFive({
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#79c51c]">
             Signed in
           </p>
+
           <p className="mt-2 break-all text-base font-black text-white">
             {customerEmail}
           </p>
+
           <p className="mt-2 text-sm leading-6 text-white/50">
             This job will automatically be added to your existing RCS customer account.
           </p>
@@ -1404,14 +2092,43 @@ function StepFive({
         </p>
 
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <SummaryItem label="Waste" value={wasteType} />
-          <SummaryItem label="Postcode" value={postcode.toUpperCase()} />
-          <SummaryItem label="Date" value={collectionDate} />
-          <SummaryItem label="Time" value={preferredTime || "Any time"} />
-          <SummaryItem label="Amount" value={loadSize} />
-          <SummaryItem label="Location" value={location} />
+          <SummaryItem
+            label="Waste"
+            value={wasteType}
+          />
+
+          <SummaryItem
+            label="Postcode"
+            value={postcode.toUpperCase()}
+          />
+
+          <SummaryItem
+            label="Date"
+            value={formatDate(
+              collectionDate,
+            )}
+          />
+
+          <SummaryItem
+            label="Time"
+            value="Any time"
+          />
+
+          <SummaryItem
+            label="Amount"
+            value={loadSize}
+          />
+
+          <SummaryItem
+            label="Location"
+            value={location}
+          />
+
           <div className="sm:col-span-2">
-            <SummaryItem label="Address" value={address} />
+            <SummaryItem
+              label="Address"
+              value={address}
+            />
           </div>
         </div>
       </div>
@@ -1419,20 +2136,31 @@ function StepFive({
   );
 }
 
-function PhotoPreview({ file }: { file: File }) {
-  const [src, setSrc] = useState("");
+function PhotoPreview({
+  file,
+}: {
+  file: File;
+}) {
+  const [src, setSrc] =
+    useState("");
 
   useEffect(() => {
-    const objectUrl = URL.createObjectURL(file);
+    const objectUrl =
+      URL.createObjectURL(file);
+
     setSrc(objectUrl);
 
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      URL.revokeObjectURL(
+        objectUrl,
+      );
     };
   }, [file]);
 
   if (!src) {
-    return <div className="h-full w-full bg-white/5" />;
+    return (
+      <div className="h-full w-full bg-white/5" />
+    );
   }
 
   return (
@@ -1458,9 +2186,11 @@ function StepHeading({
       <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
         {eyebrow}
       </p>
+
       <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
         {title}
       </h2>
+
       <p className="mt-3 max-w-2xl text-sm leading-6 text-white/50 sm:text-base">
         {text}
       </p>
@@ -1482,9 +2212,15 @@ function NextStep({
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#79c51c] text-xs font-black text-[#050705]">
         {number}
       </div>
+
       <div>
-        <p className="font-black text-white">{title}</p>
-        <p className="mt-1 text-sm leading-6 text-white/45">{text}</p>
+        <p className="font-black text-white">
+          {title}
+        </p>
+
+        <p className="mt-1 text-sm leading-6 text-white/45">
+          {text}
+        </p>
       </div>
     </div>
   );
@@ -1503,8 +2239,14 @@ function Field({
     <div>
       <label className="mb-2 block text-sm font-black text-white/80">
         {label}
-        {required && <span className="ml-1 text-[#79c51c]">*</span>}
+
+        {required && (
+          <span className="ml-1 text-[#79c51c]">
+            *
+          </span>
+        )}
       </label>
+
       {children}
     </div>
   );
@@ -1522,8 +2264,34 @@ function SummaryItem({
       <p className="text-xs font-bold uppercase tracking-wide text-white/35">
         {label}
       </p>
-      <p className="mt-1 truncate font-black text-white">{value}</p>
+
+      <p className="mt-1 truncate font-black text-white">
+        {value}
+      </p>
     </div>
+  );
+}
+
+function formatDate(
+  value: string,
+) {
+  if (!value) return "";
+
+  const date =
+    new Date(`${value}T12:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString(
+    "en-GB",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    },
   );
 }
 
