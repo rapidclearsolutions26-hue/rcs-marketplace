@@ -99,7 +99,7 @@ export default function HomePage() {
     <main className="min-h-screen overflow-x-hidden bg-[#050705] pb-20 text-white lg:pb-0">
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl">
-        <div className="mx-auto flex h-[64px] max-w-7xl items-center justify-between px-4 sm:h-[72px] sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:h-[76px] sm:px-6 lg:px-8">
           <Link href="/" className="shrink-0">
             <Image
               src="/rapid-clear-logo.png"
@@ -107,7 +107,7 @@ export default function HomePage() {
               width={220}
               height={90}
               priority
-              className="h-9 w-auto object-contain sm:h-12"
+              className="h-8 w-auto max-w-[155px] object-contain sm:h-12"
             />
           </Link>
 
@@ -157,24 +157,62 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex shrink-0 items-center gap-2 lg:hidden">
+            {/* Customer account */}
             <Link
-              href="/customer/post-job"
-              className="rounded-xl bg-[#79c51c] px-3.5 py-2.5 text-[10px] font-black text-black"
+              href="/customer/login"
+              aria-label="Customer login"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/[0.12] text-white transition hover:border-[#79c51c] hover:text-[#79c51c]"
             >
-              POST A JOB
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M4.5 21a7.5 7.5 0 0 1 15 0"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
             </Link>
 
+            {/* Mobile menu */}
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.12]"
+              aria-expanded={menuOpen}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/[0.16] bg-[#050705]"
             >
-              <div className="space-y-1.5">
-                <span className="block h-[2px] w-5 bg-white" />
-                <span className="block h-[2px] w-5 bg-white" />
-                <span className="block h-[2px] w-5 bg-white" />
+              <span className="sr-only">
+                {menuOpen ? "Close menu" : "Open menu"}
+              </span>
+
+              <div className="flex w-5 flex-col gap-1.5">
+                <span
+                  className={`block h-[2px] w-5 bg-white transition ${
+                    menuOpen ? "translate-y-2 rotate-45" : ""
+                  }`}
+                />
+                <span
+                  className={`block h-[2px] w-5 bg-white transition ${
+                    menuOpen ? "opacity-0" : ""
+                  }`}
+                />
+                <span
+                  className={`block h-[2px] w-5 bg-white transition ${
+                    menuOpen ? "-translate-y-2 -rotate-45" : ""
+                  }`}
+                />
               </div>
             </button>
           </div>
@@ -224,7 +262,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#050705] via-transparent to-[#050705]/20" />
         </div>
 
-        <div className="relative mx-auto flex min-h-[650px] max-w-7xl items-end px-5 pb-12 pt-20 sm:min-h-[720px] sm:items-center sm:px-6 sm:py-20 lg:px-8">
+        <div className="relative mx-auto flex min-h-[650px] max-w-7xl items-end px-5 pb-12 pt-14 sm:min-h-[720px] sm:items-center sm:px-6 sm:py-20 lg:px-8">
           <div className="w-full max-w-4xl">
             <div className="mb-5 flex items-center gap-2.5">
               <span className="h-2 w-2 rounded-full bg-[#79c51c]" />
