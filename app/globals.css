@@ -41,15 +41,6 @@ body {
 /* MOBILE / PWA SAFE AREA                                    */
 /* ========================================================= */
 
-/*
-  Normal Safari/Chrome:
-  No extra top spacing is added.
-
-  Home Screen / standalone RCS app:
-  The header is moved below the iPhone status bar so the
-  RCS logo and menu button remain completely clickable.
-*/
-
 .safe-area-top {
   padding-top: env(safe-area-inset-top);
 }
@@ -64,7 +55,7 @@ body {
 }
 
 /* ========================================================= */
-/* RCS HOME SCREEN / PWA HEADER                              */
+/* RCS PWA HEADER                                            */
 /* ========================================================= */
 
 .pwa-header {
@@ -72,15 +63,15 @@ body {
 }
 
 /*
-  Standalone Home Screen app.
+  Installed Home Screen PWA.
 
-  The 44px minimum provides a fallback for iPhones where
-  safe-area-inset-top is reported as 0.
+  Keeps the RCS header below the iPhone status bar /
+  Dynamic Island while avoiding excessive blank space.
 */
 
 @media (display-mode: standalone) {
   .pwa-header {
-    padding-top: max(env(safe-area-inset-top), 44px);
+    padding-top: max(env(safe-area-inset-top), 20px);
   }
 }
 
@@ -90,7 +81,7 @@ body {
 
 @media (display-mode: fullscreen) {
   .pwa-header {
-    padding-top: max(env(safe-area-inset-top), 44px);
+    padding-top: max(env(safe-area-inset-top), 20px);
   }
 }
 
@@ -101,7 +92,7 @@ body {
 @supports (-webkit-touch-callout: none) {
   @media (display-mode: standalone) {
     .pwa-header {
-      padding-top: max(env(safe-area-inset-top), 44px);
+      padding-top: max(env(safe-area-inset-top), 20px);
     }
   }
 }

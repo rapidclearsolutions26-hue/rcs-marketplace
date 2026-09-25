@@ -21,29 +21,19 @@ export default function RCSHeader({
     ? "Dashboard"
     : "Customer Login";
 
-  const navItems = [
-    ["/customer/post-job", "Post a Waste Job"],
-    ["/services", "Services"],
-    ["/#how-it-works", "How It Works"],
-    ["/driver/register", "For Drivers"],
-    ["/#reviews", "Customer Reviews"],
-    ["/customer/login", "Customer Login"],
-    ["/driver/login", "Driver Login"],
-    ["/driver/register", "Join as a Driver"],
-  ];
-
   return (
     <header
-      className={`sticky top-0 z-[100] border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl ${
+      className={`pwa-header sticky top-0 z-[100] w-full border-b border-white/[0.07] bg-[#050705]/95 backdrop-blur-xl ${
         menuOpen ? "shadow-2xl" : ""
       }`}
     >
-      <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:h-[76px] sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[68px] w-full max-w-7xl items-center justify-between px-4 sm:min-h-[76px] sm:px-6 lg:px-8">
+
         {/* LOGO */}
         <Link
           href="/"
           onClick={() => setMenuOpen(false)}
-          className="shrink-0"
+          className="flex min-w-0 shrink-0 items-center"
           aria-label="Rapid Clear Solutions home"
         >
           <Image
@@ -52,7 +42,7 @@ export default function RCSHeader({
             width={220}
             height={70}
             priority
-            className="h-9 w-auto object-contain sm:h-12"
+            className="h-9 w-auto max-w-[150px] object-contain sm:h-12 sm:max-w-none"
           />
         </Link>
 
@@ -105,17 +95,18 @@ export default function RCSHeader({
         </div>
 
         {/* MOBILE ACTIONS */}
-        <div className="flex items-center gap-2 lg:hidden">
-          {/* ACCOUNT */}
+        <div className="flex shrink-0 items-center gap-2 lg:hidden">
+
+          {/* ACCOUNT BUTTON */}
           <Link
             href={accountHref}
             onClick={() => setMenuOpen(false)}
             aria-label={accountLabel}
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white transition hover:border-[#79c51c]/40 hover:bg-[#79c51c]/10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white transition active:scale-95"
           >
             <svg
-              width="20"
-              height="20"
+              width="21"
+              height="21"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -135,11 +126,11 @@ export default function RCSHeader({
             onClick={() => setMenuOpen((open) => !open)}
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white transition hover:border-[#79c51c]/40 hover:bg-[#79c51c]/10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white transition active:scale-95"
           >
-            <div className="relative flex h-5 w-5 flex-col justify-center">
+            <span className="relative block h-5 w-5">
               <span
-                className={`absolute left-0 h-[2px] w-5 rounded-full bg-white transition ${
+                className={`absolute left-0 block h-[2px] w-5 rounded-full bg-white transition-all duration-200 ${
                   menuOpen
                     ? "top-[9px] rotate-45"
                     : "top-[3px]"
@@ -147,19 +138,19 @@ export default function RCSHeader({
               />
 
               <span
-                className={`absolute left-0 top-[9px] h-[2px] w-5 rounded-full bg-white transition ${
+                className={`absolute left-0 top-[9px] block h-[2px] w-5 rounded-full bg-white transition-all duration-200 ${
                   menuOpen ? "opacity-0" : "opacity-100"
                 }`}
               />
 
               <span
-                className={`absolute left-0 h-[2px] w-5 rounded-full bg-white transition ${
+                className={`absolute left-0 block h-[2px] w-5 rounded-full bg-white transition-all duration-200 ${
                   menuOpen
                     ? "top-[9px] -rotate-45"
                     : "top-[15px]"
                 }`}
               />
-            </div>
+            </span>
           </button>
         </div>
       </div>
@@ -168,74 +159,75 @@ export default function RCSHeader({
       {menuOpen && (
         <div className="border-t border-white/[0.07] bg-[#050705] lg:hidden">
           <nav className="mx-auto max-w-7xl px-4 pb-5 sm:px-6">
-            <div className="pt-2">
-              {/* MAIN CTA */}
+
+            {/* MAIN CTA */}
+            <Link
+              href="/customer/post-job"
+              onClick={() => setMenuOpen(false)}
+              className="mt-3 flex min-h-[54px] items-center justify-center rounded-xl bg-[#79c51c] px-4 text-sm font-black text-black transition active:scale-[0.99]"
+            >
+              POST A WASTE JOB
+            </Link>
+
+            {/* NAVIGATION */}
+            <div className="mt-3 overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
+
               <Link
-                href="/customer/post-job"
+                href="/services"
                 onClick={() => setMenuOpen(false)}
-                className="mt-2 flex min-h-[54px] items-center justify-center rounded-xl bg-[#79c51c] px-4 text-sm font-black text-black transition hover:bg-[#91db32]"
+                className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition active:bg-white/[0.05]"
               >
-                POST A WASTE JOB
+                Services
               </Link>
 
-              {/* NAVIGATION */}
-              <div className="mt-3 overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
-                <Link
-                  href="/services"
-                  onClick={() => setMenuOpen(false)}
-                  className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition hover:bg-white/[0.03] hover:text-[#79c51c]"
-                >
-                  Services
-                </Link>
+              <Link
+                href="/#how-it-works"
+                onClick={() => setMenuOpen(false)}
+                className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition active:bg-white/[0.05]"
+              >
+                How It Works
+              </Link>
 
-                <Link
-                  href="/#how-it-works"
-                  onClick={() => setMenuOpen(false)}
-                  className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition hover:bg-white/[0.03] hover:text-[#79c51c]"
-                >
-                  How It Works
-                </Link>
+              <Link
+                href="/driver/register"
+                onClick={() => setMenuOpen(false)}
+                className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition active:bg-white/[0.05]"
+              >
+                For Drivers
+              </Link>
 
-                <Link
-                  href="/driver/register"
-                  onClick={() => setMenuOpen(false)}
-                  className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition hover:bg-white/[0.03] hover:text-[#79c51c]"
-                >
-                  For Drivers
-                </Link>
+              <Link
+                href="/#reviews"
+                onClick={() => setMenuOpen(false)}
+                className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition active:bg-white/[0.05]"
+              >
+                Customer Reviews
+              </Link>
 
-                <Link
-                  href="/#reviews"
-                  onClick={() => setMenuOpen(false)}
-                  className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition hover:bg-white/[0.03] hover:text-[#79c51c]"
-                >
-                  Customer Reviews
-                </Link>
+              <Link
+                href="/customer/login"
+                onClick={() => setMenuOpen(false)}
+                className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition active:bg-white/[0.05]"
+              >
+                Customer Login
+              </Link>
 
-                <Link
-                  href="/customer/login"
-                  onClick={() => setMenuOpen(false)}
-                  className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition hover:bg-white/[0.03] hover:text-[#79c51c]"
-                >
-                  Customer Login
-                </Link>
+              <Link
+                href="/driver/login"
+                onClick={() => setMenuOpen(false)}
+                className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition active:bg-white/[0.05]"
+              >
+                Driver Login
+              </Link>
 
-                <Link
-                  href="/driver/login"
-                  onClick={() => setMenuOpen(false)}
-                  className="block border-b border-white/[0.07] px-4 py-4 text-sm font-bold text-gray-300 transition hover:bg-white/[0.03] hover:text-[#79c51c]"
-                >
-                  Driver Login
-                </Link>
+              <Link
+                href="/driver/register"
+                onClick={() => setMenuOpen(false)}
+                className="block px-4 py-4 text-sm font-bold text-[#79c51c] transition active:bg-white/[0.05]"
+              >
+                Join as a Driver
+              </Link>
 
-                <Link
-                  href="/driver/register"
-                  onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-4 text-sm font-bold text-[#79c51c] transition hover:bg-white/[0.03]"
-                >
-                  Join as a Driver
-                </Link>
-              </div>
             </div>
           </nav>
         </div>
