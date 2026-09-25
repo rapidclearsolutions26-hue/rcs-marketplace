@@ -154,7 +154,7 @@ export default function HomePage() {
               </Link>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+            <div className="hidden sm:grid mt-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               {[
                 "Post online",
                 "Upload photos",
@@ -174,7 +174,7 @@ export default function HomePage() {
       </section>
 
       {/* LOCAL AVAILABILITY */}
-      <section className="border-b border-white/[0.07] bg-[#080b08] py-10 sm:py-14">
+      <section className="hidden lg:block border-b border-white/[0.07] bg-[#080b08] py-10 sm:py-14">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="rounded-3xl border border-white/[0.08] bg-[#0a0e0a] p-5 sm:p-7">
             <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -220,7 +220,7 @@ export default function HomePage() {
       </section>
 
       {/* LIVE MARKETPLACE ACTIVITY */}
-      <section className="bg-[#050705] py-10 sm:py-14">
+      <section className="hidden lg:block bg-[#050705] py-10 sm:py-14">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
@@ -253,7 +253,7 @@ export default function HomePage() {
       </section>
 
       {/* JOBS BEING QUOTED */}
-      <section className="border-y border-white/[0.07] bg-[#080b08] py-12 sm:py-16">
+      <section className="hidden lg:block border-y border-white/[0.07] bg-[#080b08] py-12 sm:py-16">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -312,7 +312,7 @@ export default function HomePage() {
       </section>
 
       {/* CUSTOMER / DRIVER SPLIT */}
-      <section className="bg-[#080b08] py-14 sm:py-20">
+      <section className="hidden lg:block bg-[#080b08] py-14 sm:py-20">
         <div className="mx-auto grid max-w-7xl gap-4 px-5 sm:px-6 lg:grid-cols-2 lg:px-8">
           <AudienceCard
             label="For Customers"
@@ -436,7 +436,7 @@ export default function HomePage() {
       </section>
 
       {/* WHY RCS */}
-      <section className="bg-[#050705] py-16 sm:py-24">
+      <section className="hidden lg:block bg-[#050705] py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
@@ -474,7 +474,7 @@ export default function HomePage() {
       </section>
 
       {/* MARKETPLACE */}
-      <section className="border-y border-white/[0.07] bg-[#080b08] py-16 sm:py-24">
+      <section className="hidden lg:block border-y border-white/[0.07] bg-[#080b08] py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
             <div>
@@ -658,7 +658,7 @@ export default function HomePage() {
       </section>
 
       {/* SERVICES */}
-      <section className="bg-[#050705] py-16 sm:py-24">
+      <section className="hidden lg:block bg-[#050705] py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
@@ -694,7 +694,7 @@ export default function HomePage() {
       </section>
 
       {/* LOCATIONS */}
-      <section className="border-y border-white/[0.07] bg-[#080b08] py-16 sm:py-24">
+      <section className="hidden lg:block border-y border-white/[0.07] bg-[#080b08] py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -737,7 +737,7 @@ export default function HomePage() {
       </section>
 
       {/* FAQ */}
-      <section className="bg-[#050705] py-16 sm:py-24">
+      <section className="hidden lg:block bg-[#050705] py-16 sm:py-24">
         <div className="mx-auto max-w-4xl px-5 sm:px-6">
           <div className="text-center">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
