@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!stripeSecretKey) {
   throw new Error(
@@ -10,37 +13,92 @@ if (!stripeSecretKey) {
   );
 }
 
+if (!supabaseUrl) {
+  throw new Error(
+    "NEXT_PUBLIC_SUPABASE_URL is missing from environment variables."
+  );
+}
+
+if (!supabaseServiceRoleKey) {
+  throw new Error(
+    "SUPABASE_SERVICE_ROLE_KEY is missing from environment variables."
+  );
+}
+
 const stripe = new Stripe(stripeSecretKey);
+
+const supabaseAdmin = createClient(
+  supabaseUrl,
+  supabaseServiceRoleKey,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);
 
 export async function POST(request: Request) {
   try {
     /*
      * =====================================================
-     * SUPABASE SERVER CLIENT
+     * AUTHENTICATE MOBILE USER
      * =====================================================
      */
 
-    const supabase = await createClient();
+    const authorization =
+      request.headers.get("authorization");
 
-    /*
-     * =====================================================
-     * CHECK CUSTOMER LOGIN
-     * =====================================================
-     */
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    if (!authorization) {
       return NextResponse.json(
         {
           error: "You must be logged in to make a payment.",
         },
+        { status: 401 }
+      );
+    }
+
+    const [scheme, accessToken] =
+      authorization.split(" ");
+
+    if (
+      scheme?.toLowerCase() !== "bearer" ||
+      !accessToken
+    ) {
+      return NextResponse.json(
         {
-          status: 401,
-        }
+          error: "Invalid authentication token.",
+        },
+        { status: 401 }
+      );
+    }
+
+    /*
+     * Verify the Supabase access token.
+     */
+
+    const {
+      data: {
+        user,
+      },
+      error: userError,
+    } =
+      await supabaseAdmin.auth.getUser(
+        accessToken
+      );
+
+    if (userError || !user) {
+      console.error(
+        "Mobile Supabase authentication failed:",
+        userError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Your login session has expired. Please log in again.",
+        },
+        { status: 401 }
       );
     }
 
@@ -62,9 +120,7 @@ export async function POST(request: Request) {
         {
           error: "Invalid request body.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
@@ -79,24 +135,23 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error: "A valid jobId and bidId are required.",
+          error:
+            "A valid jobId and bidId are required.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
     /*
      * =====================================================
-     * LOAD JOB
+     * LOAD CUSTOMER JOB
      * =====================================================
      */
 
     const {
       data: job,
       error: jobError,
-    } = await supabase
+    } = await supabaseAdmin
       .from("jobs")
       .select(
         `
@@ -118,21 +173,22 @@ export async function POST(request: Request) {
       .single();
 
     if (jobError || !job) {
-      console.error("Stripe job lookup error:", jobError);
+      console.error(
+        "Stripe job lookup error:",
+        jobError
+      );
 
       return NextResponse.json(
         {
           error: "We couldn't find this job.",
         },
-        {
-          status: 404,
-        }
+        { status: 404 }
       );
     }
 
     /*
      * =====================================================
-     * PAYMENT ALREADY COMPLETED
+     * PAYMENT ALREADY COMPLETE
      * =====================================================
      */
 
@@ -142,30 +198,16 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error: "Payment has already been completed for this job.",
+          error:
+            "Payment has already been completed for this job.",
         },
-        {
-          status: 409,
-        }
+        { status: 409 }
       );
     }
 
     /*
      * =====================================================
      * VERIFY ACCEPTED QUOTE
-     * =====================================================
-     *
-     * The customer must have accepted this exact bid
-     * before they can pay for it.
-     *
-     * accepted_bid_id is expected here.
-     *
-     * IMPORTANT:
-     * accepted_bid_id does NOT mean the driver has been
-     * assigned yet.
-     *
-     * The driver is only assigned by the Stripe webhook
-     * after successful payment.
      * =====================================================
      */
 
@@ -178,19 +220,13 @@ export async function POST(request: Request) {
           error:
             "This quote has not been accepted for payment.",
         },
-        {
-          status: 409,
-        }
+        { status: 409 }
       );
     }
 
     /*
      * =====================================================
-     * DO NOT ALLOW AN ALREADY ASSIGNED JOB
-     * =====================================================
-     *
-     * assigned_driver_id / assigned_bid_id are only set
-     * after successful payment.
+     * DRIVER MUST NOT ALREADY BE ASSIGNED
      * =====================================================
      */
 
@@ -208,22 +244,20 @@ export async function POST(request: Request) {
           error:
             "A driver has already been booked for this job.",
         },
-        {
-          status: 409,
-        }
+        { status: 409 }
       );
     }
 
     /*
      * =====================================================
-     * LOAD SELECTED BID
+     * LOAD ACCEPTED BID
      * =====================================================
      */
 
     const {
       data: bid,
       error: bidError,
-    } = await supabase
+    } = await supabaseAdmin
       .from("bids")
       .select(
         `
@@ -239,46 +273,38 @@ export async function POST(request: Request) {
       .single();
 
     if (bidError || !bid) {
-      console.error("Stripe bid lookup error:", bidError);
+      console.error(
+        "Stripe bid lookup error:",
+        bidError
+      );
 
       return NextResponse.json(
         {
           error:
             "We couldn't find this driver's quote.",
         },
-        {
-          status: 404,
-        }
+        { status: 404 }
       );
     }
 
     /*
      * =====================================================
-     * VERIFY BID IS THE ACCEPTED BID
+     * VERIFY BID
      * =====================================================
      */
 
-    if (Number(bid.id) !== Number(job.accepted_bid_id)) {
+    if (
+      Number(bid.id) !==
+      Number(job.accepted_bid_id)
+    ) {
       return NextResponse.json(
         {
           error:
             "This quote is not the accepted quote for this job.",
         },
-        {
-          status: 409,
-        }
+        { status: 409 }
       );
     }
-
-    /*
-     * =====================================================
-     * CHECK BID STATUS
-     * =====================================================
-     *
-     * The accept_customer_bid RPC sets the selected bid
-     * to accepted before payment.
-     * =====================================================
-     */
 
     if (bid.status !== "accepted") {
       return NextResponse.json(
@@ -286,17 +312,9 @@ export async function POST(request: Request) {
           error:
             "This quote must be accepted before payment.",
         },
-        {
-          status: 409,
-        }
+        { status: 409 }
       );
     }
-
-    /*
-     * =====================================================
-     * CHECK DRIVER ID
-     * =====================================================
-     */
 
     if (!bid.driver_id) {
       return NextResponse.json(
@@ -304,15 +322,13 @@ export async function POST(request: Request) {
           error:
             "This quote is missing its driver.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
     /*
      * =====================================================
-     * CHECK BID PRICE
+     * CHECK PRICE
      * =====================================================
      */
 
@@ -327,22 +343,19 @@ export async function POST(request: Request) {
           error:
             "This driver's quote has an invalid price.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
     /*
      * =====================================================
-     * CREATE STRIPE CHECKOUT SESSION
+     * CREATE STRIPE CHECKOUT
      * =====================================================
      */
 
     const origin =
-      request.headers.get("origin") ||
       process.env.NEXT_PUBLIC_SITE_URL ||
-      "http://localhost:3000";
+      "https://www.rapidclearsolutions.co.uk";
 
     const reference =
       job.reference ||
@@ -406,36 +419,26 @@ export async function POST(request: Request) {
 
     /*
      * =====================================================
-     * SAVE STRIPE CHECKOUT SESSION
-     * =====================================================
-     *
-     * This gives us a reference to the active Stripe
-     * checkout session before payment takes place.
+     * SAVE CHECKOUT SESSION
      * =====================================================
      */
 
-    const { error: sessionUpdateError } =
-      await supabase
-        .from("jobs")
-        .update({
-          stripe_checkout_session_id:
-            checkoutSession.id,
-        })
-        .eq("id", job.id)
-        .eq("customer_id", user.id);
+    const {
+      error: sessionUpdateError,
+    } = await supabaseAdmin
+      .from("jobs")
+      .update({
+        stripe_checkout_session_id:
+          checkoutSession.id,
+      })
+      .eq("id", job.id)
+      .eq("customer_id", user.id);
 
     if (sessionUpdateError) {
       console.error(
         "Could not save Stripe checkout session:",
         sessionUpdateError
       );
-
-      /*
-       * We don't cancel the Stripe session here because
-       * the customer can still potentially complete it.
-       *
-       * The webhook remains the source of truth for payment.
-       */
     }
 
     /*
@@ -455,9 +458,7 @@ export async function POST(request: Request) {
           error:
             "Stripe did not return a checkout URL.",
         },
-        {
-          status: 500,
-        }
+        { status: 500 }
       );
     }
 
@@ -479,9 +480,7 @@ export async function POST(request: Request) {
             ? error.message
             : "Unable to create payment.",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
