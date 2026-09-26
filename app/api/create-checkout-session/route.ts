@@ -109,7 +109,8 @@ export async function POST(request: Request) {
           status,
           accepted_bid_id,
           assigned_driver_id,
-          assigned_bid_id
+          assigned_bid_id,
+          payment_status
         `
       )
       .eq("id", jobId)
@@ -131,21 +132,77 @@ export async function POST(request: Request) {
 
     /*
      * =====================================================
-     * DO NOT ALLOW ALREADY BOOKED JOBS
+     * PAYMENT ALREADY COMPLETED
      * =====================================================
      */
 
-    const alreadyAssigned =
-      Boolean(job.accepted_bid_id) ||
-      Boolean(job.assigned_driver_id) ||
-      Boolean(job.assigned_bid_id) ||
+    if (
+      job.payment_status === "paid" ||
+      job.payment_status === "succeeded"
+    ) {
+      return NextResponse.json(
+        {
+          error: "Payment has already been completed for this job.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    /*
+     * =====================================================
+     * VERIFY ACCEPTED QUOTE
+     * =====================================================
+     *
+     * The customer must have accepted this exact bid
+     * before they can pay for it.
+     *
+     * accepted_bid_id is expected here.
+     *
+     * IMPORTANT:
+     * accepted_bid_id does NOT mean the driver has been
+     * assigned yet.
+     *
+     * The driver is only assigned by the Stripe webhook
+     * after successful payment.
+     * =====================================================
+     */
+
+    if (
+      !job.accepted_bid_id ||
+      Number(job.accepted_bid_id) !== bidId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This quote has not been accepted for payment.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    /*
+     * =====================================================
+     * DO NOT ALLOW AN ALREADY ASSIGNED JOB
+     * =====================================================
+     *
+     * assigned_driver_id / assigned_bid_id are only set
+     * after successful payment.
+     * =====================================================
+     */
+
+    if (
+      job.assigned_driver_id ||
+      job.assigned_bid_id ||
       [
         "assigned",
         "in_progress",
         "completed",
-      ].includes(job.status || "");
-
-    if (alreadyAssigned) {
+      ].includes(job.status || "")
+    ) {
       return NextResponse.json(
         {
           error:
@@ -197,20 +254,58 @@ export async function POST(request: Request) {
 
     /*
      * =====================================================
-     * CHECK BID STATUS
-     *
-     * A rejected bid can never be paid for.
+     * VERIFY BID IS THE ACCEPTED BID
      * =====================================================
      */
 
-    if (bid.status === "rejected") {
+    if (Number(bid.id) !== Number(job.accepted_bid_id)) {
       return NextResponse.json(
         {
           error:
-            "This driver's quote is no longer available.",
+            "This quote is not the accepted quote for this job.",
         },
         {
           status: 409,
+        }
+      );
+    }
+
+    /*
+     * =====================================================
+     * CHECK BID STATUS
+     * =====================================================
+     *
+     * The accept_customer_bid RPC sets the selected bid
+     * to accepted before payment.
+     * =====================================================
+     */
+
+    if (bid.status !== "accepted") {
+      return NextResponse.json(
+        {
+          error:
+            "This quote must be accepted before payment.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    /*
+     * =====================================================
+     * CHECK DRIVER ID
+     * =====================================================
+     */
+
+    if (!bid.driver_id) {
+      return NextResponse.json(
+        {
+          error:
+            "This quote is missing its driver.",
+        },
+        {
+          status: 400,
         }
       );
     }
@@ -231,24 +326,6 @@ export async function POST(request: Request) {
         {
           error:
             "This driver's quote has an invalid price.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /*
-     * =====================================================
-     * CHECK DRIVER ID
-     * =====================================================
-     */
-
-    if (!bid.driver_id) {
-      return NextResponse.json(
-        {
-          error:
-            "This quote is missing its assigned driver.",
         },
         {
           status: 400,
@@ -326,6 +403,40 @@ export async function POST(request: Request) {
           },
         },
       });
+
+    /*
+     * =====================================================
+     * SAVE STRIPE CHECKOUT SESSION
+     * =====================================================
+     *
+     * This gives us a reference to the active Stripe
+     * checkout session before payment takes place.
+     * =====================================================
+     */
+
+    const { error: sessionUpdateError } =
+      await supabase
+        .from("jobs")
+        .update({
+          stripe_checkout_session_id:
+            checkoutSession.id,
+        })
+        .eq("id", job.id)
+        .eq("customer_id", user.id);
+
+    if (sessionUpdateError) {
+      console.error(
+        "Could not save Stripe checkout session:",
+        sessionUpdateError
+      );
+
+      /*
+       * We don't cancel the Stripe session here because
+       * the customer can still potentially complete it.
+       *
+       * The webhook remains the source of truth for payment.
+       */
+    }
 
     /*
      * =====================================================
