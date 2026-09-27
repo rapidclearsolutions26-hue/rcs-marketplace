@@ -265,202 +265,295 @@ export default function CustomerJobPage() {
    * =========================================================
    */
 
-  async function acceptBid(bid: Bid) {
-    if (!job) {
-      return;
-    }
-
-    if (acceptingBid !== null) {
-      return;
-    }
-
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    const confirmed = window.confirm(
-      `Continue to payment for ${
-        drivers[bid.driver_id]?.full_name || "this driver's"
-      } quote of £${Number(bid.amount).toFixed(2)}?`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setAcceptingBid(bid.id);
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/customer/login");
-        return;
-      }
-
-      const {
-        data: currentJob,
-        error: jobCheckError,
-      } = await supabase
-        .from("jobs")
-        .select(
-          `
-            id,
-            customer_id,
-            status,
-            accepted_bid_id,
-            assigned_driver_id,
-            assigned_bid_id,
-            journey_status
-          `
-        )
-        .eq("id", job.id)
-        .eq("customer_id", user.id)
-        .single();
-
-      if (jobCheckError || !currentJob) {
-        console.error(
-          "JOB VERIFICATION FAILED:",
-          jobCheckError
-        );
-
-        setErrorMessage(
-          jobCheckError?.message ||
-            "We couldn't verify this job. Please refresh and try again."
-        );
-
-        setAcceptingBid(null);
-        return;
-      }
-
-      const alreadyAssigned =
-        Boolean(currentJob.accepted_bid_id) ||
-        Boolean(currentJob.assigned_driver_id) ||
-        Boolean(currentJob.assigned_bid_id) ||
-        [
-          "assigned",
-          "in_progress",
-          "completed",
-        ].includes(currentJob.status || "");
-
-      if (alreadyAssigned) {
-        setErrorMessage(
-          "A driver has already been selected for this job."
-        );
-
-        await loadJob();
-        return;
-      }
-
-      const {
-        data: selectedBid,
-        error: selectedBidError,
-      } = await supabase
-        .from("bids")
-        .select(
-          "id, job_id, driver_id, amount, message, status"
-        )
-        .eq("id", bid.id)
-        .eq("job_id", job.id)
-        .single();
-
-      if (selectedBidError || !selectedBid) {
-        console.error(
-          "SELECTED BID ERROR:",
-          selectedBidError
-        );
-
-        setErrorMessage(
-          selectedBidError?.message ||
-            "We couldn't find this driver's quote."
-        );
-
-        setAcceptingBid(null);
-        return;
-      }
-
-      if (selectedBid.status === "rejected") {
-        setErrorMessage(
-          "This driver's quote is no longer available."
-        );
-
-        setAcceptingBid(null);
-        return;
-      }
-
-      const {
-  data: { session },
-  error: sessionError,
-} = await supabase.auth.getSession();
-
-if (sessionError || !session?.access_token) {
-  throw new Error(
-    "Your login session has expired. Please log in again."
-  );
-}
-
-const response = await fetch(
-  "/api/create-checkout-session",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({
-      jobId: job.id,
-      bidId: selectedBid.id,
-    }),
+async function acceptBid(bid: Bid) {
+  if (!job) {
+    return;
   }
-);
-      let result: {
-        url?: string;
-        error?: string;
-        message?: string;
-      } = {};
 
-      try {
-        result = await response.json();
-      } catch {
-        result = {};
-      }
+  if (acceptingBid !== null) {
+    return;
+  }
 
-      if (!response.ok) {
-        console.error(
-          "STRIPE CHECKOUT ERROR:",
-          result
-        );
+  setErrorMessage("");
+  setSuccessMessage("");
 
-        throw new Error(
-          result.error ||
-            result.message ||
-            "We couldn't start the payment."
-        );
-      }
+  const confirmed = window.confirm(
+    `Continue to payment for ${
+      drivers[bid.driver_id]?.full_name || "this driver's"
+    } quote of £${Number(bid.amount).toFixed(2)}?`
+  );
 
-      if (!result.url) {
-        throw new Error(
-          "Stripe did not return a checkout URL."
-        );
-      }
+  if (!confirmed) {
+    return;
+  }
 
-      window.location.href = result.url;
-    } catch (error) {
+  setAcceptingBid(bid.id);
+
+  try {
+    /*
+     * =======================================================
+     * VERIFY CUSTOMER LOGIN
+     * =======================================================
+     */
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push("/customer/login");
+      return;
+    }
+
+    /*
+     * =======================================================
+     * VERIFY JOB
+     * =======================================================
+     */
+
+    const {
+      data: currentJob,
+      error: jobCheckError,
+    } = await supabase
+      .from("jobs")
+      .select(
+        `
+          id,
+          customer_id,
+          status,
+          accepted_bid_id,
+          assigned_driver_id,
+          assigned_bid_id,
+          journey_status
+        `
+      )
+      .eq("id", job.id)
+      .eq("customer_id", user.id)
+      .single();
+
+    if (jobCheckError || !currentJob) {
       console.error(
-        "PAYMENT START ERROR:",
-        error
+        "JOB VERIFICATION FAILED:",
+        jobCheckError
       );
 
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "We couldn't start payment. Please try again."
+        jobCheckError?.message ||
+          "We couldn't verify this job. Please refresh and try again."
       );
 
       setAcceptingBid(null);
+      return;
     }
+
+    /*
+     * =======================================================
+     * MAKE SURE A DRIVER HAS NOT ALREADY BEEN SELECTED
+     * =======================================================
+     */
+
+    const alreadyAssigned =
+      Boolean(currentJob.accepted_bid_id) ||
+      Boolean(currentJob.assigned_driver_id) ||
+      Boolean(currentJob.assigned_bid_id) ||
+      [
+        "assigned",
+        "in_progress",
+        "completed",
+      ].includes(currentJob.status || "");
+
+    if (alreadyAssigned) {
+      setErrorMessage(
+        "A driver has already been selected for this job."
+      );
+
+      await loadJob();
+      setAcceptingBid(null);
+      return;
+    }
+
+    /*
+     * =======================================================
+     * VERIFY SELECTED BID
+     * =======================================================
+     */
+
+    const {
+      data: selectedBid,
+      error: selectedBidError,
+    } = await supabase
+      .from("bids")
+      .select(
+        "id, job_id, driver_id, amount, message, status"
+      )
+      .eq("id", bid.id)
+      .eq("job_id", job.id)
+      .single();
+
+    if (selectedBidError || !selectedBid) {
+      console.error(
+        "SELECTED BID ERROR:",
+        selectedBidError
+      );
+
+      setErrorMessage(
+        selectedBidError?.message ||
+          "We couldn't find this driver's quote."
+      );
+
+      setAcceptingBid(null);
+      return;
+    }
+
+    if (selectedBid.status === "rejected") {
+      setErrorMessage(
+        "This driver's quote is no longer available."
+      );
+
+      setAcceptingBid(null);
+      return;
+    }
+
+    /*
+     * =======================================================
+     * ACCEPT BID FIRST
+     * =======================================================
+     *
+     * This sets accepted_bid_id on the job.
+     *
+     * IMPORTANT:
+     * The driver is NOT assigned here.
+     * Driver assignment happens after successful payment.
+     */
+
+    const {
+      data: acceptResult,
+      error: acceptError,
+    } = await supabase.rpc(
+      "accept_customer_bid",
+      {
+        p_job_id: job.id,
+        p_bid_id: selectedBid.id,
+      }
+    );
+
+    if (acceptError) {
+      console.error(
+        "ACCEPT BID ERROR:",
+        acceptError
+      );
+
+      throw new Error(
+        acceptError.message ||
+          "We couldn't accept this quote."
+      );
+    }
+
+    if (!acceptResult?.success) {
+      console.error(
+        "ACCEPT BID FAILED:",
+        acceptResult
+      );
+
+      throw new Error(
+        "The quote could not be accepted."
+      );
+    }
+
+    /*
+     * =======================================================
+     * GET CURRENT SESSION
+     * =======================================================
+     */
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (
+      sessionError ||
+      !session?.access_token
+    ) {
+      throw new Error(
+        "Your login session has expired. Please log in again."
+      );
+    }
+
+    /*
+     * =======================================================
+     * CREATE STRIPE CHECKOUT
+     * =======================================================
+     */
+
+    const response = await fetch(
+      "/api/create-checkout-session",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+          bidId: selectedBid.id,
+        }),
+      }
+    );
+
+    let result: {
+      url?: string;
+      error?: string;
+      message?: string;
+    } = {};
+
+    try {
+      result = await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (!response.ok) {
+      console.error(
+        "STRIPE CHECKOUT ERROR:",
+        result
+      );
+
+      throw new Error(
+        result.error ||
+          result.message ||
+          "We couldn't start the payment."
+      );
+    }
+
+    if (!result.url) {
+      throw new Error(
+        "Stripe did not return a checkout URL."
+      );
+    }
+
+    /*
+     * =======================================================
+     * SEND CUSTOMER TO STRIPE
+     * =======================================================
+     */
+
+    window.location.href = result.url;
+  } catch (error) {
+    console.error(
+      "PAYMENT START ERROR:",
+      error
+    );
+
+    setErrorMessage(
+      error instanceof Error
+        ? error.message
+        : "We couldn't start payment. Please try again."
+    );
+
+    setAcceptingBid(null);
   }
+}
 
   /*
    * =========================================================
