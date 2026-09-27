@@ -49,15 +49,16 @@ export function middleware(request: NextRequest) {
 
     body {
       min-height: 100vh;
+
       background:
         radial-gradient(
           circle at 50% 10%,
-          rgba(27, 187, 140, 0.18),
+          rgba(121, 197, 28, 0.18),
           transparent 38%
         ),
         linear-gradient(
           180deg,
-          #07100d 0%,
+          #0b1206 0%,
           #050705 55%,
           #020302 100%
         );
@@ -96,7 +97,7 @@ export function middleware(request: NextRequest) {
 
       transform: translate(-50%, -50%);
 
-      background: #1BBB8C;
+      background: #79C51C;
 
       opacity: 0.07;
 
@@ -126,7 +127,7 @@ export function middleware(request: NextRequest) {
 
       border-radius: 16px;
 
-      background: #1BBB8C;
+      background: #79C51C;
 
       display: flex;
 
@@ -136,7 +137,7 @@ export function middleware(request: NextRequest) {
       margin-right: 14px;
 
       box-shadow:
-        0 0 30px rgba(27, 187, 140, 0.28),
+        0 0 30px rgba(121, 197, 28, 0.28),
         0 10px 30px rgba(0, 0, 0, 0.45);
     }
 
@@ -165,7 +166,7 @@ export function middleware(request: NextRequest) {
     }
 
     .brand-name span {
-      color: #1BBB8C;
+      color: #79C51C;
     }
 
     .brand-sub {
@@ -187,9 +188,9 @@ export function middleware(request: NextRequest) {
     .card {
       position: relative;
 
-      background: rgba(9, 16, 13, 0.9);
+      background: rgba(9, 16, 6, 0.9);
 
-      border: 1px solid rgba(27, 187, 140, 0.24);
+      border: 1px solid rgba(121, 197, 28, 0.24);
 
       border-radius: 28px;
 
@@ -215,11 +216,11 @@ export function middleware(request: NextRequest) {
 
       border-radius: 999px;
 
-      background: rgba(27, 187, 140, 0.09);
+      background: rgba(121, 197, 28, 0.09);
 
-      border: 1px solid rgba(27, 187, 140, 0.22);
+      border: 1px solid rgba(121, 197, 28, 0.22);
 
-      color: #1BBB8C;
+      color: #79C51C;
 
       font-size: 11px;
 
@@ -238,11 +239,11 @@ export function middleware(request: NextRequest) {
 
       border-radius: 50%;
 
-      background: #1BBB8C;
+      background: #79C51C;
 
       box-shadow:
-        0 0 8px rgba(27, 187, 140, 0.8),
-        0 0 16px rgba(27, 187, 140, 0.4);
+        0 0 8px rgba(121, 197, 28, 0.8),
+        0 0 16px rgba(121, 197, 28, 0.4);
     }
 
     /* HEADING */
@@ -260,10 +261,10 @@ export function middleware(request: NextRequest) {
     }
 
     h1 span {
-      color: #1BBB8C;
+      color: #79C51C;
 
       text-shadow:
-        0 0 30px rgba(27, 187, 140, 0.18);
+        0 0 30px rgba(121, 197, 28, 0.18);
     }
 
     /* DIVIDER */
@@ -272,14 +273,14 @@ export function middleware(request: NextRequest) {
       width: 70px;
       height: 3px;
 
-      background: #1BBB8C;
+      background: #79C51C;
 
       border-radius: 999px;
 
       margin: 32px auto;
 
       box-shadow:
-        0 0 15px rgba(27, 187, 140, 0.35);
+        0 0 15px rgba(121, 197, 28, 0.35);
     }
 
     /* MESSAGE */
@@ -313,13 +314,13 @@ export function middleware(request: NextRequest) {
 
       border-radius: 14px;
 
-      background: rgba(27, 187, 140, 0.07);
+      background: rgba(121, 197, 28, 0.07);
 
-      border: 1px solid rgba(27, 187, 140, 0.18);
+      border: 1px solid rgba(121, 197, 28, 0.18);
     }
 
     .time {
-      color: #1BBB8C;
+      color: #79C51C;
 
       font-size: 18px;
 
@@ -447,7 +448,7 @@ export function middleware(request: NextRequest) {
 
         We'll be back at<br />
 
-        <span>7:00 PM UK time.</span>
+        <span>10:00 PM UK time.</span>
 
       </h1>
 
@@ -461,14 +462,14 @@ export function middleware(request: NextRequest) {
         <br /><br />
 
         Our website will be back online at
-        <strong>7:00 PM UK time.</strong>
+        <strong>10:00 PM UK time.</strong>
 
       </p>
 
       <div class="time-box">
 
         <div class="time">
-          Back online at 7:00 PM UK
+          Back online at 10:00 PM UK
         </div>
 
       </div>

@@ -1,0 +1,61 @@
+[35mapp/admin/bids/page.tsx[m[36m:[m[32m37[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/admin/bids/page.tsx[m[36m:[m[32m1063[m[36m:[m    bid.job?.[1;31maccepted_bid_id[m ===
+[35mapp/admin/bids/page.tsx[m[36m:[m[32m1249[m[36m:[m    bid.job?.[1;31maccepted_bid_id[m ===
+[35mapp/admin/customers/page.tsx[m[36m:[m[32m39[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/admin/customers/page.tsx[m[36m:[m[32m1319[m[36m:[m            job.[1;31maccepted_bid_id[m
+[35mapp/admin/jobs/page.tsx[m[36m:[m[32m50[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/admin/jobs/page.tsx[m[36m:[m[32m1072[m[36m:[m                    job.[1;31maccepted_bid_id[m
+[35mapp/api/admin/bids/route.ts[m[36m:[m[32m118[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/api/admin/bids/route.ts[m[36m:[m[32m211[m[36m:[m          [1;31maccepted_bid_id[m,
+[35mapp/api/admin/customers/route.ts[m[36m:[m[32m124[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/api/admin/customers/route.ts[m[36m:[m[32m245[m[36m:[m        [1;31maccepted_bid_id[m,
+[35mapp/api/admin/customers/route.ts[m[36m:[m[32m315[m[36m:[m          .map((job) => job.[1;31maccepted_bid_id[m)
+[35mapp/api/admin/customers/route.ts[m[36m:[m[32m372[m[36m:[m        if (job.[1;31maccepted_bid_id[m) {
+[35mapp/api/admin/customers/route.ts[m[36m:[m[32m373[m[36m:[m          const bid = bidById.get(job.[1;31maccepted_bid_id[m);
+[35mapp/api/admin/jobs/route.ts[m[36m:[m[32m28[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/api/admin/jobs/route.ts[m[36m:[m[32m244[m[36m:[m          [1;31maccepted_bid_id[m,
+[35mapp/api/admin/jobs/route.ts[m[36m:[m[32m332[m[36m:[m            job.[1;31maccepted_bid_id[m,
+[35mapp/api/admin/jobs/route.ts[m[36m:[m[32m497[m[36m:[m          job.[1;31maccepted_bid_id[m ??
+[35mapp/api/create-checkout-session/route.ts[m[36m:[m[32m165[m[36m:[m          [1;31maccepted_bid_id[m,
+[35mapp/api/create-checkout-session/route.ts[m[36m:[m[32m215[m[36m:[m      !job.[1;31maccepted_bid_id[m ||
+[35mapp/api/create-checkout-session/route.ts[m[36m:[m[32m216[m[36m:[m      Number(job.[1;31maccepted_bid_id[m) !== bidId
+[35mapp/api/create-checkout-session/route.ts[m[36m:[m[32m298[m[36m:[m      Number(job.[1;31maccepted_bid_id[m)
+[35mapp/api/cron/cancel-unbooked-jobs/route.ts[m[36m:[m[32m186[m[36m:[m        [1;31maccepted_bid_id[m,
+[35mapp/api/cron/cancel-unbooked-jobs/route.ts[m[36m:[m[32m208[m[36m:[m        "[1;31maccepted_bid_id[m",
+[35mapp/api/cron/cancel-unbooked-jobs/route.ts[m[36m:[m[32m282[m[36m:[m          [1;31maccepted_bid_id[m,
+[35mapp/api/cron/cancel-unbooked-jobs/route.ts[m[36m:[m[32m320[m[36m:[m        !latestJob.[1;31maccepted_bid_id[m &&
+[35mapp/api/cron/cancel-unbooked-jobs/route.ts[m[36m:[m[32m362[m[36m:[m          "[1;31maccepted_bid_id[m",
+[35mapp/api/customer/manage-job/route.ts[m[36m:[m[32m47[m[36m:[m    [1;31maccepted_bid_id[m?: number | null;
+[35mapp/api/customer/manage-job/route.ts[m[36m:[m[32m67[m[36m:[m    job.[1;31maccepted_bid_id[m !== null &&
+[35mapp/api/customer/manage-job/route.ts[m[36m:[m[32m68[m[36m:[m    job.[1;31maccepted_bid_id[m !== undefined
+[35mapp/api/customer/manage-job/route.ts[m[36m:[m[32m295[m[36m:[m            [1;31maccepted_bid_id[m,
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m209[m[36m:[m            [1;31maccepted_bid_id[m,
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m353[m[36m:[m            [1;31maccepted_bid_id[m,
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m396[m[36m:[m        Boolean(job.[1;31maccepted_bid_id[m) ||
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m564[m[36m:[m          [1;31maccepted_bid_id[m: bidId,
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m576[m[36m:[m            [1;31maccepted_bid_id[m,
+[35mapp/customer/dashboard/page.tsx[m[36m:[m[32m29[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/customer/dashboard/page.tsx[m[36m:[m[32m74[m[36m:[m  [1;31maccepted_bid_id[m,
+[35mapp/customer/jobs/[id]/edit/page.tsx[m[36m:[m[32m70[m[36m:[m  [1;31maccepted_bid_id[m?: number | null;
+[35mapp/customer/jobs/[id]/edit/page.tsx[m[36m:[m[32m93[m[36m:[m    job.[1;31maccepted_bid_id[m !==
+[35mapp/customer/jobs/[id]/edit/page.tsx[m[36m:[m[32m95[m[36m:[m    job.[1;31maccepted_bid_id[m !==
+[35mapp/customer/jobs/[id]/edit/page.tsx[m[36m:[m[32m353[m[36m:[m              [1;31maccepted_bid_id[m,
+[35mapp/customer/jobs/[id]/page.tsx[m[36m:[m[32m24[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/customer/jobs/[id]/page.tsx[m[36m:[m[32m312[m[36m:[m            [1;31maccepted_bid_id[m,
+[35mapp/customer/jobs/[id]/page.tsx[m[36m:[m[32m338[m[36m:[m        Boolean(currentJob.[1;31maccepted_bid_id[m) ||
+[35mapp/customer/jobs/[id]/page.tsx[m[36m:[m[32m517[m[36m:[m    Boolean(job.[1;31maccepted_bid_id[m) ||
+[35mapp/customer/jobs/page.tsx[m[36m:[m[32m28[m[36m:[m  [1;31maccepted_bid_id[m?: number | null;
+[35mapp/customer/jobs/page.tsx[m[36m:[m[32m54[m[36m:[m  [1;31maccepted_bid_id[m,
+[35mapp/customer/jobs/page.tsx[m[36m:[m[32m124[m[36m:[m    job.[1;31maccepted_bid_id[m !==
+[35mapp/customer/jobs/page.tsx[m[36m:[m[32m126[m[36m:[m    job.[1;31maccepted_bid_id[m !==
+[35mapp/customer/quotes/page.tsx[m[36m:[m[32m258[m[36m:[m        [1;31maccepted_bid_id[m: quote.bid.id,
+[35mapp/driver/dashboard/page.tsx[m[36m:[m[32m24[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/driver/dashboard/page.tsx[m[36m:[m[32m62[m[36m:[m  [1;31maccepted_bid_id[m,
+[35mapp/driver/jobs/[id]/page.tsx[m[36m:[m[32m39[m[36m:[m  [1;31maccepted_bid_id[m: number | null;
+[35mapp/driver/jobs/[id]/page.tsx[m[36m:[m[32m109[m[36m:[m    (job?.[1;31maccepted_bid_id[m !== null &&
+[35mapp/driver/jobs/[id]/page.tsx[m[36m:[m[32m110[m[36m:[m      job?.[1;31maccepted_bid_id[m === existingBid?.id);
+[35mapp/driver/jobs/[id]/page.tsx[m[36m:[m[32m190[m[36m:[m              [1;31maccepted_bid_id[m,
+[35mapp/driver/jobs/[id]/page.tsx[m[36m:[m[32m439[m[36m:[m            [1;31maccepted_bid_id[m,
+[35mapp/driver/jobs/[id]/page.tsx[m[36m:[m[32m558[m[36m:[m            [1;31maccepted_bid_id[m,
+[35mapp/driver/jobs/[id]/page.tsx[m[36m:[m[32m640[m[36m:[m            [1;31maccepted_bid_id[m,
+[35mapp/driver/jobs/[id]/page.tsx[m[36m:[m[32m668[m[36m:[m        currentJob.[1;31maccepted_bid_id[m !== null ||
