@@ -4,11 +4,17 @@ import { stripe } from "@/lib/stripe/server";
 
 export async function POST(request: Request) {
   try {
+    // ---------------------------------------------------------
+    // 1. Get the user's Supabase access token
+    // ---------------------------------------------------------
     const authHeader = request.headers.get("authorization");
 
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
-        { success: false, error: "Missing authorization token." },
+        {
+          success: false,
+          error: "Missing authorization token.",
+        },
         { status: 401 }
       );
     }
@@ -17,11 +23,17 @@ export async function POST(request: Request) {
 
     if (!token) {
       return NextResponse.json(
-        { success: false, error: "Missing authorization token." },
+        {
+          success: false,
+          error: "Missing authorization token.",
+        },
         { status: 401 }
       );
     }
 
+    // ---------------------------------------------------------
+    // 2. Authenticate the user using the Supabase service role
+    // ---------------------------------------------------------
     const supabaseAdmin = createSupabaseAdminClient();
 
     const {
@@ -31,18 +43,25 @@ export async function POST(request: Request) {
 
     if (userError || !user) {
       return NextResponse.json(
-        { success: false, error: "Invalid or expired session." },
+        {
+          success: false,
+          error: "Invalid or expired session.",
+        },
         { status: 401 }
       );
     }
 
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .select(
-        "id, full_name, role, stripe_connect_account_id"
-      )
-      .eq("id", user.id)
-      .maybeSingle();
+    // ---------------------------------------------------------
+    // 3. Load the driver's profile
+    // ---------------------------------------------------------
+    const { data: profile, error: profileError } =
+      await supabaseAdmin
+        .from("profiles")
+        .select(
+          "id, full_name, role, stripe_connect_account_id"
+        )
+        .eq("id", user.id)
+        .maybeSingle();
 
     if (profileError) {
       console.error("PROFILE ERROR:", profileError);
@@ -66,6 +85,9 @@ export async function POST(request: Request) {
       );
     }
 
+    // ---------------------------------------------------------
+    // 4. Make sure this is a driver
+    // ---------------------------------------------------------
     if (profile.role !== "driver") {
       return NextResponse.json(
         {
@@ -76,23 +98,45 @@ export async function POST(request: Request) {
       );
     }
 
+    // ---------------------------------------------------------
+    // 5. Get or create the Stripe Connect account
+    //
+    // IMPORTANT:
+    // This uses Stripe Accounts v2.
+    // ---------------------------------------------------------
     let accountId = profile.stripe_connect_account_id;
 
-    /*
-     * Create the Stripe Connect Express account
-     * only if the driver does not already have one.
-     */
     if (!accountId) {
-      const account = await stripe.accounts.create({
-        type: "express",
-        country: "GB",
-        email: user.email ?? undefined,
-        business_type: "individual",
-        capabilities: {
-          transfers: {
-            requested: true,
+      const account = await stripe.v2.core.accounts.create({
+        contact_email: user.email ?? undefined,
+
+        display_name:
+          profile.full_name || "RCS Driver",
+
+        dashboard: "express",
+
+        identity: {
+          country: "gb",
+          entity_type: "individual",
+        },
+
+        configuration: {
+          recipient: {
+            capabilities: {
+              stripe_balance: {
+                stripe_transfers: {
+                  requested: true,
+                },
+              },
+            },
           },
         },
+
+        defaults: {
+          currency: "gbp",
+          locales: ["en-GB"],
+        },
+
         metadata: {
           profile_id: profile.id,
           driver_name: profile.full_name ?? "",
@@ -101,6 +145,9 @@ export async function POST(request: Request) {
 
       accountId = account.id;
 
+      // -------------------------------------------------------
+      // 6. Save the Stripe account ID against the driver
+      // -------------------------------------------------------
       const { error: updateError } = await supabaseAdmin
         .from("profiles")
         .update({
@@ -109,7 +156,10 @@ export async function POST(request: Request) {
         .eq("id", profile.id);
 
       if (updateError) {
-        console.error("PROFILE UPDATE ERROR:", updateError);
+        console.error(
+          "PROFILE UPDATE ERROR:",
+          updateError
+        );
 
         return NextResponse.json(
           {
@@ -122,26 +172,40 @@ export async function POST(request: Request) {
       }
     }
 
+    // ---------------------------------------------------------
+    // 7. Create the Stripe onboarding link
+    //
+    // The Account Links API can be used with the v2 Account ID.
+    // ---------------------------------------------------------
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
       "https://www.rapidclearsolutions.co.uk";
 
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
+
       refresh_url:
         `${siteUrl}/driver/stripe/onboarding?refresh=1`,
+
       return_url:
         `${siteUrl}/driver/stripe/onboarding?complete=1`,
+
       type: "account_onboarding",
     });
 
+    // ---------------------------------------------------------
+    // 8. Send the onboarding URL back to the mobile app
+    // ---------------------------------------------------------
     return NextResponse.json({
       success: true,
       accountId,
       url: accountLink.url,
     });
   } catch (error) {
-    console.error("STRIPE CONNECT ONBOARDING ERROR:", error);
+    console.error(
+      "STRIPE CONNECT ONBOARDING ERROR:",
+      error
+    );
 
     return NextResponse.json(
       {
