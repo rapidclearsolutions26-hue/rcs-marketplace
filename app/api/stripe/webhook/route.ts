@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -238,8 +239,16 @@ export async function POST(request: Request) {
         job.payment_status
       );
       console.log(
+        "Current accepted bid:",
+        job.accepted_bid_id
+      );
+      console.log(
         "Current assigned driver:",
         job.assigned_driver_id
+      );
+      console.log(
+        "Current assigned bid:",
+        job.assigned_bid_id
       );
 
       /*
@@ -300,6 +309,7 @@ export async function POST(request: Request) {
       }
 
       console.log("BID FOUND:", bid.id);
+      console.log("BID DRIVER:", bid.driver_id);
 
       /*
        * ===================================================
@@ -320,15 +330,7 @@ export async function POST(request: Request) {
 
       /*
        * ===================================================
-       * IMPORTANT PAYMENT STEP
-       *
-       * We update payment_status BEFORE checking whether
-       * the job is already assigned.
-       *
-       * This is what was missing from the old webhook.
-       *
-       * The database wallet trigger will then create the
-       * driver's earning.
+       * RECORD PAYMENT
        * ===================================================
        */
 
@@ -376,24 +378,34 @@ export async function POST(request: Request) {
       console.log("");
       console.log("PAYMENT RECORDED");
       console.log("Job:", jobId);
-      console.log("Payment status:", paidJob.payment_status);
       console.log(
-        "Stripe session:",
-        paidJob.stripe_checkout_session_id
-      );
-      console.log(
-        "Payment intent:",
-        paidJob.stripe_payment_intent_id
+        "Payment status:",
+        paidJob.payment_status
       );
 
       /*
        * ===================================================
-       * CHECK WHETHER JOB IS ALREADY ASSIGNED
+       * CHECK WHETHER JOB IS ACTUALLY ASSIGNED
+       * ===================================================
+       *
+       * IMPORTANT:
+       *
+       * accepted_bid_id DOES NOT mean the job is assigned.
+       *
+       * The customer accepts the bid BEFORE payment.
+       *
+       * The driver becomes assigned AFTER payment.
+       *
+       * Therefore we ONLY use:
+       *
+       * assigned_bid_id
+       * assigned_driver_id
+       *
+       * to determine whether assignment has already happened.
        * ===================================================
        */
 
       const alreadyAssigned =
-        Boolean(job.accepted_bid_id) ||
         Boolean(job.assigned_driver_id) ||
         Boolean(job.assigned_bid_id) ||
         [
@@ -405,10 +417,6 @@ export async function POST(request: Request) {
       /*
        * ===================================================
        * ALREADY ASSIGNED
-       *
-       * Payment has already been recorded above.
-       *
-       * Do NOT reassign the driver.
        * ===================================================
        */
 
@@ -418,7 +426,7 @@ export async function POST(request: Request) {
         );
 
         /*
-         * Verify the assignment still matches the paid bid.
+         * Verify the existing driver matches.
          */
 
         if (
@@ -437,6 +445,10 @@ export async function POST(request: Request) {
             { status: 409 }
           );
         }
+
+        /*
+         * Verify the existing bid matches.
+         */
 
         if (
           job.assigned_bid_id &&
@@ -547,11 +559,6 @@ export async function POST(request: Request) {
        * ===================================================
        * ASSIGN DRIVER
        * ===================================================
-       *
-       * Payment was already recorded above.
-       *
-       * This update assigns the selected driver.
-       * ===================================================
        */
 
       const {
@@ -614,10 +621,13 @@ export async function POST(request: Request) {
         `Payment status: ${updatedJob.payment_status}`
       );
       console.log(
-        `Stripe session: ${updatedJob.stripe_checkout_session_id}`
+        `Assigned bid: ${updatedJob.assigned_bid_id}`
       );
       console.log(
-        `Payment intent: ${updatedJob.stripe_payment_intent_id}`
+        `Assigned driver: ${updatedJob.assigned_driver_id}`
+      );
+      console.log(
+        `Journey status: ${updatedJob.journey_status}`
       );
       console.log("========================================");
 
@@ -625,6 +635,7 @@ export async function POST(request: Request) {
         received: true,
         success: true,
         paymentRecorded: true,
+        assigned: true,
         jobId,
         bidId,
         driverId: bid.driver_id,
