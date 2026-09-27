@@ -389,20 +389,31 @@ export default function CustomerJobPage() {
         return;
       }
 
-      const response = await fetch(
-        "/api/create-checkout-session",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            jobId: job.id,
-            bidId: selectedBid.id,
-          }),
-        }
-      );
+      const {
+  data: { session },
+  error: sessionError,
+} = await supabase.auth.getSession();
 
+if (sessionError || !session?.access_token) {
+  throw new Error(
+    "Your login session has expired. Please log in again."
+  );
+}
+
+const response = await fetch(
+  "/api/create-checkout-session",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      jobId: job.id,
+      bidId: selectedBid.id,
+    }),
+  }
+);
       let result: {
         url?: string;
         error?: string;
