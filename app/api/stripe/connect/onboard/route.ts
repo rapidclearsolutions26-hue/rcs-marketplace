@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     }
 
     // ---------------------------------------------------------
-    // 2. Authenticate the user using the Supabase service role
+    // 2. Authenticate the user with Supabase
     // ---------------------------------------------------------
     const supabaseAdmin = createSupabaseAdminClient();
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     // ---------------------------------------------------------
-    // 3. Load the driver's profile
+    // 3. Load driver profile
     // ---------------------------------------------------------
     const { data: profile, error: profileError } =
       await supabaseAdmin
@@ -99,10 +99,8 @@ export async function POST(request: Request) {
     }
 
     // ---------------------------------------------------------
-    // 5. Get or create the Stripe Connect account
-    //
-    // IMPORTANT:
-    // This uses Stripe Accounts v2.
+    // 5. Get existing Stripe Connect account
+    //    or create a new Accounts v2 recipient account
     // ---------------------------------------------------------
     let accountId = profile.stripe_connect_account_id;
 
@@ -134,7 +132,13 @@ export async function POST(request: Request) {
 
         defaults: {
           currency: "gbp",
+
           locales: ["en-GB"],
+
+          responsibilities: {
+            fees_collector: "application",
+            losses_collector: "application",
+          },
         },
 
         metadata: {
@@ -146,7 +150,7 @@ export async function POST(request: Request) {
       accountId = account.id;
 
       // -------------------------------------------------------
-      // 6. Save the Stripe account ID against the driver
+      // 6. Save Stripe account ID to driver profile
       // -------------------------------------------------------
       const { error: updateError } = await supabaseAdmin
         .from("profiles")
@@ -173,9 +177,7 @@ export async function POST(request: Request) {
     }
 
     // ---------------------------------------------------------
-    // 7. Create the Stripe onboarding link
-    //
-    // The Account Links API can be used with the v2 Account ID.
+    // 7. Create Stripe onboarding link
     // ---------------------------------------------------------
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
@@ -194,7 +196,7 @@ export async function POST(request: Request) {
     });
 
     // ---------------------------------------------------------
-    // 8. Send the onboarding URL back to the mobile app
+    // 8. Return onboarding URL to mobile app
     // ---------------------------------------------------------
     return NextResponse.json({
       success: true,
