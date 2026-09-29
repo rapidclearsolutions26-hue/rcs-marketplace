@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -10,625 +13,439 @@ const serviceRoleKey =
 const adminEmail =
   process.env.ADMIN_EMAIL;
 
-type Job = {
-  id: number;
-  reference: string;
-  customer_id: string;
-  job_type: string | null;
-  postcode: string | null;
-  address: string | null;
-  load_size: string | null;
-  description: string | null;
-  floor: string | null;
-  stairs: boolean | null;
-  access_notes: string | null;
-  preferred_date: string | null;
-  preferred_time: number | string | null;
-  status: string | null;
-  accepted_bid_id: number | null;
-  created_at: string;
-  assigned_driver_id: string | null;
-  assigned_bid_id: number | null;
-  journey_status: string | null;
-  payment_status: string | null;
-  stripe_checkout_session_id:
-    | string
-    | null;
-  stripe_payment_intent_id:
-    | string
-    | null;
-};
+const PHOTO_BUCKET = "customer-job-photos";
 
-type Bid = {
+type JobPhoto = {
   id: number;
   job_id: number;
-  driver_id: string;
-  amount: number | null;
-  message: string | null;
-  status: string | null;
-  created_at: string;
-  accepted_at: string | null;
-  platform_fee_percent:
-    | number
-    | null;
-  platform_fee:
-    | number
-    | null;
-  driver_payout:
-    | number
-    | null;
+  storage_path: string;
 };
 
-type Driver = {
-  id: string;
-  full_name: string | null;
-  trading_name: string | null;
-  company_name: string | null;
-  phone: string | null;
-  email: string | null;
-  vehicle_type: string | null;
-  approved: boolean | null;
-  application_status: string | null;
+type CustomerPhoto = {
+  id: number;
+  job_id: number;
+  storage_path: string;
+  url: string;
 };
-
-function getAdminClient() {
-  if (
-    !supabaseUrl ||
-    !serviceRoleKey
-  ) {
-    throw new Error(
-      "Supabase admin environment variables are missing.",
-    );
-  }
-
-  return createClient(
-    supabaseUrl,
-    serviceRoleKey,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    },
-  );
-}
-
-async function verifyAdmin(
-  request: Request,
-) {
-  if (
-    !supabaseUrl ||
-    !serviceRoleKey ||
-    !adminEmail
-  ) {
-    return {
-      ok: false as const,
-      response:
-        NextResponse.json(
-          {
-            error:
-              "Admin environment is not configured.",
-          },
-          { status: 500 },
-        ),
-    };
-  }
-
-  const authorization =
-    request.headers.get(
-      "authorization",
-    );
-
-  if (
-    !authorization?.startsWith(
-      "Bearer ",
-    )
-  ) {
-    return {
-      ok: false as const,
-      response:
-        NextResponse.json(
-          {
-            error:
-              "Missing authorization token.",
-          },
-          { status: 401 },
-        ),
-    };
-  }
-
-  const accessToken =
-    authorization
-      .replace("Bearer ", "")
-      .trim();
-
-  if (!accessToken) {
-    return {
-      ok: false as const,
-      response:
-        NextResponse.json(
-          {
-            error:
-              "Missing access token.",
-          },
-          { status: 401 },
-        ),
-    };
-  }
-
-  const supabase =
-    getAdminClient();
-
-  const {
-    data: { user },
-    error,
-  } =
-    await supabase.auth.getUser(
-      accessToken,
-    );
-
-  if (error || !user) {
-    return {
-      ok: false as const,
-      response:
-        NextResponse.json(
-          {
-            error:
-              "Invalid authentication.",
-          },
-          { status: 401 },
-        ),
-    };
-  }
-
-  if (
-    !user.email ||
-    user.email.toLowerCase() !==
-      adminEmail.toLowerCase()
-  ) {
-    return {
-      ok: false as const,
-      response:
-        NextResponse.json(
-          {
-            error:
-              "Admin access required.",
-          },
-          { status: 403 },
-        ),
-    };
-  }
-
-  return {
-    ok: true as const,
-    supabase,
-  };
-}
 
 export async function GET(
-  request: Request,
+  request: Request
 ) {
   try {
-    const verification =
-      await verifyAdmin(request);
-
-    if (!verification.ok) {
-      return verification.response;
-    }
-
-    const { supabase } =
-      verification;
-
-    const {
-      data: jobsData,
-      error: jobsError,
-    } =
-      await supabase
-        .from("jobs")
-        .select(
-          `
-          id,
-          reference,
-          customer_id,
-          job_type,
-          postcode,
-          address,
-          load_size,
-          description,
-          floor,
-          stairs,
-          access_notes,
-          preferred_date,
-          preferred_time,
-          status,
-          accepted_bid_id,
-          created_at,
-          assigned_driver_id,
-          assigned_bid_id,
-          journey_status,
-          payment_status,
-          stripe_checkout_session_id,
-          stripe_payment_intent_id
-        `,
-        )
-        .order(
-          "created_at",
-          {
-            ascending: false,
-          },
-        );
-
-    if (jobsError) {
-      console.error(
-        "Admin jobs query error:",
-        jobsError,
-      );
-
+    if (
+      !supabaseUrl ||
+      !serviceRoleKey
+    ) {
       return NextResponse.json(
         {
           error:
-            "Failed to load jobs.",
-          details:
-            jobsError.message,
+            "Supabase server configuration is missing.",
         },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
-    const jobs =
-      (jobsData ?? []) as Job[];
-
-    if (jobs.length === 0) {
+    if (!adminEmail) {
       return NextResponse.json(
         {
-          jobs: [],
-          stats: {
-            total: 0,
-            open: 0,
-            assigned: 0,
-            completed: 0,
-            paid: 0,
-            totalValue: 0,
-          },
+          error:
+            "ADMIN_EMAIL is not configured.",
         },
-        {
-          status: 200,
-          headers: {
-            "Cache-Control":
-              "no-store",
-          },
-        },
+        { status: 500 }
       );
     }
 
-    const jobIds = [
-      ...new Set(
-        jobs.map(
-          (job) => job.id,
-        ),
-      ),
-    ];
+    const authorization =
+      request.headers.get(
+        "authorization"
+      );
 
-    const driverIds = [
-      ...new Set(
-        jobs
-          .map(
-            (job) =>
-              job.assigned_driver_id,
-          )
-          .filter(
-            (
-              id,
-            ): id is string =>
-              Boolean(id),
-          ),
-      ),
-    ];
+    if (!authorization) {
+      return NextResponse.json(
+        {
+          error:
+            "Authentication required.",
+        },
+        { status: 401 }
+      );
+    }
 
-    const bidIds = [
-      ...new Set(
-        jobs
-          .flatMap((job) => [
-            job.accepted_bid_id,
-            job.assigned_bid_id,
-          ])
-          .filter(
-            (
-              id,
-            ): id is number =>
-              typeof id ===
-              "number",
-          ),
-      ),
-    ];
+    const accessToken =
+      authorization.replace(
+        "Bearer ",
+        ""
+      );
 
+    if (!accessToken) {
+      return NextResponse.json(
+        {
+          error:
+            "Authentication required.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const supabase =
+      createClient(
+        supabaseUrl,
+        serviceRoleKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }
+      );
+
+    /*
+     * VERIFY ADMIN SESSION
+     */
+    const {
+      data: {
+        user,
+      },
+      error: userError,
+    } =
+      await supabase.auth.getUser(
+        accessToken
+      );
+
+    if (
+      userError ||
+      !user
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid authentication.",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (
+      user.email?.toLowerCase() !==
+      adminEmail.toLowerCase()
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Admin access required.",
+        },
+        { status: 403 }
+      );
+    }
+
+    /*
+     * LOAD MAIN ADMIN DATA
+     */
     const [
-      bidsResult,
+      jobsResult,
       driversResult,
+      bidsResult,
+      payoutRequestsResult,
+      customersResult,
     ] = await Promise.all([
       supabase
-        .from("bids")
-        .select(
-          `
-          id,
-          job_id,
-          driver_id,
-          amount,
-          message,
-          status,
-          created_at,
-          accepted_at,
-          platform_fee_percent,
-          platform_fee,
-          driver_payout
-        `,
-        )
-        .in(
-          "job_id",
-          jobIds,
-        )
-        .order(
-          "created_at",
-          {
-            ascending: false,
-          },
-        ),
+        .from("jobs")
+        .select("*")
+        .order("created_at", {
+          ascending: false,
+        }),
 
-      driverIds.length > 0
-        ? supabase
-            .from("drivers")
-            .select(
-              `
-              id,
-              full_name,
-              trading_name,
-              company_name,
-              phone,
-              email,
-              vehicle_type,
-              approved,
-              application_status
-            `,
-            )
-            .in(
-              "id",
-              driverIds,
-            )
-        : Promise.resolve({
-            data: [],
-            error: null,
-          }),
+      supabase
+        .from("drivers")
+        .select("*")
+        .order("created_at", {
+          ascending: false,
+        }),
+
+      supabase
+        .from("bids")
+        .select("*")
+        .order("created_at", {
+          ascending: false,
+        }),
+
+      supabase
+        .from(
+          "driver_payout_requests"
+        )
+        .select("*")
+        .order("requested_at", {
+          ascending: false,
+        }),
+
+      supabase
+        .from("profiles")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("role", "customer"),
     ]);
 
-    if (bidsResult.error) {
+    /*
+     * ERROR CHECKING
+     */
+    if (jobsResult.error) {
       console.error(
-        "Admin jobs bids query error:",
-        bidsResult.error,
+        "Admin jobs error:",
+        jobsResult.error
       );
 
       return NextResponse.json(
         {
           error:
-            "Failed to load job bids.",
-          details:
-            bidsResult.error.message,
+            `Jobs: ${jobsResult.error.message}`,
         },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
     if (driversResult.error) {
       console.error(
-        "Admin jobs drivers query error:",
-        driversResult.error,
+        "Admin drivers error:",
+        driversResult.error
       );
 
       return NextResponse.json(
         {
           error:
-            "Failed to load assigned drivers.",
-          details:
-            driversResult.error.message,
+            `Drivers: ${driversResult.error.message}`,
         },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
-    const bids =
-      (bidsResult.data ??
-        []) as Bid[];
+    if (bidsResult.error) {
+      console.error(
+        "Admin bids error:",
+        bidsResult.error
+      );
 
-    const drivers =
-      (driversResult.data ??
-        []) as Driver[];
-
-    const bidsByJob =
-      new Map<
-        number,
-        Bid[]
-      >();
-
-    for (const bid of bids) {
-      const existing =
-        bidsByJob.get(
-          bid.job_id,
-        ) ?? [];
-
-      existing.push(bid);
-
-      bidsByJob.set(
-        bid.job_id,
-        existing,
+      return NextResponse.json(
+        {
+          error:
+            `Bids: ${bidsResult.error.message}`,
+        },
+        { status: 500 }
       );
     }
 
-    const bidMap =
-      new Map<
-        number,
-        Bid
-      >(
-        bids.map((bid) => [
-          bid.id,
-          bid,
-        ]),
+    if (
+      payoutRequestsResult.error
+    ) {
+      console.error(
+        "Admin payout requests error:",
+        payoutRequestsResult.error
       );
 
-    const driverMap =
-      new Map<
-        string,
-        Driver
-      >(
-        drivers.map(
-          (driver) => [
-            driver.id,
-            driver,
-          ],
-        ),
+      return NextResponse.json(
+        {
+          error:
+            `Payouts: ${payoutRequestsResult.error.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (
+      customersResult.error
+    ) {
+      console.error(
+        "Admin customers error:",
+        customersResult.error
       );
 
-    const enrichedJobs =
-      jobs.map((job) => {
-        const jobBids =
-          bidsByJob.get(
-            job.id,
-          ) ?? [];
+      return NextResponse.json(
+        {
+          error:
+            `Customers: ${customersResult.error.message}`,
+        },
+        { status: 500 }
+      );
+    }
 
-        const winningBidId =
-          job.accepted_bid_id ??
-          job.assigned_bid_id ??
-          null;
+    const jobs =
+      jobsResult.data || [];
 
-        const winningBid =
-          winningBidId !== null
-            ? bidMap.get(
-                winningBidId,
-              ) ?? null
-            : null;
+    /*
+     * ============================================================
+     * CUSTOMER PHOTOS
+     * ============================================================
+     *
+     * Get every photo belonging to the jobs being displayed.
+     *
+     * The storage bucket is private, so we create signed URLs
+     * using the server-side service role key.
+     */
+    const jobIds = jobs.map(
+      (job) => job.id
+    );
 
-        const assignedDriver =
-          job.assigned_driver_id
-            ? driverMap.get(
-                job.assigned_driver_id,
-              ) ?? null
-            : null;
+    let customerPhotos: CustomerPhoto[] =
+      [];
 
-        return {
-          ...job,
-          winningBid: winningBid
-            ? {
-                ...winningBid,
-                driver:
-                  driverMap.get(
-                    winningBid.driver_id,
-                  ) ?? null,
+    if (jobIds.length > 0) {
+      const {
+        data: photoRows,
+        error: photoError,
+      } = await supabase
+        .from("job_photos")
+        .select(
+          "id, job_id, storage_path"
+        )
+        .in("job_id", jobIds)
+        .order("id", {
+          ascending: true,
+        });
+
+      if (photoError) {
+        console.error(
+          "Admin customer photos error:",
+          photoError
+        );
+
+        /*
+         * Don't break the whole admin jobs page if
+         * the photo query fails. Jobs can still load.
+         */
+        customerPhotos = [];
+      } else if (
+        photoRows &&
+        photoRows.length > 0
+      ) {
+        const signedPhotos =
+          await Promise.all(
+            (
+              photoRows as JobPhoto[]
+            ).map(async (photo) => {
+              try {
+                const {
+                  data,
+                  error,
+                } =
+                  await supabase.storage
+                    .from(
+                      PHOTO_BUCKET
+                    )
+                    .createSignedUrl(
+                      photo.storage_path,
+                      60 * 60
+                    );
+
+                if (
+                  error ||
+                  !data?.signedUrl
+                ) {
+                  console.error(
+                    "Photo signed URL error:",
+                    {
+                      path:
+                        photo.storage_path,
+                      error,
+                    }
+                  );
+
+                  return null;
+                }
+
+                return {
+                  id: photo.id,
+                  job_id:
+                    photo.job_id,
+                  storage_path:
+                    photo.storage_path,
+                  url: data.signedUrl,
+                };
+              } catch (error) {
+                console.error(
+                  "Customer photo processing error:",
+                  error
+                );
+
+                return null;
               }
-            : null,
-          assignedDriver,
-          bidCount:
-            jobBids.length,
-        };
-      });
-
-    const openJobs =
-      jobs.filter((job) =>
-        [
-          "open",
-          "bidding",
-        ].includes(
-          String(
-            job.status ?? "",
-          ).toLowerCase(),
-        ),
-      );
-
-    const assignedJobs =
-      jobs.filter(
-        (job) =>
-          String(
-            job.status ?? "",
-          ).toLowerCase() ===
-            "assigned" ||
-          String(
-            job.journey_status ??
-              "",
-          ).toLowerCase() ===
-            "assigned",
-      );
-
-    const completedJobs =
-      jobs.filter(
-        (job) =>
-          String(
-            job.status ?? "",
-          ).toLowerCase() ===
-            "completed" ||
-          String(
-            job.journey_status ??
-              "",
-          ).toLowerCase() ===
-            "completed",
-      );
-
-    const paidJobs =
-      jobs.filter(
-        (job) =>
-          String(
-            job.payment_status ??
-              "",
-          ).toLowerCase() ===
-          "paid",
-      );
-
-    const totalValue =
-      enrichedJobs.reduce(
-        (total, job) => {
-          const amount =
-            Number(
-              job.winningBid
-                ?.amount ?? 0,
-            );
-
-          return (
-            total + amount
+            })
           );
-        },
-        0,
-      );
+
+        customerPhotos =
+          signedPhotos.filter(
+            (
+              photo
+            ): photo is CustomerPhoto =>
+              photo !== null
+          );
+      }
+    }
+
+    /*
+     * ============================================================
+     * GROUP PHOTOS BY JOB
+     * ============================================================
+     */
+    const photosByJob: Record<
+      number,
+      CustomerPhoto[]
+    > = {};
+
+    for (const photo of customerPhotos) {
+      if (!photosByJob[photo.job_id]) {
+        photosByJob[photo.job_id] =
+          [];
+      }
+
+      photosByJob[
+        photo.job_id
+      ].push(photo);
+    }
+
+    /*
+     * ============================================================
+     * RETURN JOBS WITH PHOTOS
+     * ============================================================
+     */
+    const jobsWithPhotos =
+      jobs.map((job) => ({
+        ...job,
+
+        customerPhotos:
+          photosByJob[job.id] || [],
+      }));
 
     return NextResponse.json(
       {
-        jobs:
-          enrichedJobs,
-        stats: {
-          total: jobs.length,
-          open:
-            openJobs.length,
-          assigned:
-            assignedJobs.length,
-          completed:
-            completedJobs.length,
-          paid:
-            paidJobs.length,
-          totalValue:
-            Number(
-              totalValue.toFixed(
-                2,
-              ),
-            ),
-        },
+        jobs: jobsWithPhotos,
+
+        drivers:
+          driversResult.data || [],
+
+        bids:
+          bidsResult.data || [],
+
+        payoutRequests:
+          payoutRequestsResult.data ||
+          [],
+
+        customersCount:
+          customersResult.count || 0,
+
+        updatedAt:
+          new Date().toISOString(),
       },
       {
-        status: 200,
         headers: {
           "Cache-Control":
-            "no-store",
+            "no-store, max-age=0",
         },
-      },
+      }
     );
   } catch (error) {
     console.error(
       "Admin jobs API error:",
-      error,
+      error
     );
 
     return NextResponse.json(
@@ -636,9 +453,9 @@ export async function GET(
         error:
           error instanceof Error
             ? error.message
-            : "Failed to load jobs.",
+            : "Unable to load admin data.",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
