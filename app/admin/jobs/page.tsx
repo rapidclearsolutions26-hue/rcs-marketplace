@@ -1,6 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -26,10 +31,23 @@ type Bid = {
   status: string | null;
   created_at: string;
   accepted_at: string | null;
-  platform_fee_percent: number | null;
-  platform_fee: number | null;
-  driver_payout: number | null;
+  platform_fee_percent:
+    | number
+    | null;
+  platform_fee:
+    | number
+    | null;
+  driver_payout:
+    | number
+    | null;
   driver: Driver | null;
+};
+
+type CustomerPhoto = {
+  id: number;
+  job_id: number;
+  storage_path: string;
+  url: string;
 };
 
 type Job = {
@@ -53,11 +71,16 @@ type Job = {
   assigned_bid_id: number | null;
   journey_status: string | null;
   payment_status: string | null;
-  stripe_checkout_session_id: string | null;
-  stripe_payment_intent_id: string | null;
+  stripe_checkout_session_id:
+    | string
+    | null;
+  stripe_payment_intent_id:
+    | string
+    | null;
   winningBid: Bid | null;
   assignedDriver: Driver | null;
   bidCount: number;
+  customerPhotos: CustomerPhoto[];
 };
 
 type Stats = {
@@ -83,173 +106,282 @@ const SECTION = "#080b08";
 const CARD = "#0a0e0a";
 
 export default function AdminJobsPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase =
+    useMemo(
+      () => createClient(),
+      [],
+    );
 
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] =
+    useState<Job[]>([]);
 
-  const [stats, setStats] = useState<Stats>({
-    total: 0,
-    open: 0,
-    assigned: 0,
-    completed: 0,
-    paid: 0,
-    totalValue: 0,
-  });
+  const [stats, setStats] =
+    useState<Stats>({
+      total: 0,
+      open: 0,
+      assigned: 0,
+      completed: 0,
+      paid: 0,
+      totalValue: 0,
+    });
 
-  const [selectedJob, setSelectedJob] =
-    useState<Job | null>(null);
+  const [
+    selectedJob,
+    setSelectedJob,
+  ] = useState<Job | null>(
+    null,
+  );
 
   const [filter, setFilter] =
     useState<Filter>("all");
 
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [search, setSearch] =
+    useState("");
 
-  const loadJobs = useCallback(
-    async (showRefreshing = false) => {
-      try {
-        if (showRefreshing) {
-          setRefreshing(true);
-        }
+  const [loading, setLoading] =
+    useState(true);
 
-        setErrorMessage("");
+  const [
+    refreshing,
+    setRefreshing,
+  ] = useState(false);
 
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-        if (!session?.access_token) {
-          throw new Error(
-            "Your admin session has expired. Please log in again.",
-          );
-        }
+  const loadJobs =
+    useCallback(
+      async (
+        showRefreshing = false,
+      ) => {
+        try {
+          if (showRefreshing) {
+            setRefreshing(true);
+          }
 
-        const response = await fetch(
-          "/api/admin/jobs",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
+          setErrorMessage("");
+
+          const {
+            data: {
+              session,
             },
-            cache: "no-store",
-          },
-        );
+          } =
+            await supabase.auth.getSession();
 
-        const data = await response.json();
+          if (
+            !session?.access_token
+          ) {
+            throw new Error(
+              "Your admin session has expired. Please log in again.",
+            );
+          }
 
-        if (!response.ok) {
-          throw new Error(
-            data?.error || "Failed to load jobs.",
+          const response =
+            await fetch(
+              "/api/admin/jobs",
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                cache:
+                  "no-store",
+              },
+            );
+
+          const data =
+            await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data?.error ||
+                "Failed to load jobs.",
+            );
+          }
+
+          setJobs(
+            data.jobs ?? [],
           );
+
+          setStats(
+            data.stats ?? {
+              total: 0,
+              open: 0,
+              assigned: 0,
+              completed: 0,
+              paid: 0,
+              totalValue: 0,
+            },
+          );
+        } catch (error) {
+          console.error(
+            "Admin jobs loading error:",
+            error,
+          );
+
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load jobs.",
+          );
+        } finally {
+          setLoading(false);
+          setRefreshing(false);
         }
-
-        setJobs(data.jobs ?? []);
-
-        setStats(
-          data.stats ?? {
-            total: 0,
-            open: 0,
-            assigned: 0,
-            completed: 0,
-            paid: 0,
-            totalValue: 0,
-          },
-        );
-      } catch (error) {
-        console.error(
-          "Admin jobs loading error:",
-          error,
-        );
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to load jobs.",
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [supabase],
-  );
+      },
+      [supabase],
+    );
 
   useEffect(() => {
     void loadJobs();
   }, [loadJobs]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
-      void loadJobs();
-    }, 15000);
+    const interval =
+      window.setInterval(
+        () => {
+          void loadJobs();
+        },
+        15000,
+      );
 
     return () => {
-      window.clearInterval(interval);
+      window.clearInterval(
+        interval,
+      );
     };
   }, [loadJobs]);
 
-  const filteredJobs = useMemo(() => {
-    const searchValue =
-      search.trim().toLowerCase();
+  const filteredJobs =
+    useMemo(() => {
+      const searchValue =
+        search
+          .trim()
+          .toLowerCase();
 
-    return jobs.filter((job) => {
-      const status = normalise(job.status);
+      return jobs.filter(
+        (job) => {
+          const status =
+            normalise(
+              job.status,
+            );
 
-      const journey = normalise(
-        job.journey_status,
+          const journey =
+            normalise(
+              job.journey_status,
+            );
+
+          const matchesFilter =
+            filter === "all" ||
+            (filter === "open" &&
+              [
+                "open",
+                "bidding",
+              ].includes(
+                status,
+              )) ||
+            (filter ===
+              "assigned" &&
+              (status ===
+                "assigned" ||
+                journey ===
+                  "assigned")) ||
+            (filter ===
+              "completed" &&
+              (status ===
+                "completed" ||
+                journey ===
+                  "completed")) ||
+            (filter === "paid" &&
+              normalise(
+                job.payment_status,
+              ) === "paid");
+
+          if (!matchesFilter) {
+            return false;
+          }
+
+          if (!searchValue) {
+            return true;
+          }
+
+          const values = [
+            job.reference,
+            job.customer_id,
+            job.job_type,
+            job.postcode,
+            job.address,
+            job.load_size,
+            job.description,
+            job.assigned_driver_id,
+            String(job.id),
+          ];
+
+          return values.some(
+            (value) =>
+              String(
+                value ?? "",
+              )
+                .toLowerCase()
+                .includes(
+                  searchValue,
+                ),
+          );
+        },
       );
-
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "open" &&
-          ["open", "bidding"].includes(status)) ||
-        (filter === "assigned" &&
-          (status === "assigned" ||
-            journey === "assigned")) ||
-        (filter === "completed" &&
-          (status === "completed" ||
-            journey === "completed")) ||
-        (filter === "paid" &&
-          normalise(job.payment_status) === "paid");
-
-      if (!matchesFilter) {
-        return false;
-      }
-
-      if (!searchValue) {
-        return true;
-      }
-
-      const values = [
-        job.reference,
-        job.customer_id,
-        job.job_type,
-        job.postcode,
-        job.address,
-        job.load_size,
-        job.description,
-        job.assigned_driver_id,
-        String(job.id),
-      ];
-
-      return values.some((value) =>
-        String(value ?? "")
-          .toLowerCase()
-          .includes(searchValue),
-      );
-    });
-  }, [jobs, filter, search]);
+    }, [
+      jobs,
+      filter,
+      search,
+    ]);
 
   return (
     <main
       className="min-h-screen overflow-x-hidden text-white"
-      style={{ background: BG }}
+      style={{
+        background: BG,
+      }}
     >
-      {/* ========================================================= */}
+      <style jsx global>{`
+        * {
+          box-sizing: border-box;
+        }
+
+        body {
+          margin: 0;
+          background: ${BG};
+        }
+
+        .admin-scroll::-webkit-scrollbar {
+          height: 5px;
+        }
+
+        .admin-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .admin-scroll::-webkit-scrollbar-thumb {
+          background: rgba(121, 197, 28, 0.25);
+          border-radius: 999px;
+        }
+
+        .photo-scroll::-webkit-scrollbar {
+          width: 5px;
+        }
+
+        .photo-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .photo-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
+        }
+      `}</style>
+
       {/* HEADER */}
-      {/* ========================================================= */}
 
       <header
         className="sticky top-0 z-40 border-b backdrop-blur-xl"
@@ -267,16 +399,15 @@ export default function AdminJobsPage() {
               "max(0.75rem, env(safe-area-inset-top))",
           }}
         >
-          {/* LOGO */}
           <Link
             href="/admin/dashboard"
             className="flex min-w-0 items-center gap-3"
           >
             <Image
-              src="/rcs-logo.jpg"
+              src="/rapid-clear-logo.png"
               alt="Rapid Clear Solutions"
               width={180}
-              height={70}
+              height={55}
               className="h-9 w-auto object-contain sm:h-12"
               priority
             />
@@ -292,7 +423,6 @@ export default function AdminJobsPage() {
             </div>
           </Link>
 
-          {/* HEADER ACTIONS */}
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -331,9 +461,7 @@ export default function AdminJobsPage() {
         </div>
       </header>
 
-      {/* ========================================================= */}
-      {/* MOBILE BACK BUTTON */}
-      {/* ========================================================= */}
+      {/* MOBILE BACK */}
 
       <div
         className="border-b px-4 py-3 sm:hidden"
@@ -345,7 +473,7 @@ export default function AdminJobsPage() {
       >
         <Link
           href="/admin/dashboard"
-          className="flex min-h-[48px] w-full items-center justify-center rounded-xl border px-4 text-sm font-black transition active:scale-[0.99]"
+          className="flex min-h-[48px] w-full items-center justify-center rounded-xl border px-4 text-sm font-black"
           style={{
             borderColor:
               "rgba(255,255,255,0.10)",
@@ -358,9 +486,7 @@ export default function AdminJobsPage() {
         </Link>
       </div>
 
-      {/* ========================================================= */}
-      {/* MAIN CONTENT */}
-      {/* ========================================================= */}
+      {/* CONTENT */}
 
       <div
         className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8"
@@ -369,14 +495,14 @@ export default function AdminJobsPage() {
             "calc(2rem + env(safe-area-inset-bottom))",
         }}
       >
-        {/* ======================================================= */}
         {/* HERO */}
-        {/* ======================================================= */}
 
         <section className="mb-6 sm:mb-8">
           <p
             className="text-[10px] font-black uppercase tracking-[0.2em] sm:text-xs"
-            style={{ color: GREEN }}
+            style={{
+              color: GREEN,
+            }}
           >
             RCS Marketplace
           </p>
@@ -388,25 +514,31 @@ export default function AdminJobsPage() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
-                Manage marketplace jobs, drivers,
-                bids, assignments and payments from
-                one place.
+                Manage marketplace
+                jobs, bids,
+                assignments,
+                payments and
+                customer photos.
               </p>
             </div>
 
             <div
               className="flex w-fit items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold"
               style={{
-                borderColor: `${GREEN}25`,
-                background: `${GREEN}0d`,
+                borderColor:
+                  `${GREEN}25`,
+                background:
+                  `${GREEN}0d`,
                 color: GREEN,
               }}
             >
               <span
                 className="h-2 w-2 rounded-full"
                 style={{
-                  background: GREEN,
-                  boxShadow: `0 0 10px ${GREEN}`,
+                  background:
+                    GREEN,
+                  boxShadow:
+                    `0 0 10px ${GREEN}`,
                 }}
               />
 
@@ -415,19 +547,15 @@ export default function AdminJobsPage() {
           </div>
         </section>
 
-        {/* ======================================================= */}
         {/* ERROR */}
-        {/* ======================================================= */}
 
         {errorMessage && (
-          <div className="mb-5 rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm leading-6 text-red-200 sm:p-5">
+          <div className="mb-5 rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm leading-6 text-red-200">
             {errorMessage}
           </div>
         )}
 
-        {/* ======================================================= */}
         {/* STATS */}
-        {/* ======================================================= */}
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <StatCard
@@ -462,9 +590,7 @@ export default function AdminJobsPage() {
           />
         </section>
 
-        {/* ======================================================= */}
-        {/* SEARCH + VALUE */}
-        {/* ======================================================= */}
+        {/* SEARCH */}
 
         <section
           className="mt-4 rounded-2xl border p-4 sm:mt-5 sm:rounded-3xl sm:p-6"
@@ -478,13 +604,19 @@ export default function AdminJobsPage() {
             <div>
               <p
                 className="text-[10px] font-black uppercase tracking-[0.16em]"
-                style={{ color: GREEN }}
+                style={{
+                  color: GREEN,
+                }}
               >
-                Accepted / Assigned Value
+                Accepted / Assigned
+                Value
               </p>
 
               <p className="mt-2 text-2xl font-black sm:text-3xl">
-                £{formatMoney(stats.totalValue)}
+                £
+                {formatMoney(
+                  stats.totalValue,
+                )}
               </p>
             </div>
 
@@ -496,85 +628,98 @@ export default function AdminJobsPage() {
               <input
                 type="text"
                 value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
+                onChange={(
+                  event,
+                ) =>
+                  setSearch(
+                    event.target
+                      .value,
+                  )
                 }
                 placeholder="Reference, customer, postcode, job ID..."
-                className="min-h-[48px] w-full rounded-xl border px-4 py-3 text-base text-white outline-none transition placeholder:text-white/20 sm:rounded-2xl sm:text-sm"
+                className="min-h-[48px] w-full rounded-xl border px-4 py-3 text-base text-white outline-none placeholder:text-white/20 sm:rounded-2xl sm:text-sm"
                 style={{
                   borderColor:
                     "rgba(255,255,255,0.10)",
-                  background: "#070907",
-                }}
-                onFocus={(event) => {
-                  event.currentTarget.style.borderColor =
-                    GREEN;
-                }}
-                onBlur={(event) => {
-                  event.currentTarget.style.borderColor =
-                    "rgba(255,255,255,0.10)";
+                  background:
+                    "#070907",
                 }}
               />
             </div>
           </div>
         </section>
 
-        {/* ======================================================= */}
         {/* FILTERS */}
-        {/* ======================================================= */}
 
         <section className="mt-4">
           <div
-            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0"
-            style={{
-              scrollbarWidth: "none",
-              WebkitOverflowScrolling: "touch",
-            }}
+            className="admin-scroll -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0"
           >
             <FilterButton
-              active={filter === "all"}
-              onClick={() => setFilter("all")}
+              active={
+                filter === "all"
+              }
+              onClick={() =>
+                setFilter("all")
+              }
             >
               All ({stats.total})
             </FilterButton>
 
             <FilterButton
-              active={filter === "open"}
-              onClick={() => setFilter("open")}
+              active={
+                filter === "open"
+              }
+              onClick={() =>
+                setFilter("open")
+              }
             >
               Open ({stats.open})
             </FilterButton>
 
             <FilterButton
-              active={filter === "assigned"}
+              active={
+                filter === "assigned"
+              }
               onClick={() =>
-                setFilter("assigned")
+                setFilter(
+                  "assigned",
+                )
               }
             >
-              Assigned ({stats.assigned})
+              Assigned (
+              {stats.assigned})
             </FilterButton>
 
             <FilterButton
-              active={filter === "completed"}
+              active={
+                filter ===
+                "completed"
+              }
               onClick={() =>
-                setFilter("completed")
+                setFilter(
+                  "completed",
+                )
               }
             >
-              Completed ({stats.completed})
+              Completed (
+              {stats.completed})
             </FilterButton>
 
             <FilterButton
-              active={filter === "paid"}
-              onClick={() => setFilter("paid")}
+              active={
+                filter === "paid"
+              }
+              onClick={() =>
+                setFilter("paid")
+              }
             >
               Paid ({stats.paid})
             </FilterButton>
           </div>
         </section>
 
-        {/* ======================================================= */}
         {/* JOBS */}
-        {/* ======================================================= */}
 
         <section className="mt-6 sm:mt-7">
           <div className="mb-4">
@@ -583,34 +728,41 @@ export default function AdminJobsPage() {
             </h2>
 
             <p className="mt-1 text-xs text-white/35 sm:text-sm">
-              Showing {filteredJobs.length} of{" "}
-              {jobs.length} jobs
+              Showing{" "}
+              {
+                filteredJobs.length
+              }{" "}
+              of {jobs.length}{" "}
+              jobs
             </p>
           </div>
 
           {loading ? (
             <LoadingState />
-          ) : filteredJobs.length === 0 ? (
+          ) : filteredJobs.length ===
+            0 ? (
             <EmptyState />
           ) : (
             <div className="space-y-3 sm:space-y-4">
-              {filteredJobs.map((job) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onView={() =>
-                    setSelectedJob(job)
-                  }
-                />
-              ))}
+              {filteredJobs.map(
+                (job) => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    onView={() =>
+                      setSelectedJob(
+                        job,
+                      )
+                    }
+                  />
+                ),
+              )}
             </div>
           )}
         </section>
       </div>
 
-      {/* ========================================================= */}
       {/* JOB MODAL */}
-      {/* ========================================================= */}
 
       {selectedJob && (
         <JobModal
@@ -624,6 +776,10 @@ export default function AdminJobsPage() {
   );
 }
 
+/* ========================================================= */
+/* JOB CARD */
+/* ========================================================= */
+
 function JobCard({
   job,
   onView,
@@ -632,22 +788,32 @@ function JobCard({
   onView: () => void;
 }) {
   const driverName =
-    job.assignedDriver?.trading_name ||
-    job.assignedDriver?.company_name ||
-    job.assignedDriver?.full_name ||
+    job.assignedDriver
+      ?.trading_name ||
+    job.assignedDriver
+      ?.company_name ||
+    job.assignedDriver
+      ?.full_name ||
     null;
 
   const amount =
-    job.winningBid?.amount !== null &&
-    job.winningBid?.amount !== undefined
+    job.winningBid
+      ?.amount !== null &&
+    job.winningBid
+      ?.amount !==
+      undefined
       ? `£${formatMoney(
           job.winningBid.amount,
         )}`
       : "—";
 
+  const photoCount =
+    job.customerPhotos
+      ?.length ?? 0;
+
   return (
     <div
-      className="overflow-hidden rounded-2xl border transition sm:rounded-3xl hover:border-white/15"
+      className="overflow-hidden rounded-2xl border sm:rounded-3xl"
       style={{
         borderColor:
           "rgba(255,255,255,0.08)",
@@ -655,7 +821,6 @@ function JobCard({
       }}
     >
       <div className="p-4 sm:p-6">
-        {/* TOP */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -669,7 +834,9 @@ function JobCard({
               />
 
               <JourneyBadge
-                status={job.journey_status}
+                status={
+                  job.journey_status
+                }
               />
             </div>
 
@@ -695,16 +862,17 @@ function JobCard({
 
             <p
               className="mt-1 text-2xl font-black"
-              style={{ color: GREEN }}
+              style={{
+                color: GREEN,
+              }}
             >
               {amount}
             </p>
           </div>
         </div>
 
-        {/* DETAILS */}
         <div
-          className="mt-5 grid grid-cols-2 gap-4 border-t pt-5 sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-5 grid grid-cols-2 gap-4 border-t pt-5 sm:grid-cols-2 lg:grid-cols-5"
           style={{
             borderColor:
               "rgba(255,255,255,0.07)",
@@ -734,11 +902,26 @@ function JobCard({
 
           <JobMeta
             label="Bids"
-            value={String(job.bidCount)}
+            value={String(
+              job.bidCount,
+            )}
+          />
+
+          <JobMeta
+            label="Customer Photos"
+            value={
+              photoCount > 0
+                ? `${photoCount} photo${
+                    photoCount ===
+                    1
+                      ? ""
+                      : "s"
+                  }`
+                : "None"
+            }
           />
         </div>
 
-        {/* BOTTOM */}
         <div
           className="mt-5 flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between"
           style={{
@@ -748,16 +931,39 @@ function JobCard({
         >
           <div className="flex flex-wrap items-center gap-2">
             <PaymentStatus
-              status={job.payment_status}
+              status={
+                job.payment_status
+              }
             />
+
+            {photoCount > 0 && (
+              <span
+                className="rounded-full border px-3 py-1.5 text-xs font-bold"
+                style={{
+                  borderColor:
+                    `${GREEN}35`,
+                  background:
+                    `${GREEN}0d`,
+                  color: GREEN,
+                }}
+              >
+                📷 {photoCount} photo
+                {photoCount ===
+                1
+                  ? ""
+                  : "s"}
+              </span>
+            )}
 
             {driverName ? (
               <span className="max-w-full truncate rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/55">
-                Driver: {driverName}
+                Driver:{" "}
+                {driverName}
               </span>
             ) : (
               <span className="rounded-full border border-yellow-500/20 bg-yellow-500/5 px-3 py-1.5 text-xs font-bold text-yellow-200/70">
-                No driver assigned
+                No driver
+                assigned
               </span>
             )}
           </div>
@@ -765,16 +971,20 @@ function JobCard({
           <button
             type="button"
             onClick={onView}
-            className="min-h-[50px] w-full rounded-xl px-5 text-sm font-black transition active:scale-[0.99] sm:min-h-[46px] sm:w-auto sm:rounded-2xl"
+            className="min-h-[50px] w-full rounded-xl px-5 text-sm font-black transition sm:min-h-[46px] sm:w-auto sm:rounded-2xl"
             style={{
               background: GREEN,
               color: BG,
             }}
-            onMouseEnter={(event) => {
+            onMouseEnter={(
+              event,
+            ) => {
               event.currentTarget.style.background =
                 GREEN_HOVER;
             }}
-            onMouseLeave={(event) => {
+            onMouseLeave={(
+              event,
+            ) => {
               event.currentTarget.style.background =
                 GREEN;
             }}
@@ -786,6 +996,886 @@ function JobCard({
     </div>
   );
 }
+
+/* ========================================================= */
+/* JOB MODAL */
+/* ========================================================= */
+
+function JobModal({
+  job,
+  onClose,
+}: {
+  job: Job;
+  onClose: () => void;
+}) {
+  const [
+    selectedPhotoIndex,
+    setSelectedPhotoIndex,
+  ] = useState<
+    number | null
+  >(null);
+
+  const photos =
+    job.customerPhotos ?? [];
+
+  const driverName =
+    job.assignedDriver
+      ?.trading_name ||
+    job.assignedDriver
+      ?.company_name ||
+    job.assignedDriver
+      ?.full_name ||
+    "No driver assigned";
+
+  useEffect(() => {
+    if (
+      selectedPhotoIndex ===
+      null
+    ) {
+      return;
+    }
+
+    const handleKeyDown = (
+      event: KeyboardEvent,
+    ) => {
+      if (
+        event.key === "Escape"
+      ) {
+        setSelectedPhotoIndex(
+          null,
+        );
+      }
+
+      if (
+        event.key ===
+          "ArrowRight" &&
+        photos.length > 1
+      ) {
+        setSelectedPhotoIndex(
+          (current) =>
+            current === null
+              ? 0
+              : (current + 1) %
+                photos.length,
+        );
+      }
+
+      if (
+        event.key ===
+          "ArrowLeft" &&
+        photos.length > 1
+      ) {
+        setSelectedPhotoIndex(
+          (current) =>
+            current === null
+              ? 0
+              : (current -
+                  1 +
+                  photos.length) %
+                photos.length,
+        );
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+    };
+  }, [
+    selectedPhotoIndex,
+    photos.length,
+  ]);
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/85 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+        onMouseDown={(
+          event,
+        ) => {
+          if (
+            event.target ===
+            event.currentTarget
+          ) {
+            onClose();
+          }
+        }}
+      >
+        <div
+          className="min-h-screen w-full overflow-hidden border shadow-2xl sm:my-8 sm:min-h-0 sm:max-w-5xl sm:rounded-3xl"
+          style={{
+            borderColor:
+              "rgba(255,255,255,0.10)",
+            background: CARD,
+          }}
+        >
+          {/* MODAL HEADER */}
+
+          <div
+            className="sticky top-0 z-10 flex items-center justify-between border-b p-4 sm:static sm:p-6"
+            style={{
+              borderColor:
+                "rgba(255,255,255,0.07)",
+              background: SECTION,
+              paddingTop:
+                "max(1rem, env(safe-area-inset-top))",
+            }}
+          >
+            <div className="min-w-0 pr-3">
+              <p
+                className="text-[10px] font-black uppercase tracking-[0.2em] sm:text-xs"
+                style={{
+                  color: GREEN,
+                }}
+              >
+                Marketplace Job
+              </p>
+
+              <h2 className="mt-1 break-all text-xl font-black sm:text-2xl">
+                {job.reference}
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-2xl"
+              style={{
+                borderColor:
+                  "rgba(255,255,255,0.10)",
+                color:
+                  "rgba(255,255,255,0.65)",
+                background: CARD,
+              }}
+              aria-label="Close job"
+            >
+              ×
+            </button>
+          </div>
+
+          <div
+            className="photo-scroll max-h-[calc(100vh-76px)] overflow-y-auto p-4 sm:max-h-[78vh] sm:p-7"
+            style={{
+              paddingBottom:
+                "calc(2rem + env(safe-area-inset-bottom))",
+            }}
+          >
+            {/* STATUS */}
+
+            <section
+              className="rounded-2xl border p-4 sm:p-5"
+              style={{
+                borderColor:
+                  "rgba(255,255,255,0.08)",
+                background: SECTION,
+              }}
+            >
+              <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+                <Info
+                  label="Job status"
+                  value={
+                    <StatusBadge
+                      status={
+                        job.status
+                      }
+                    />
+                  }
+                />
+
+                <Info
+                  label="Journey"
+                  value={
+                    <JourneyBadge
+                      status={
+                        job.journey_status
+                      }
+                    />
+                  }
+                />
+
+                <Info
+                  label="Payment"
+                  value={
+                    <PaymentStatus
+                      status={
+                        job.payment_status
+                      }
+                    />
+                  }
+                />
+
+                <Info
+                  label="Created"
+                  value={formatDateTime(
+                    job.created_at,
+                  )}
+                />
+              </div>
+            </section>
+
+            {/* CUSTOMER PHOTOS */}
+
+            <section className="mt-7 sm:mt-8">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-black">
+                    Customer Photos
+                  </h3>
+
+                  <p className="mt-1 text-xs text-white/35">
+                    Photos uploaded
+                    with this job
+                  </p>
+                </div>
+
+                {photos.length >
+                  0 && (
+                  <span
+                    className="rounded-full border px-3 py-1.5 text-xs font-black"
+                    style={{
+                      borderColor:
+                        `${GREEN}35`,
+                      background:
+                        `${GREEN}0d`,
+                      color: GREEN,
+                    }}
+                  >
+                    {photos.length}{" "}
+                    photo
+                    {photos.length ===
+                    1
+                      ? ""
+                      : "s"}
+                  </span>
+                )}
+              </div>
+
+              {photos.length ===
+              0 ? (
+                <div
+                  className="mt-3 rounded-2xl border p-6 text-center sm:mt-4"
+                  style={{
+                    borderColor:
+                      "rgba(255,255,255,0.08)",
+                    background:
+                      SECTION,
+                  }}
+                >
+                  <div className="text-3xl">
+                    📷
+                  </div>
+
+                  <p className="mt-3 text-sm font-bold text-white/50">
+                    No customer
+                    photos
+                    uploaded
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {photos.map(
+                    (
+                      photo,
+                      index,
+                    ) => (
+                      <button
+                        key={
+                          photo.id
+                        }
+                        type="button"
+                        onClick={() =>
+                          setSelectedPhotoIndex(
+                            index,
+                          )
+                        }
+                        className="group relative aspect-square overflow-hidden rounded-2xl border bg-black"
+                        style={{
+                          borderColor:
+                            "rgba(255,255,255,0.10)",
+                        }}
+                      >
+                        <img
+                          src={
+                            photo.url
+                          }
+                          alt={`Customer photo ${index + 1}`}
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+
+                        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80">
+                          <div className="flex w-full items-center justify-between p-3">
+                            <span className="text-xs font-black text-white">
+                              PHOTO{" "}
+                              {index +
+                                1}
+                            </span>
+
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-sm">
+                              ↗
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    ),
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* COLLECTION */}
+
+            <DetailSection title="Collection Details">
+              <Detail
+                label="Reference"
+                value={
+                  job.reference
+                }
+              />
+
+              <Detail
+                label="Job ID"
+                value={job.id}
+              />
+
+              <Detail
+                label="Job type"
+                value={
+                  job.job_type
+                }
+              />
+
+              <Detail
+                label="Load size"
+                value={
+                  job.load_size
+                }
+              />
+
+              <Detail
+                label="Postcode"
+                value={
+                  job.postcode
+                }
+              />
+
+              <Detail
+                label="Address"
+                value={
+                  job.address
+                }
+              />
+
+              <Detail
+                label="Preferred date"
+                value={formatDate(
+                  job.preferred_date,
+                )}
+              />
+
+              <Detail
+                label="Preferred time"
+                value={formatTime(
+                  job.preferred_time,
+                )}
+              />
+
+              <Detail
+                label="Floor"
+                value={job.floor}
+              />
+
+              <Detail
+                label="Stairs"
+                value={
+                  job.stairs ===
+                  null
+                    ? null
+                    : job.stairs
+                      ? "Yes"
+                      : "No"
+                }
+              />
+
+              <Detail
+                label="Access notes"
+                value={
+                  job.access_notes
+                }
+              />
+            </DetailSection>
+
+            {/* DESCRIPTION */}
+
+            <section className="mt-7 sm:mt-8">
+              <h3 className="text-lg font-black">
+                Description
+              </h3>
+
+              <div
+                className="mt-3 rounded-2xl border p-4 sm:mt-4 sm:p-5"
+                style={{
+                  borderColor:
+                    "rgba(255,255,255,0.08)",
+                  background:
+                    SECTION,
+                }}
+              >
+                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-white/65">
+                  {job.description ||
+                    "No description provided."}
+                </p>
+              </div>
+            </section>
+
+            {/* CUSTOMER */}
+
+            <DetailSection title="Customer">
+              <Detail
+                label="Customer ID"
+                value={
+                  job.customer_id
+                }
+              />
+            </DetailSection>
+
+            {/* DRIVER */}
+
+            <section className="mt-7 sm:mt-8">
+              <h3 className="text-lg font-black">
+                Driver Assignment
+              </h3>
+
+              <div
+                className="mt-3 rounded-2xl border p-4 sm:mt-4 sm:p-5"
+                style={{
+                  borderColor:
+                    "rgba(255,255,255,0.08)",
+                  background:
+                    SECTION,
+                }}
+              >
+                <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+                  <Detail
+                    label="Driver"
+                    value={
+                      driverName
+                    }
+                  />
+
+                  <Detail
+                    label="Driver ID"
+                    value={
+                      job.assigned_driver_id
+                    }
+                  />
+
+                  <Detail
+                    label="Assigned bid ID"
+                    value={
+                      job.assigned_bid_id
+                    }
+                  />
+
+                  <Detail
+                    label="Accepted bid ID"
+                    value={
+                      job.accepted_bid_id
+                    }
+                  />
+                </div>
+
+                {job.assignedDriver && (
+                  <div
+                    className="mt-5 grid grid-cols-2 gap-5 border-t pt-5"
+                    style={{
+                      borderColor:
+                        "rgba(255,255,255,0.07)",
+                    }}
+                  >
+                    <Detail
+                      label="Driver name"
+                      value={
+                        job
+                          .assignedDriver
+                          .full_name
+                      }
+                    />
+
+                    <Detail
+                      label="Trading name"
+                      value={
+                        job
+                          .assignedDriver
+                          .trading_name
+                      }
+                    />
+
+                    <Detail
+                      label="Phone"
+                      value={
+                        job
+                          .assignedDriver
+                          .phone
+                      }
+                    />
+
+                    <Detail
+                      label="Email"
+                      value={
+                        job
+                          .assignedDriver
+                          .email
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* ACCEPTED BID */}
+
+            <section className="mt-7 sm:mt-8">
+              <h3 className="text-lg font-black">
+                Accepted Bid
+              </h3>
+
+              <div
+                className="mt-3 rounded-2xl border p-4 sm:mt-4 sm:p-5"
+                style={{
+                  borderColor:
+                    "rgba(255,255,255,0.08)",
+                  background:
+                    SECTION,
+                }}
+              >
+                {job.winningBid ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+                      <Detail
+                        label="Bid amount"
+                        value={
+                          job
+                            .winningBid
+                            .amount !==
+                          null
+                            ? `£${formatMoney(
+                                job
+                                  .winningBid
+                                  .amount,
+                              )}`
+                            : null
+                        }
+                      />
+
+                      <Detail
+                        label="Driver payout"
+                        value={
+                          job
+                            .winningBid
+                            .driver_payout !==
+                          null
+                            ? `£${formatMoney(
+                                job
+                                  .winningBid
+                                  .driver_payout,
+                              )}`
+                            : null
+                        }
+                      />
+
+                      <Detail
+                        label="RCS fee"
+                        value={
+                          job
+                            .winningBid
+                            .platform_fee !==
+                          null
+                            ? `£${formatMoney(
+                                job
+                                  .winningBid
+                                  .platform_fee,
+                              )}`
+                            : null
+                        }
+                      />
+
+                      <Detail
+                        label="RCS fee %"
+                        value={
+                          job
+                            .winningBid
+                            .platform_fee_percent !==
+                          null
+                            ? `${job.winningBid.platform_fee_percent}%`
+                            : null
+                        }
+                      />
+
+                      <Detail
+                        label="Bid status"
+                        value={
+                          job
+                            .winningBid
+                            .status
+                        }
+                      />
+
+                      <Detail
+                        label="Bid created"
+                        value={formatDateTime(
+                          job
+                            .winningBid
+                            .created_at,
+                        )}
+                      />
+
+                      <Detail
+                        label="Accepted"
+                        value={
+                          job
+                            .winningBid
+                            .accepted_at
+                            ? formatDateTime(
+                                job
+                                  .winningBid
+                                  .accepted_at,
+                              )
+                            : "Not recorded"
+                        }
+                      />
+
+                      <Detail
+                        label="Driver ID"
+                        value={
+                          job
+                            .winningBid
+                            .driver_id
+                        }
+                      />
+                    </div>
+
+                    <div
+                      className="mt-5 border-t pt-5"
+                      style={{
+                        borderColor:
+                          "rgba(255,255,255,0.07)",
+                      }}
+                    >
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-white/25">
+                        Driver message
+                      </p>
+
+                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-white/65">
+                        {job
+                          .winningBid
+                          .message ||
+                          "No message provided."}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-white/35">
+                    No accepted
+                    bid recorded.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            {/* STRIPE */}
+
+            <section className="mt-7 sm:mt-8">
+              <h3 className="text-lg font-black">
+                Stripe Payment
+              </h3>
+
+              <div
+                className="mt-3 grid gap-5 rounded-2xl border p-4 sm:mt-4 sm:grid-cols-2 sm:p-5"
+                style={{
+                  borderColor:
+                    "rgba(255,255,255,0.08)",
+                  background:
+                    SECTION,
+                }}
+              >
+                <Detail
+                  label="Payment status"
+                  value={
+                    job.payment_status
+                  }
+                />
+
+                <Detail
+                  label="Checkout session"
+                  value={
+                    job.stripe_checkout_session_id
+                  }
+                />
+
+                <Detail
+                  label="Payment intent"
+                  value={
+                    job.stripe_payment_intent_id
+                  }
+                />
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      {/* FULL SCREEN PHOTO VIEWER */}
+
+      {selectedPhotoIndex !==
+        null &&
+        photos[
+          selectedPhotoIndex
+        ] && (
+          <PhotoViewer
+            photos={photos}
+            index={
+              selectedPhotoIndex
+            }
+            onClose={() =>
+              setSelectedPhotoIndex(
+                null,
+              )
+            }
+            onPrevious={() =>
+              setSelectedPhotoIndex(
+                (selectedPhotoIndex -
+                  1 +
+                  photos.length) %
+                  photos.length,
+              )
+            }
+            onNext={() =>
+              setSelectedPhotoIndex(
+                (selectedPhotoIndex +
+                  1) %
+                  photos.length,
+              )
+            }
+          />
+        )}
+    </>
+  );
+}
+
+/* ========================================================= */
+/* PHOTO VIEWER */
+/* ========================================================= */
+
+function PhotoViewer({
+  photos,
+  index,
+  onClose,
+  onPrevious,
+  onNext,
+}: {
+  photos: CustomerPhoto[];
+  index: number;
+  onClose: () => void;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const photo =
+    photos[index];
+
+  if (!photo) {
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 p-3 sm:p-6"
+      onMouseDown={(
+        event,
+      ) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          onClose();
+        }
+      }}
+    >
+      {/* TOP BAR */}
+
+      <div className="absolute left-3 right-3 top-3 flex items-center justify-between sm:left-6 sm:right-6 sm:top-6">
+        <div className="rounded-full border border-white/10 bg-black/60 px-3 py-2 text-xs font-black text-white/70 backdrop-blur-md">
+          PHOTO {index + 1} /{" "}
+          {photos.length}
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/60 text-2xl text-white backdrop-blur-md"
+          aria-label="Close photo"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* PREVIOUS */}
+
+      {photos.length > 1 && (
+        <button
+          type="button"
+          onClick={onPrevious}
+          className="absolute left-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/60 text-2xl text-white backdrop-blur-md sm:left-6"
+          aria-label="Previous photo"
+        >
+          ‹
+        </button>
+      )}
+
+      {/* IMAGE */}
+
+      <div className="flex max-h-[85vh] max-w-[92vw] items-center justify-center">
+        <img
+          src={photo.url}
+          alt={`Customer photo ${
+            index + 1
+          }`}
+          className="max-h-[82vh] max-w-[90vw] rounded-xl object-contain shadow-2xl sm:max-h-[86vh]"
+        />
+      </div>
+
+      {/* NEXT */}
+
+      {photos.length > 1 && (
+        <button
+          type="button"
+          onClick={onNext}
+          className="absolute right-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/60 text-2xl text-white backdrop-blur-md sm:right-6"
+          aria-label="Next photo"
+        >
+          ›
+        </button>
+      )}
+
+      {/* BOTTOM */}
+
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/70 px-4 py-2 text-xs font-bold text-white/60 backdrop-blur-md sm:bottom-6">
+        Swipe / use arrows to
+        browse
+      </div>
+    </div>
+  );
+}
+
+/* ========================================================= */
+/* SMALL COMPONENTS */
+/* ========================================================= */
 
 function JobMeta({
   label,
@@ -803,489 +1893,6 @@ function JobMeta({
       <p className="mt-1 break-words text-sm font-bold text-white/70">
         {value}
       </p>
-    </div>
-  );
-}
-
-function JobModal({
-  job,
-  onClose,
-}: {
-  job: Job;
-  onClose: () => void;
-}) {
-  const driverName =
-    job.assignedDriver?.trading_name ||
-    job.assignedDriver?.company_name ||
-    job.assignedDriver?.full_name ||
-    "No driver assigned";
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/85 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        className="min-h-screen w-full overflow-hidden border shadow-2xl sm:my-8 sm:min-h-0 sm:max-w-5xl sm:rounded-3xl"
-        style={{
-          borderColor:
-            "rgba(255,255,255,0.10)",
-          background: CARD,
-        }}
-      >
-        {/* MODAL HEADER */}
-        <div
-          className="sticky top-0 z-10 flex items-center justify-between border-b p-4 sm:static sm:p-6"
-          style={{
-            borderColor:
-              "rgba(255,255,255,0.07)",
-            background: SECTION,
-            paddingTop:
-              "max(1rem, env(safe-area-inset-top))",
-          }}
-        >
-          <div className="min-w-0 pr-3">
-            <p
-              className="text-[10px] font-black uppercase tracking-[0.2em] sm:text-xs"
-              style={{ color: GREEN }}
-            >
-              Marketplace Job
-            </p>
-
-            <h2 className="mt-1 break-all text-xl font-black sm:text-2xl">
-              {job.reference}
-            </h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-2xl transition active:scale-95"
-            style={{
-              borderColor:
-                "rgba(255,255,255,0.10)",
-              color:
-                "rgba(255,255,255,0.65)",
-              background: CARD,
-            }}
-            aria-label="Close job"
-          >
-            ×
-          </button>
-        </div>
-
-        <div
-          className="max-h-[calc(100vh-76px)] overflow-y-auto p-4 sm:max-h-[78vh] sm:p-7"
-          style={{
-            paddingBottom:
-              "calc(2rem + env(safe-area-inset-bottom))",
-          }}
-        >
-          {/* STATUS */}
-          <section
-            className="rounded-2xl border p-4 sm:p-5"
-            style={{
-              borderColor:
-                "rgba(255,255,255,0.08)",
-              background: SECTION,
-            }}
-          >
-            <div className="grid grid-cols-2 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              <Info
-                label="Job status"
-                value={
-                  <StatusBadge
-                    status={job.status}
-                  />
-                }
-              />
-
-              <Info
-                label="Journey status"
-                value={
-                  <JourneyBadge
-                    status={
-                      job.journey_status
-                    }
-                  />
-                }
-              />
-
-              <Info
-                label="Payment status"
-                value={
-                  <PaymentStatus
-                    status={
-                      job.payment_status
-                    }
-                  />
-                }
-              />
-
-              <Info
-                label="Created"
-                value={formatDateTime(
-                  job.created_at,
-                )}
-              />
-            </div>
-          </section>
-
-          {/* COLLECTION */}
-          <DetailSection title="Collection Details">
-            <Detail
-              label="Reference"
-              value={job.reference}
-            />
-
-            <Detail
-              label="Job ID"
-              value={job.id}
-            />
-
-            <Detail
-              label="Job type"
-              value={job.job_type}
-            />
-
-            <Detail
-              label="Load size"
-              value={job.load_size}
-            />
-
-            <Detail
-              label="Postcode"
-              value={job.postcode}
-            />
-
-            <Detail
-              label="Address"
-              value={job.address}
-            />
-
-            <Detail
-              label="Preferred date"
-              value={formatDate(
-                job.preferred_date,
-              )}
-            />
-
-            <Detail
-              label="Preferred time"
-              value={formatTime(
-                job.preferred_time,
-              )}
-            />
-
-            <Detail
-              label="Floor"
-              value={job.floor}
-            />
-
-            <Detail
-              label="Stairs"
-              value={
-                job.stairs === null
-                  ? null
-                  : job.stairs
-                    ? "Yes"
-                    : "No"
-              }
-            />
-
-            <Detail
-              label="Access notes"
-              value={job.access_notes}
-            />
-          </DetailSection>
-
-          {/* DESCRIPTION */}
-          <section className="mt-7 sm:mt-8">
-            <h3 className="text-lg font-black">
-              Description
-            </h3>
-
-            <div
-              className="mt-3 rounded-2xl border p-4 sm:mt-4 sm:p-5"
-              style={{
-                borderColor:
-                  "rgba(255,255,255,0.08)",
-                background: SECTION,
-              }}
-            >
-              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-white/65">
-                {job.description ||
-                  "No description provided."}
-              </p>
-            </div>
-          </section>
-
-          {/* CUSTOMER */}
-          <DetailSection title="Customer">
-            <Detail
-              label="Customer ID"
-              value={job.customer_id}
-            />
-          </DetailSection>
-
-          {/* DRIVER */}
-          <section className="mt-7 sm:mt-8">
-            <h3 className="text-lg font-black">
-              Driver Assignment
-            </h3>
-
-            <div
-              className="mt-3 rounded-2xl border p-4 sm:mt-4 sm:p-5"
-              style={{
-                borderColor:
-                  "rgba(255,255,255,0.08)",
-                background: SECTION,
-              }}
-            >
-              <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-                <Detail
-                  label="Driver"
-                  value={driverName}
-                />
-
-                <Detail
-                  label="Driver ID"
-                  value={
-                    job.assigned_driver_id
-                  }
-                />
-
-                <Detail
-                  label="Assigned bid ID"
-                  value={
-                    job.assigned_bid_id
-                  }
-                />
-
-                <Detail
-                  label="Accepted bid ID"
-                  value={
-                    job.accepted_bid_id
-                  }
-                />
-              </div>
-
-              {job.assignedDriver && (
-                <div
-                  className="mt-5 grid grid-cols-2 gap-5 border-t pt-5"
-                  style={{
-                    borderColor:
-                      "rgba(255,255,255,0.07)",
-                  }}
-                >
-                  <Detail
-                    label="Driver name"
-                    value={
-                      job.assignedDriver
-                        .full_name
-                    }
-                  />
-
-                  <Detail
-                    label="Trading name"
-                    value={
-                      job.assignedDriver
-                        .trading_name
-                    }
-                  />
-
-                  <Detail
-                    label="Phone"
-                    value={
-                      job.assignedDriver
-                        .phone
-                    }
-                  />
-
-                  <Detail
-                    label="Email"
-                    value={
-                      job.assignedDriver
-                        .email
-                    }
-                  />
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* ACCEPTED BID */}
-          <section className="mt-7 sm:mt-8">
-            <h3 className="text-lg font-black">
-              Accepted Bid
-            </h3>
-
-            <div
-              className="mt-3 rounded-2xl border p-4 sm:mt-4 sm:p-5"
-              style={{
-                borderColor:
-                  "rgba(255,255,255,0.08)",
-                background: SECTION,
-              }}
-            >
-              {job.winningBid ? (
-                <>
-                  <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-                    <Detail
-                      label="Bid amount"
-                      value={
-                        job.winningBid
-                          .amount !== null
-                          ? `£${formatMoney(
-                              job.winningBid
-                                .amount,
-                            )}`
-                          : null
-                      }
-                    />
-
-                    <Detail
-                      label="Driver payout"
-                      value={
-                        job.winningBid
-                          .driver_payout !==
-                        null
-                          ? `£${formatMoney(
-                              job.winningBid
-                                .driver_payout,
-                            )}`
-                          : null
-                      }
-                    />
-
-                    <Detail
-                      label="RCS fee"
-                      value={
-                        job.winningBid
-                          .platform_fee !==
-                        null
-                          ? `£${formatMoney(
-                              job.winningBid
-                                .platform_fee,
-                            )}`
-                          : null
-                      }
-                    />
-
-                    <Detail
-                      label="RCS fee %"
-                      value={
-                        job.winningBid
-                          .platform_fee_percent !==
-                        null
-                          ? `${job.winningBid.platform_fee_percent}%`
-                          : null
-                      }
-                    />
-
-                    <Detail
-                      label="Bid status"
-                      value={
-                        job.winningBid.status
-                      }
-                    />
-
-                    <Detail
-                      label="Bid created"
-                      value={formatDateTime(
-                        job.winningBid
-                          .created_at,
-                      )}
-                    />
-
-                    <Detail
-                      label="Accepted"
-                      value={
-                        job.winningBid
-                          .accepted_at
-                          ? formatDateTime(
-                              job.winningBid
-                                .accepted_at,
-                            )
-                          : "Not recorded"
-                      }
-                    />
-
-                    <Detail
-                      label="Driver ID"
-                      value={
-                        job.winningBid
-                          .driver_id
-                      }
-                    />
-                  </div>
-
-                  <div
-                    className="mt-5 border-t pt-5"
-                    style={{
-                      borderColor:
-                        "rgba(255,255,255,0.07)",
-                    }}
-                  >
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-white/25">
-                      Driver message
-                    </p>
-
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-white/65">
-                      {job.winningBid
-                        .message ||
-                        "No message provided."}
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-white/35">
-                  No accepted bid recorded.
-                </p>
-              )}
-            </div>
-          </section>
-
-          {/* STRIPE */}
-          <section className="mt-7 sm:mt-8">
-            <h3 className="text-lg font-black">
-              Stripe Payment
-            </h3>
-
-            <div
-              className="mt-3 grid gap-5 rounded-2xl border p-4 sm:mt-4 sm:grid-cols-2 sm:p-5"
-              style={{
-                borderColor:
-                  "rgba(255,255,255,0.08)",
-                background: SECTION,
-              }}
-            >
-              <Detail
-                label="Payment status"
-                value={job.payment_status}
-              />
-
-              <Detail
-                label="Checkout session"
-                value={
-                  job.stripe_checkout_session_id
-                }
-              />
-
-              <Detail
-                label="Payment intent"
-                value={
-                  job.stripe_payment_intent_id
-                }
-              />
-            </div>
-          </section>
-        </div>
-      </div>
     </div>
   );
 }
@@ -1346,7 +1953,7 @@ function FilterButton({
     <button
       type="button"
       onClick={onClick}
-      className="min-h-[44px] shrink-0 rounded-xl border px-4 text-xs font-black transition active:scale-[0.98] sm:text-sm"
+      className="min-h-[44px] shrink-0 rounded-xl border px-4 text-xs font-black transition sm:text-sm"
       style={{
         borderColor: active
           ? `${GREEN}60`
@@ -1373,7 +1980,8 @@ function StatusBadge({
     | undefined;
 }) {
   const value =
-    normalise(status) || "unknown";
+    normalise(status) ||
+    "unknown";
 
   let background =
     "rgba(255,255,255,0.05)";
@@ -1441,7 +2049,8 @@ function JourneyBadge({
     | undefined;
 }) {
   const value =
-    normalise(status) || "not started";
+    normalise(status) ||
+    "not started";
 
   let background =
     "rgba(255,255,255,0.05)";
@@ -1458,7 +2067,9 @@ function JourneyBadge({
       "rgba(59,130,246,0.25)";
   }
 
-  if (value === "on_the_way") {
+  if (
+    value === "on_the_way"
+  ) {
     background =
       "rgba(234,179,8,0.10)";
     color = "#fde68a";
@@ -1467,8 +2078,10 @@ function JourneyBadge({
   }
 
   if (
-    value === "in_progress" ||
-    value === "at_location"
+    value ===
+      "in_progress" ||
+    value ===
+      "at_location"
   ) {
     background =
       "rgba(168,85,247,0.10)";
@@ -1506,9 +2119,11 @@ function PaymentStatus({
     | undefined;
 }) {
   const value =
-    normalise(status) || "unknown";
+    normalise(status) ||
+    "unknown";
 
-  const paid = value === "paid";
+  const paid =
+    value === "paid";
 
   return (
     <span
@@ -1564,7 +2179,7 @@ function DetailSection({
       </h3>
 
       <div
-        className="mt-3 grid grid-cols-2 gap-5 rounded-2xl border p-4 sm:mt-4 sm:grid-cols-2 sm:p-5"
+        className="mt-3 grid grid-cols-2 gap-5 rounded-2xl border p-4 sm:mt-4 sm:p-5"
         style={{
           borderColor:
             "rgba(255,255,255,0.08)",
@@ -1596,7 +2211,8 @@ function Detail({
 
       <p className="mt-1 break-all text-sm font-bold leading-5 text-white/65">
         {value === null ||
-        value === undefined ||
+        value ===
+          undefined ||
         value === ""
           ? "Not provided"
           : String(value)}
@@ -1644,7 +2260,8 @@ function EmptyState() {
       <div
         className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-black"
         style={{
-          background: `${GREEN}12`,
+          background:
+            `${GREEN}12`,
           color: GREEN,
         }}
       >
@@ -1656,11 +2273,16 @@ function EmptyState() {
       </h3>
 
       <p className="mt-2 text-sm text-white/35">
-        Try changing your filter or search.
+        Try changing your
+        filter or search.
       </p>
     </div>
   );
 }
+
+/* ========================================================= */
+/* HELPERS */
+/* ========================================================= */
 
 function normalise(
   value:
@@ -1669,7 +2291,8 @@ function normalise(
     | undefined,
 ) {
   return (
-    value?.trim().toLowerCase() || ""
+    value?.trim().toLowerCase() ||
+    ""
   );
 }
 
@@ -1680,12 +2303,15 @@ function formatStatus(
     | undefined,
 ) {
   const safe =
-    normalise(value) || "Unknown";
+    normalise(value) ||
+    "Unknown";
 
   return safe
     .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) =>
-      letter.toUpperCase(),
+    .replace(
+      /\b\w/g,
+      (letter) =>
+        letter.toUpperCase(),
     );
 }
 
@@ -1698,12 +2324,16 @@ function formatMoney(
   if (
     value === null ||
     value === undefined ||
-    Number.isNaN(Number(value))
+    Number.isNaN(
+      Number(value),
+    )
   ) {
     return "0.00";
   }
 
-  return Number(value).toFixed(2);
+  return Number(value).toFixed(
+    2,
+  );
 }
 
 function formatDate(
@@ -1716,9 +2346,14 @@ function formatDate(
     return "Not provided";
   }
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return "Invalid date";
   }
 
@@ -1742,9 +2377,14 @@ function formatDateTime(
     return "Not provided";
   }
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return "Invalid date";
   }
 
@@ -1775,7 +2415,8 @@ function formatTime(
     return "Not specified";
   }
 
-  const numeric = Number(value);
+  const numeric =
+    Number(value);
 
   if (numeric === 8) {
     return "Morning";
@@ -1793,10 +2434,9 @@ function formatTime(
     numeric >= 0 &&
     numeric <= 23
   ) {
-    return `${String(numeric).padStart(
-      2,
-      "0",
-    )}:00`;
+    return `${String(
+      numeric,
+    ).padStart(2, "0")}:00`;
   }
 
   return String(value);
