@@ -418,8 +418,18 @@ export async function POST(request: Request) {
     // CREATE ACCOUNT
     // --------------------------------------------------
 
+    /*
+     * Use the production URL directly and encode the
+     * nested /driver/login path.
+     *
+     * This avoids Safari/iPhone rejecting the redirect
+     * URL with:
+     *
+     * "The string did not match the expected pattern."
+     */
+
     const emailRedirectTo =
-      `${SITE_URL}/auth/confirm?next=/driver/login`;
+      "https://www.rapidclearsolutions.co.uk/auth/confirm?next=%2Fdriver%2Flogin";
 
     const {
       data: signupData,
