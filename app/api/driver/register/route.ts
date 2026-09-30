@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const supabasePublishableKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
@@ -14,12 +15,19 @@ const supabaseServiceRoleKey =
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
-  "https://rapidclearsolutions.co.uk";
+  "https://www.rapidclearsolutions.co.uk";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE =
+  10 * 1024 * 1024;
+
+const DRIVER_DOCUMENT_BUCKET =
+  "driver-documents";
 
 function getAdminClient() {
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
+  if (
+    !supabaseUrl ||
+    !supabaseServiceRoleKey
+  ) {
     throw new Error(
       "Supabase admin environment variables are missing."
     );
@@ -38,7 +46,10 @@ function getAdminClient() {
 }
 
 function getPublicClient() {
-  if (!supabaseUrl || !supabasePublishableKey) {
+  if (
+    !supabaseUrl ||
+    !supabasePublishableKey
+  ) {
     throw new Error(
       "Supabase public environment variables are missing."
     );
@@ -86,16 +97,24 @@ function validateFile(
 }
 
 async function uploadFile(
-  admin: ReturnType<typeof getAdminClient>,
+  admin: ReturnType<
+    typeof getAdminClient
+  >,
   file: File,
   userId: string,
   folder: string
 ) {
   const extension =
-    file.name.split(".").pop()?.toLowerCase() || "file";
+    file.name
+      .split(".")
+      .pop()
+      ?.toLowerCase() || "file";
 
   const safeExtension =
-    extension.replace(/[^a-z0-9]/g, "") || "file";
+    extension.replace(
+      /[^a-z0-9]/g,
+      ""
+    ) || "file";
 
   const fileName =
     `${crypto.randomUUID()}.${safeExtension}`;
@@ -103,14 +122,24 @@ async function uploadFile(
   const filePath =
     `${userId}/${folder}/${fileName}`;
 
-  const { error } = await admin.storage
-    .from("driver-documents")
-    .upload(filePath, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType:
-        file.type || "application/octet-stream",
-    });
+  const {
+    error,
+  } = await admin.storage
+    .from(
+      DRIVER_DOCUMENT_BUCKET
+    )
+    .upload(
+      filePath,
+      file,
+      {
+        cacheControl:
+          "3600",
+        upsert: false,
+        contentType:
+          file.type ||
+          "application/octet-stream",
+      }
+    );
 
   if (error) {
     throw new Error(
@@ -124,16 +153,27 @@ async function uploadFile(
   return filePath;
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
   let admin:
-    | ReturnType<typeof getAdminClient>
+    | ReturnType<
+        typeof getAdminClient
+      >
     | null = null;
 
-  let createdUserId: string | null = null;
+  let createdUserId:
+    | string
+    | null = null;
 
-  const uploadedPaths: string[] = [];
+  const uploadedPaths: string[] =
+    [];
 
   try {
+    // --------------------------------------------------
+    // ENVIRONMENT
+    // --------------------------------------------------
+
     if (
       !supabaseUrl ||
       !supabasePublishableKey ||
@@ -148,96 +188,155 @@ export async function POST(request: Request) {
           error:
             "RCS is not configured correctly. Please contact support.",
         },
-        { status: 500 }
+        {
+          status: 500,
+        }
       );
     }
 
-    const formData = await request.formData();
+    // --------------------------------------------------
+    // FORM DATA
+    // --------------------------------------------------
+
+    const formData =
+      await request.formData();
 
     // --------------------------------------------------
     // PERSONAL DETAILS
     // --------------------------------------------------
 
-    const fullName = cleanText(
-      formData.get("fullName")
-    );
+    const fullName =
+      cleanText(
+        formData.get(
+          "fullName"
+        )
+      );
 
-    const email = cleanText(
-      formData.get("email")
-    ).toLowerCase();
+    const email =
+      cleanText(
+        formData.get(
+          "email"
+        )
+      ).toLowerCase();
 
-    const phone = cleanText(
-      formData.get("phone")
-    );
+    const phone =
+      cleanText(
+        formData.get(
+          "phone"
+        )
+      );
 
-    const address = cleanText(
-      formData.get("address")
-    );
+    const address =
+      cleanText(
+        formData.get(
+          "address"
+        )
+      );
 
-    const postcode = cleanText(
-      formData.get("postcode")
-    ).toUpperCase();
+    const postcode =
+      cleanText(
+        formData.get(
+          "postcode"
+        )
+      ).toUpperCase();
 
     // --------------------------------------------------
-    // WASTE CARRIER LICENCE
+    // WASTE LICENCE
     // --------------------------------------------------
 
-    const wasteCarrierNumber = cleanText(
-      formData.get("wasteCarrierNumber")
-    );
+    const wasteCarrierNumber =
+      cleanText(
+        formData.get(
+          "wasteCarrierNumber"
+        )
+      );
 
-    const wasteCarrierType = cleanText(
-      formData.get("wasteCarrierType")
-    );
+    const wasteCarrierType =
+      cleanText(
+        formData.get(
+          "wasteCarrierType"
+        )
+      );
 
-    const wasteCarrierExpiry = cleanText(
-      formData.get("wasteCarrierExpiry")
-    );
+    const wasteCarrierExpiry =
+      cleanText(
+        formData.get(
+          "wasteCarrierExpiry"
+        )
+      );
 
     // --------------------------------------------------
     // VEHICLE
     // --------------------------------------------------
 
-    const vehicleType = cleanText(
-      formData.get("vehicleType")
-    );
+    const vehicleType =
+      cleanText(
+        formData.get(
+          "vehicleType"
+        )
+      );
 
-    const vehicleRegistration = cleanText(
-      formData.get("vehicleRegistration")
-    ).toUpperCase();
+    const vehicleRegistration =
+      cleanText(
+        formData.get(
+          "vehicleRegistration"
+        )
+      ).toUpperCase();
 
-    const vehicleMake = cleanText(
-      formData.get("vehicleMake")
-    );
+    const vehicleMake =
+      cleanText(
+        formData.get(
+          "vehicleMake"
+        )
+      );
 
-    const vehicleModel = cleanText(
-      formData.get("vehicleModel")
-    );
+    const vehicleModel =
+      cleanText(
+        formData.get(
+          "vehicleModel"
+        )
+      );
 
-    const vehicleCapacity = cleanText(
-      formData.get("vehicleCapacity")
-    );
+    const vehicleCapacity =
+      cleanText(
+        formData.get(
+          "vehicleCapacity"
+        )
+      );
 
     // --------------------------------------------------
     // PASSWORD
     // --------------------------------------------------
 
-    const password = formData.get("password");
+    const password =
+      formData.get(
+        "password"
+      );
 
     // --------------------------------------------------
     // FILES
     // --------------------------------------------------
 
+    const wasteLicenceEntry =
+      formData.get(
+        "wasteLicenceFile"
+      );
+
     const wasteLicenceFile =
-      formData.get("wasteLicenceFile") instanceof File
-        ? (formData.get(
-            "wasteLicenceFile"
-          ) as File)
+      wasteLicenceEntry instanceof
+      File
+        ? wasteLicenceEntry
         : null;
 
+    const vanPhotoEntry =
+      formData.get(
+        "vanPhoto"
+      );
+
     const vanPhoto =
-      formData.get("vanPhoto") instanceof File
-        ? (formData.get("vanPhoto") as File)
+      vanPhotoEntry instanceof
+      File
+        ? vanPhotoEntry
         : null;
 
     // --------------------------------------------------
@@ -285,7 +384,8 @@ export async function POST(request: Request) {
     }
 
     if (
-      typeof password !== "string" ||
+      typeof password !==
+        "string" ||
       password.length < 6
     ) {
       throw new Error(
@@ -355,26 +455,35 @@ export async function POST(request: Request) {
     // CLIENTS
     // --------------------------------------------------
 
-    admin = getAdminClient();
+    admin =
+      getAdminClient();
 
-    const publicClient = getPublicClient();
+    const publicClient =
+      getPublicClient();
 
     // --------------------------------------------------
     // CHECK EXISTING ACCOUNT
     // --------------------------------------------------
 
     let page = 1;
-    let existingUser = null;
+    let existingUser:
+      | {
+          id: string;
+          email?: string;
+        }
+      | null = null;
 
     while (true) {
       const {
         data,
         error,
       } =
-        await admin.auth.admin.listUsers({
-          page,
-          perPage: 1000,
-        });
+        await admin.auth.admin.listUsers(
+          {
+            page,
+            perPage: 1000,
+          }
+        );
 
       if (error) {
         throw new Error(
@@ -385,7 +494,8 @@ export async function POST(request: Request) {
       existingUser =
         data.users.find(
           (user) =>
-            user.email?.toLowerCase() ===
+            user.email
+              ?.toLowerCase() ===
             email
         ) || null;
 
@@ -395,7 +505,8 @@ export async function POST(request: Request) {
 
       if (
         !data.users ||
-        data.users.length < 1000
+        data.users.length <
+          1000
       ) {
         break;
       }
@@ -408,45 +519,70 @@ export async function POST(request: Request) {
         {
           error:
             "A driver account already exists with this email address. Please use Driver Login.",
-          code: "ACCOUNT_EXISTS",
+          code:
+            "ACCOUNT_EXISTS",
         },
-        { status: 409 }
+        {
+          status: 409,
+        }
       );
     }
 
     // --------------------------------------------------
-    // CREATE ACCOUNT
+    // CREATE SUPABASE AUTH ACCOUNT
     // --------------------------------------------------
 
-    /*
-     * Use the production URL directly and encode the
-     * nested /driver/login path.
-     *
-     * This avoids Safari/iPhone rejecting the redirect
-     * URL with:
-     *
-     * "The string did not match the expected pattern."
-     */
-
     const emailRedirectTo =
-      "https://www.rapidclearsolutions.co.uk/auth/confirm?next=%2Fdriver%2Flogin";
+      `${SITE_URL}/auth/confirm?next=/driver/login`;
 
     const {
       data: signupData,
       error: signupError,
     } =
-      await publicClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            phone,
-            account_type: "driver",
+      await publicClient.auth.signUp(
+        {
+          email,
+          password,
+          options: {
+            data: {
+              full_name:
+                fullName,
+
+              phone:
+                phone,
+
+              account_type:
+                "driver",
+
+              waste_carrier_number:
+                wasteCarrierNumber,
+
+              waste_carrier_type:
+                wasteCarrierType,
+
+              waste_carrier_expiry:
+                wasteCarrierExpiry,
+
+              vehicle_type:
+                vehicleType,
+
+              vehicle_registration:
+                vehicleRegistration,
+
+              vehicle_make:
+                vehicleMake,
+
+              vehicle_model:
+                vehicleModel,
+
+              vehicle_size:
+                vehicleCapacity,
+            },
+
+            emailRedirectTo,
           },
-          emailRedirectTo,
-        },
-      });
+        }
+      );
 
     if (signupError) {
       console.error(
@@ -460,7 +596,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = signupData.user;
+    const user =
+      signupData.user;
 
     if (!user) {
       throw new Error(
@@ -468,10 +605,11 @@ export async function POST(request: Request) {
       );
     }
 
-    createdUserId = user.id;
+    createdUserId =
+      user.id;
 
     // --------------------------------------------------
-    // UPLOAD WASTE CARRIER LICENCE
+    // UPLOAD WASTE LICENCE
     // --------------------------------------------------
 
     const wasteLicencePath =
@@ -507,24 +645,27 @@ export async function POST(request: Request) {
     // --------------------------------------------------
 
     const {
-      error: driverError,
+      error:
+        driverError,
     } = await admin
       .from("drivers")
       .insert({
         id: user.id,
 
-        full_name: fullName,
-        email,
-        phone,
-        address,
-        postcode,
+        full_name:
+          fullName,
 
-        // These remain NULL because they are
-        // no longer collected during signup.
-        company_name: null,
-        trading_name: null,
-        company_number: null,
-        years_trading: null,
+        email:
+          email,
+
+        phone:
+          phone,
+
+        address:
+          address,
+
+        postcode:
+          postcode,
 
         waste_carrier_number:
           wasteCarrierNumber,
@@ -537,11 +678,6 @@ export async function POST(request: Request) {
 
         waste_licence_url:
           wasteLicencePath,
-
-        insurance_provider: null,
-        insurance_policy_number: null,
-        insurance_expiry: null,
-        insurance_certificate_url: null,
 
         vehicle_type:
           vehicleType,
@@ -561,7 +697,8 @@ export async function POST(request: Request) {
         van_photo_url:
           vanPhotoPath,
 
-        approved: false,
+        approved:
+          false,
 
         application_status:
           "pending",
@@ -584,13 +721,21 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        success: true,
-        userId: user.id,
-        email,
+        success:
+          true,
+
+        userId:
+          user.id,
+
+        email:
+          email,
+
         emailConfirmationRequired:
           !signupData.session,
       },
-      { status: 201 }
+      {
+        status: 201,
+      }
     );
   } catch (error) {
     console.error(
@@ -599,18 +744,25 @@ export async function POST(request: Request) {
     );
 
     // --------------------------------------------------
-    // CLEANUP FILES
+    // REMOVE UPLOADED FILES
     // --------------------------------------------------
 
     if (
       admin &&
-      uploadedPaths.length > 0
+      uploadedPaths.length >
+        0
     ) {
       try {
         await admin.storage
-          .from("driver-documents")
-          .remove(uploadedPaths);
-      } catch (cleanupError) {
+          .from(
+            DRIVER_DOCUMENT_BUCKET
+          )
+          .remove(
+            uploadedPaths
+          );
+      } catch (
+        cleanupError
+      ) {
         console.error(
           "Driver file cleanup error:",
           cleanupError
@@ -619,7 +771,7 @@ export async function POST(request: Request) {
     }
 
     // --------------------------------------------------
-    // CLEANUP ACCOUNT
+    // REMOVE CREATED USER
     // --------------------------------------------------
 
     if (
@@ -630,7 +782,9 @@ export async function POST(request: Request) {
         await admin.auth.admin.deleteUser(
           createdUserId
         );
-      } catch (cleanupError) {
+      } catch (
+        cleanupError
+      ) {
         console.error(
           "Driver account cleanup error:",
           cleanupError
@@ -641,11 +795,14 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          error instanceof
+          Error
             ? error.message
             : "Something went wrong submitting your driver application.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
