@@ -1298,16 +1298,36 @@ export default function PostJobPage() {
           </p>
 
           <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">
-            {isLoggedIn
-              ? "Post a new waste removal job."
-              : "Get a quote for your waste removal."}
+            Get your waste removed.
           </h1>
 
           <p className="mt-4 text-base leading-7 text-white/60 sm:text-lg">
-            Tell us what needs removing and
-            approved RCS drivers can review
-            your job and submit their price.
+            Tell us what needs clearing, add a few photos and choose your collection date.
+            Local RCS drivers can then review your job and send you their prices.
           </p>
+
+          <div className="mt-7 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              ["1", "Job details"],
+              ["2", "Collection date"],
+              ["3", "Photos & details"],
+              ["4", "Your account"],
+            ].map(([number, label]) => (
+              <div
+                key={number}
+                className="rounded-xl border border-white/10 bg-[#0a0e0a] px-3 py-3"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#79c51c] text-xs font-black text-[#050705]">
+                    {number}
+                  </span>
+                  <span className="text-xs font-black text-white/70 sm:text-sm">
+                    {label}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {checkingSession && (
@@ -1386,7 +1406,7 @@ export default function PostJobPage() {
           <section className="rounded-[2rem] border border-white/10 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
             <SectionHeading
               number="01"
-              title="What needs removing?"
+              title="What are you getting rid of?"
               description="Choose the option that best describes your job."
             />
 
@@ -1413,8 +1433,8 @@ export default function PostJobPage() {
           <section className="rounded-[2rem] border border-white/10 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
             <SectionHeading
               number="02"
-              title="Where are we collecting from?"
-              description="Give the driver everything they need to find you."
+              title="Where is it?"
+              description="Enter the collection address so local drivers can price the job."
             />
 
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
@@ -1458,7 +1478,7 @@ export default function PostJobPage() {
             <SectionHeading
               number="03"
               title="When should we collect it?"
-              description="Choose a date, then tell us what time of day works best."
+              description="Choose your collection date and preferred collection time."
             />
 
             <div className="mt-7">
@@ -1638,7 +1658,7 @@ export default function PostJobPage() {
           <section className="rounded-[2rem] border border-white/10 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
             <SectionHeading
               number="04"
-              title="Help the driver understand the job"
+              title="A few job details"
               description="Give us your best estimate."
             />
 
@@ -1698,7 +1718,7 @@ export default function PostJobPage() {
           <section className="rounded-[2rem] border border-white/10 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
             <SectionHeading
               number="05"
-              title="Show us what needs taking"
+              title="Show us the waste"
               description="Photos help drivers price your job accurately."
             />
 
@@ -1765,8 +1785,8 @@ export default function PostJobPage() {
           <section className="rounded-[2rem] border border-white/10 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
             <SectionHeading
               number="06"
-              title="Tell us more about the job"
-              description="Anything else the driver should know?"
+              title="Anything else the driver should know?"
+              description="Add a description and any useful access information."
             />
 
             <div className="mt-6 space-y-5">
@@ -1808,20 +1828,17 @@ export default function PostJobPage() {
               <section className="rounded-[2rem] border border-[#79c51c]/20 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
                 <SectionHeading
                   number="07"
-                  title="Create your RCS customer account"
-                  description="Your account lets you track your job, view driver quotes and manage your collection."
+                  title="Your details"
+                  description="Create your RCS customer account so you can track the job and compare driver quotes."
                 />
 
                 <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-4">
                   <p className="text-sm font-black text-[#bff58a]">
-                    No account needed to start your quote
+                    Create your RCS customer account
                   </p>
 
                   <p className="mt-1 text-sm leading-6 text-white/50">
-                    We only ask for these details at
-                    the end so we can create your
-                    account and keep your job and
-                    driver quotes together.
+                    Your account keeps your job, driver quotes and collection details together.
                   </p>
                 </div>
 
@@ -1936,8 +1953,8 @@ export default function PostJobPage() {
               <section className="rounded-[2rem] border border-[#79c51c]/20 bg-[#0a0e0a] p-5 shadow-2xl sm:p-8">
                 <SectionHeading
                   number="07"
-                  title="Your RCS customer account"
-                  description="This job will be added to your existing account."
+                  title="Your account"
+                  description="This job will be added to your existing RCS customer account."
                 />
 
                 <div className="mt-6 rounded-2xl border border-[#79c51c]/20 bg-[#79c51c]/5 p-5">
@@ -1988,7 +2005,7 @@ export default function PostJobPage() {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <SummaryItem
-                label="Collection"
+                label="Collection date"
                 value={
                   collectionDate
                     ? new Date(
