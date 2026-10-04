@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -7,49 +8,41 @@ import RCSHeader from "@/app/components/RCSHeader";
 
 const services = [
   {
-    number: "01",
     title: "Rubbish Removal",
     image: "/general-rubbish.jpg",
     href: "/services/rubbish-removal",
   },
   {
-    number: "02",
     title: "House Clearance",
     image: "/house-clearance.jpg",
     href: "/services/house-clearance",
   },
   {
-    number: "03",
     title: "Garden Waste",
     image: "/garden-waste.jpg",
     href: "/services/garden-waste-removal",
   },
   {
-    number: "04",
     title: "Furniture Removal",
     image: "/furniture-removal.jpg",
     href: "/services/furniture-removal",
   },
   {
-    number: "05",
     title: "Builders Waste",
     image: "/builders-waste.jpg",
     href: "/services/builders-waste",
   },
   {
-    number: "06",
     title: "Shed & Garage",
     image: "/shed-garage.jpg",
     href: "/customer/post-job",
   },
   {
-    number: "07",
     title: "Scrap Collection",
     image: "/scrap-collection.jpg",
     href: "/customer/post-job",
   },
   {
-    number: "08",
     title: "Commercial Waste",
     image: "/commercial-waste.jpg",
     href: "/customer/post-job",
@@ -67,41 +60,53 @@ const locations = [
 
 const faqs = [
   [
-    "How do I get a waste removal quote?",
-    "Post your waste-removal job through RCS, add your postcode, describe what needs removing and upload photos. Your job can then be made available to suitable RCS drivers who can review it and submit quotes.",
+    "How does RCS work?",
+    "Post your waste-removal job, add your postcode and photos, and explain what needs removing. Suitable RCS drivers can then review the job and submit their own quote. You can review your options and choose how you want to proceed.",
   ],
   [
-    "Do I need an account before posting a job?",
-    "No. You can start by posting your waste-removal job. Your customer account can then be created as part of the process so you can manage your quotes and collection online.",
-  ],
-  [
-    "What type of waste can I post?",
-    "RCS can be used for common collections including household rubbish, garden waste, furniture, house clearances, builders waste, shed and garage clearances and other suitable waste-removal jobs.",
+    "Do I need an account before posting?",
+    "No. You can start by posting your job. Your customer account can be created during the process so you can manage your quotes and collection online.",
   ],
   [
     "Can I upload photos?",
-    "Yes. Photos can be added to your job to help drivers understand the amount and type of waste before deciding whether to quote.",
+    "Yes. Photos are recommended because they help drivers understand the type and amount of waste before deciding whether to quote.",
+  ],
+  [
+    "What can I post on RCS?",
+    "Common jobs include household rubbish, garden waste, furniture, house clearances, builders waste, shed and garage clearances, scrap and other suitable waste-removal jobs.",
   ],
   [
     "Where does RCS operate?",
-    "RCS is building its driver network across Birmingham and the West Midlands. Availability depends on the postcode, collection requirements and the drivers available in that area.",
+    "RCS is building its driver network across Birmingham and the West Midlands. Availability depends on the postcode, job requirements and drivers available in that area.",
   ],
   [
-    "How does the marketplace work for drivers?",
-    "Drivers can review suitable jobs available through the RCS Marketplace and choose which jobs they want to quote for.",
+    "How does it work for drivers?",
+    "Drivers can create an account, review suitable marketplace jobs and choose which jobs they want to quote for. Drivers submit their own prices and decide which work they want to take on.",
   ],
 ];
 
+function Arrow() {
+  return <span aria-hidden="true">→</span>;
+}
+
+function Check() {
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#79c51c]/15 text-[#79c51c]">
+      ✓
+    </span>
+  );
+}
+
 export default function HomePage() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050705] pb-20 text-white lg:pb-0">
-      {/* SHARED HEADER */}
       <RCSHeader />
 
-      {/* HERO */}
+      {/* =========================================================
+          HERO
+      ========================================================= */}
       <section className="relative overflow-hidden border-b border-white/[0.07]">
         <div className="absolute inset-0">
           <Image
@@ -110,17 +115,20 @@ export default function HomePage() {
             fill
             priority
             sizes="100vw"
-            className="object-cover object-[62%_center] sm:object-center"
+            className="object-cover object-[68%_center] sm:object-center"
           />
 
-          <div className="absolute inset-0 bg-[#050705]/75" />
+          <div className="absolute inset-0 bg-[#050705]/78" />
+
           <div className="absolute inset-0 bg-gradient-to-r from-[#050705] via-[#050705]/90 to-[#050705]/35" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050705] via-transparent to-[#050705]/20" />
+
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050705] via-transparent to-[#050705]/25" />
         </div>
 
-        <div className="relative mx-auto flex min-h-[650px] max-w-7xl items-end px-5 pb-12 pt-20 sm:min-h-[720px] sm:items-center sm:px-6 sm:py-20 lg:px-8">
-          <div className="w-full max-w-4xl">
-            <div className="mb-5 flex items-center gap-2.5">
+        <div className="relative mx-auto flex min-h-[700px] max-w-7xl items-center px-5 py-24 sm:px-6 lg:min-h-[760px] lg:px-8">
+          <div className="max-w-4xl">
+
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#79c51c]/25 bg-[#79c51c]/10 px-4 py-2">
               <span className="h-2 w-2 rounded-full bg-[#79c51c]" />
 
               <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#79c51c]">
@@ -128,508 +136,684 @@ export default function HomePage() {
               </span>
             </div>
 
-            <h1 className="max-w-4xl text-[48px] font-black uppercase leading-[0.88] tracking-[-0.055em] sm:text-7xl md:text-8xl lg:text-[96px]">
-              Need waste
-              <span className="block text-[#79c51c]">removed?</span>
+            <h1 className="max-w-4xl text-[50px] font-black uppercase leading-[0.88] tracking-[-0.055em] sm:text-7xl md:text-8xl lg:text-[96px]">
+              Waste removal.
+              <span className="block text-[#79c51c]">
+                The smarter way.
+              </span>
             </h1>
 
-            <p className="mt-6 max-w-2xl text-base leading-7 text-gray-200 sm:mt-8 sm:text-xl sm:leading-8">
-              Post your waste-removal job, upload photos and receive quotes
-              from RCS drivers in your area.
+            <p className="mt-7 max-w-2xl text-base leading-7 text-gray-200 sm:text-xl sm:leading-8">
+              RCS connects customers who need waste removed with local drivers
+              looking for suitable jobs. Post your job, upload photos and
+              receive quotes through the RCS Marketplace.
             </p>
 
-            <div className="mt-8 grid gap-3 sm:flex">
+            <div className="mt-9 grid gap-3 sm:flex">
               <Link
                 href="/customer/post-job"
-                className="flex min-h-[58px] items-center justify-center rounded-2xl bg-[#79c51c] px-8 text-sm font-black text-black shadow-[0_0_35px_rgba(121,197,28,0.18)] transition hover:bg-[#91db32]"
+                className="flex min-h-[60px] items-center justify-center rounded-2xl bg-[#79c51c] px-8 text-sm font-black text-black shadow-[0_0_40px_rgba(121,197,28,0.18)] transition hover:bg-[#91db32]"
               >
-                POST YOUR WASTE JOB →
+                POST YOUR WASTE JOB <Arrow />
               </Link>
 
               <Link
                 href="/driver/register"
-                className="flex min-h-[58px] items-center justify-center rounded-2xl border border-white/20 bg-black/30 px-8 text-sm font-black backdrop-blur-sm transition hover:border-[#79c51c] hover:text-[#79c51c]"
+                className="flex min-h-[60px] items-center justify-center rounded-2xl border border-white/20 bg-black/35 px-8 text-sm font-black backdrop-blur-sm transition hover:border-[#79c51c] hover:text-[#79c51c]"
               >
-                I'M A DRIVER →
+                I'M A DRIVER <Arrow />
               </Link>
             </div>
 
-            <div className="hidden sm:grid mt-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+            <div className="mt-7 flex flex-wrap gap-2">
               {[
                 "Post online",
                 "Upload photos",
                 "Receive quotes",
                 "Manage online",
               ].map((item) => (
-                <div
+                <span
                   key={item}
-                  className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-gray-300 backdrop-blur-sm sm:text-xs"
+                  className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-300 backdrop-blur-sm sm:text-xs"
                 >
                   {item}
-                </div>
+                </span>
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* LOCAL AVAILABILITY */}
-      <section className="hidden lg:block border-b border-white/[0.07] bg-[#080b08] py-10 sm:py-14">
+      {/* =========================================================
+          WHAT IS RCS
+      ========================================================= */}
+      <section className="border-b border-white/[0.07] bg-[#070a07] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="rounded-3xl border border-white/[0.08] bg-[#0a0e0a] p-5 sm:p-7">
-            <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                  Waste removal near you
-                </p>
+          <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
 
-                <h2 className="mt-2 text-2xl font-black uppercase leading-tight sm:text-3xl">
-                  Check your local area
-                </h2>
-
-                <p className="mt-2 max-w-xl text-sm leading-6 text-gray-500">
-                  Enter your postcode to see whether RCS can help with your
-                  waste-removal job.
-                </p>
-              </div>
-
-              <div className="flex w-full gap-2 sm:max-w-md">
-                <label htmlFor="homepage-postcode" className="sr-only">
-                  Postcode
-                </label>
-
-                <input
-                  id="homepage-postcode"
-                  type="text"
-                  inputMode="text"
-                  autoComplete="postal-code"
-                  placeholder="Enter postcode"
-                  className="min-h-[52px] min-w-0 flex-1 rounded-xl border border-white/[0.1] bg-[#050705] px-4 text-sm font-bold text-white outline-none placeholder:text-gray-600 focus:border-[#79c51c]"
-                />
-
-                <Link
-                  href="/customer/post-job"
-                  className="flex min-h-[52px] shrink-0 items-center justify-center rounded-xl bg-[#79c51c] px-5 text-xs font-black text-black transition hover:bg-[#91db32]"
-                >
-                  CHECK
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* LIVE MARKETPLACE ACTIVITY */}
-      <section className="hidden lg:block bg-[#050705] py-10 sm:py-14">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                RCS Live
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-[#79c51c]">
+                What is RCS?
               </p>
 
-              <h2 className="mt-2 text-2xl font-black uppercase sm:text-3xl">
-                Marketplace activity
-              </h2>
-            </div>
-
-            <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-gray-500">
-              <span className="h-2 w-2 rounded-full bg-[#79c51c]" />
-              Live
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <LiveStat value="10" label="Drivers online" />
-            <LiveStat value="20" label="Jobs being quoted" />
-            <LiveStat value="5" label="New jobs today" />
-          </div>
-
-          <p className="mt-3 text-[10px] text-gray-700">
-            Current figures are temporary demo numbers and will be connected
-            to live RCS platform data.
-          </p>
-        </div>
-      </section>
-
-      {/* JOBS BEING QUOTED */}
-      <section className="hidden lg:block border-y border-white/[0.07] bg-[#080b08] py-12 sm:py-16">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                Jobs being quoted
-              </p>
-
-              <h2 className="mt-2 text-3xl font-black uppercase leading-[0.95] sm:text-5xl">
-                See what customers are posting.
-              </h2>
-            </div>
-
-            <Link
-              href="/customer/post-job"
-              className="hidden text-xs font-black uppercase tracking-wider text-[#79c51c] sm:block"
-            >
-              POST YOUR JOB →
-            </Link>
-          </div>
-
-          <div className="-mx-5 mt-7 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
-            <JobActivityCard
-              location="Birmingham"
-              type="House clearance"
-              details="Medium load"
-              quotes="3 quotes"
-            />
-
-            <JobActivityCard
-              location="Wolverhampton"
-              type="Garden waste"
-              details="Large load"
-              quotes="2 quotes"
-            />
-
-            <JobActivityCard
-              location="Walsall"
-              type="Furniture removal"
-              details="Sofa + furniture"
-              quotes="4 quotes"
-            />
-          </div>
-
-          <p className="mt-3 text-[10px] text-gray-700">
-            These are temporary example cards. They can be connected to live
-            customer jobs once the marketplace feed is enabled.
-          </p>
-
-          <Link
-            href="/customer/post-job"
-            className="mt-5 flex min-h-[52px] items-center justify-center rounded-xl border border-[#79c51c] text-xs font-black text-[#79c51c] sm:hidden"
-          >
-            POST YOUR WASTE JOB →
-          </Link>
-        </div>
-      </section>
-
-      {/* CUSTOMER / DRIVER SPLIT */}
-      <section className="hidden lg:block bg-[#080b08] py-14 sm:py-20">
-        <div className="mx-auto grid max-w-7xl gap-4 px-5 sm:px-6 lg:grid-cols-2 lg:px-8">
-          <AudienceCard
-            label="For Customers"
-            title="Need waste removed?"
-            text="Post your job once, upload photos and let suitable RCS drivers review the requirements and submit their prices."
-            items={[
-              "Post your job online",
-              "Upload photos",
-              "Receive available quotes",
-              "Manage your collection",
-            ]}
-            href="/customer/post-job"
-            button="POST YOUR WASTE JOB →"
-          />
-
-          <AudienceCard
-            label="For Drivers"
-            title="Got a van?"
-            text="Looking for more work in your local area? Join the RCS driver network and find suitable waste-removal jobs."
-            items={[
-              "Driver accounts free for now",
-              "Find local waste jobs",
-              "Choose which jobs to quote",
-              "Submit your own prices",
-            ]}
-            href="/driver/register"
-            button="JOIN AS A DRIVER →"
-            outline
-          />
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section
-        id="how-it-works"
-        className="border-y border-white/[0.07] bg-[#050705] py-16 sm:py-24"
-      >
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="max-w-2xl">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-              How RCS works
-            </p>
-
-            <h2 className="mt-3 text-4xl font-black uppercase leading-[0.9] sm:text-6xl">
-              Post. Quote. Clear.
-            </h2>
-
-            <p className="mt-5 text-sm leading-7 text-gray-500 sm:text-base">
-              RCS connects customers who need waste removed with drivers
-              looking for suitable work.
-            </p>
-          </div>
-
-          <div className="mt-9 grid gap-3 md:grid-cols-3">
-            <ProcessCard
-              number="01"
-              title="Post"
-              text="Tell us what needs removing, where it is and when you need it collected. Upload photos to show drivers the job."
-            />
-
-            <ProcessCard
-              number="02"
-              title="Get quotes"
-              text="Your job can be made available through the RCS Marketplace where suitable drivers can review it and submit their prices."
-            />
-
-            <ProcessCard
-              number="03"
-              title="Choose"
-              text="Review the available quote information, choose your collection and manage the job through your RCS account."
-            />
-          </div>
-
-          <Link
-            href="/customer/post-job"
-            className="mt-8 flex min-h-[56px] items-center justify-center rounded-2xl bg-[#79c51c] text-sm font-black text-black transition hover:bg-[#91db32] sm:mx-auto sm:max-w-xs"
-          >
-            START YOUR JOB →
-          </Link>
-        </div>
-      </section>
-
-      {/* REAL WORK */}
-      <section className="bg-[#080b08] py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                Real RCS clearances
-              </p>
-
-              <h2 className="mt-3 text-4xl font-black uppercase leading-[0.9] sm:text-6xl">
-                Real jobs.
-                <span className="block text-[#79c51c]">Real results.</span>
-              </h2>
-            </div>
-
-            <p className="max-w-md text-sm leading-6 text-gray-500">
-              See examples of the type of waste-removal work customers use RCS
-              to arrange.
-            </p>
-          </div>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <BeforeAfterCard
-              image="/before-after-garden.png"
-              title="Garden Clearance"
-            />
-
-            <BeforeAfterCard
-              image="/before-after-room.png"
-              title="Room Clearance"
-            />
-
-            <BeforeAfterCard
-              image="/before-after-storage.png"
-              title="Storage Clearance"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* WHY RCS */}
-      <section className="hidden lg:block bg-[#050705] py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="max-w-2xl">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-              Why use RCS?
-            </p>
-
-            <h2 className="mt-3 text-4xl font-black uppercase leading-[0.9] sm:text-6xl">
-              Built around
-              <span className="block text-[#79c51c]">your job.</span>
-            </h2>
-          </div>
-
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {[
-              "Post online",
-              "Upload photos",
-              "Driver quotes",
-              "Online account",
-              "Job management",
-              "Local network",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-5"
-              >
-                <span className="text-xl font-black text-[#79c51c]">✓</span>
-
-                <p className="mt-5 text-sm font-black uppercase leading-tight">
-                  {item}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* MARKETPLACE */}
-      <section className="hidden lg:block border-y border-white/[0.07] bg-[#080b08] py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                More than a waste company
-              </p>
-
-              <h2 className="mt-3 text-4xl font-black uppercase leading-[0.9] sm:text-6xl">
-                RCS is a
-                <span className="block text-[#79c51c]">marketplace.</span>
+              <h2 className="mt-4 text-4xl font-black uppercase leading-[0.95] tracking-tight sm:text-6xl">
+                A marketplace built for{" "}
+                <span className="text-[#79c51c]">
+                  waste removal.
+                </span>
               </h2>
 
-              <p className="mt-6 max-w-xl text-sm leading-7 text-gray-500 sm:text-base">
-                Customers post what they need removed. Drivers can find
-                suitable jobs, review the requirements and submit their own
-                prices.
+              <p className="mt-6 max-w-xl text-base leading-7 text-gray-400">
+                Instead of searching around for a waste company and accepting
+                the first price you get, RCS gives customers a simple way to
+                post what they need removed and put the job in front of
+                suitable drivers.
               </p>
 
               <Link
                 href="/customer/post-job"
-                className="mt-7 inline-flex min-h-[52px] items-center rounded-2xl bg-[#79c51c] px-6 text-sm font-black text-black transition hover:bg-[#91db32]"
+                className="mt-8 inline-flex items-center gap-3 text-sm font-black uppercase text-white transition hover:text-[#79c51c]"
               >
-                POST A JOB →
+                Start a waste job <Arrow />
               </Link>
             </div>
 
-            <div className="space-y-2">
-              <MarketplaceItem
-                number="01"
-                title="Simple for customers"
-                text="Post your job once instead of making multiple enquiries."
-              />
+            <div className="rounded-[2rem] border border-white/[0.08] bg-[#0a0e0a] p-5 sm:p-8">
 
-              <MarketplaceItem
-                number="02"
-                title="Flexible for drivers"
-                text="Review suitable work and decide which jobs you want to quote."
-              />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <FlowBox
+                  label="Customer"
+                  text="Posts the job"
+                />
 
-              <MarketplaceItem
-                number="03"
-                title="Built to grow"
-                text="RCS is designed to grow as more customers and drivers join the platform."
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+                <FlowBox
+                  label="RCS"
+                  text="Marketplace"
+                  active
+                />
 
-      {/* DRIVER SECTION */}
-      <section
-        id="drivers"
-        className="relative overflow-hidden bg-[#050705] py-20 sm:py-28"
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_50%,rgba(121,197,28,0.12),transparent_40%)]" />
-
-        <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-[1fr_0.8fr] lg:items-center">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                For waste removal drivers
-              </p>
-
-              <h2 className="mt-3 text-4xl font-black uppercase leading-[0.9] sm:text-6xl">
-                Got a van?
-                <span className="block text-[#79c51c]">
-                  Want more local work?
-                </span>
-              </h2>
-
-              <p className="mt-6 max-w-xl text-sm leading-7 text-gray-400 sm:text-base">
-                Join the RCS driver network and find waste-removal jobs in your
-                local area. Choose the jobs you want to quote for and submit
-                your own price.
-              </p>
-
-              <div className="mt-7 rounded-2xl border border-[#79c51c]/30 bg-[#0a0e0a] p-5">
-                <p className="text-sm font-black uppercase text-[#79c51c]">
-                  Driver accounts are free for now
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-gray-500">
-                  Driver account pricing may change in the future, so get
-                  signed up while accounts are currently free.
-                </p>
+                <FlowBox
+                  label="Driver"
+                  text="Submits a quote"
+                />
               </div>
 
-              <Link
-                href="/driver/register"
-                className="mt-7 inline-flex min-h-[56px] items-center rounded-2xl bg-[#79c51c] px-7 text-sm font-black text-black transition hover:bg-[#91db32]"
-              >
-                JOIN RCS AS A DRIVER →
-              </Link>
-            </div>
-
-            <div className="rounded-3xl border border-white/[0.08] bg-[#080b08] p-6 sm:p-8">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
-                Why join?
-              </p>
-
-              <div className="mt-6 space-y-4">
+              <div className="mt-5 grid gap-3 sm:grid-cols-4">
                 {[
-                  "Free driver account for now",
-                  "Find jobs in your local area",
-                  "Choose which jobs you want",
-                  "Submit your own price",
-                  "Manage jobs online",
-                ].map((item) => (
+                  ["01", "POST"],
+                  ["02", "QUOTE"],
+                  ["03", "CHOOSE"],
+                  ["04", "CLEAR"],
+                ].map(([number, title]) => (
                   <div
-                    key={item}
-                    className="flex items-center gap-3 border-b border-white/[0.07] pb-4 last:border-0 last:pb-0"
+                    key={number}
+                    className="rounded-2xl border border-white/[0.07] bg-[#050705] p-4"
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#79c51c] text-xs font-black text-black">
-                      ✓
+                    <span className="text-[10px] font-black text-[#79c51c]">
+                      {number}
                     </span>
 
-                    <span className="text-sm font-bold text-gray-300">
-                      {item}
-                    </span>
+                    <p className="mt-2 text-xs font-black tracking-widest">
+                      {title}
+                    </p>
                   </div>
                 ))}
               </div>
+
+              <p className="mt-5 text-sm leading-6 text-gray-500">
+                One simple process from posting a job to arranging your
+                collection.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* REVIEWS */}
-      <section id="reviews" className="bg-[#080b08] py-16 sm:py-24">
+      {/* =========================================================
+          HOW IT WORKS
+      ========================================================= */}
+      <section className="py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
+
+          <SectionIntro
+            eyebrow="How it works"
+            title="Post. Quote. Clear."
+            text="RCS is designed to make the process straightforward. Tell us what needs removing and let the marketplace connect the job with suitable drivers."
+          />
+
+          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+
+            {[
+              [
+                "01",
+                "Post your job",
+                "Add your postcode, details and photos.",
+              ],
+              [
+                "02",
+                "Drivers review",
+                "Suitable drivers can review the job.",
+              ],
+              [
+                "03",
+                "Receive quotes",
+                "Drivers submit their own prices.",
+              ],
+              [
+                "04",
+                "Choose",
+                "Review your options and decide.",
+              ],
+              [
+                "05",
+                "Get it cleared",
+                "Arrange the collection and get the waste gone.",
+              ],
+            ].map(([num, title, text]) => (
+              <div
+                key={num}
+                className="rounded-3xl border border-white/[0.08] bg-[#080b08] p-6 transition hover:-translate-y-1 hover:border-[#79c51c]/30"
+              >
+                <span className="text-xs font-black text-[#79c51c]">
+                  {num}
+                </span>
+
+                <h3 className="mt-6 text-lg font-black uppercase">
+                  {title}
+                </h3>
+
+                <p className="mt-3 text-sm leading-6 text-gray-500">
+                  {text}
+                </p>
+              </div>
+            ))}
+
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          CUSTOMER / DRIVER
+      ========================================================= */}
+      <section className="border-y border-white/[0.07] bg-[#070a07] py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+          <div className="grid gap-5 lg:grid-cols-2">
+
+            <AudienceCard
+              eyebrow="For customers"
+              title="Need something removed?"
+              text="Post the job once and give drivers the information they need to decide whether they want to quote. Keep your job and quotes together online."
+              items={[
+                "Post your job online",
+                "Upload photos",
+                "Receive driver quotes",
+                "Manage your collection online",
+              ]}
+              href="/customer/post-job"
+              button="POST A JOB"
+            />
+
+            <AudienceCard
+              eyebrow="For drivers"
+              title="Got a van? Find local work."
+              text="Join the RCS driver network, see suitable marketplace jobs and choose which ones you want to quote for."
+              items={[
+                "Create a driver account",
+                "Find suitable local jobs",
+                "Choose what you quote for",
+                "Submit your own prices",
+              ]}
+              href="/driver/register"
+              button="JOIN AS A DRIVER"
+            />
+
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          CUSTOMER ACCOUNT / APP
+      ========================================================= */}
+      <section className="py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+          <div className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#090d09]">
+
+            <div className="grid lg:grid-cols-[1fr_0.85fr] lg:items-center">
+
+              <div className="p-7 sm:p-12 lg:p-16">
+
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-[#79c51c]">
+                  Your RCS account
+                </p>
+
+                <h2 className="mt-4 max-w-2xl text-4xl font-black uppercase leading-[0.95] sm:text-6xl">
+                  Everything in one place.
+                </h2>
+
+                <p className="mt-6 max-w-xl text-base leading-7 text-gray-400">
+                  The RCS website explains the service. Your customer or driver
+                  account is where the marketplace work happens — jobs, quotes
+                  and collections are managed online.
+                </p>
+
+                <div className="mt-8 grid gap-3 sm:grid-cols-2">
+
+                  {[
+                    "Post and manage jobs",
+                    "Upload job photos",
+                    "Review quotes",
+                    "Manage collections",
+                    "View your jobs",
+                    "Keep everything online",
+                  ].map((item) => (
+                    <div
+                      key={item}
+                      className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-[#050705] p-3 text-sm font-bold text-gray-300"
+                    >
+                      <Check />
+                      {item}
+                    </div>
+                  ))}
+
+                </div>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+
+                  <Link
+                    href="/customer/register"
+                    className="rounded-xl bg-[#79c51c] px-6 py-4 text-xs font-black text-black transition hover:bg-[#91db32]"
+                  >
+                    CREATE CUSTOMER ACCOUNT
+                  </Link>
+
+                  <Link
+                    href="/customer/login"
+                    className="rounded-xl border border-white/15 px-6 py-4 text-xs font-black transition hover:border-[#79c51c]"
+                  >
+                    CUSTOMER LOGIN
+                  </Link>
+
+                </div>
+              </div>
+
+              {/* APP MOCKUP */}
+              <div className="relative min-h-[360px] border-t border-white/[0.07] bg-[#050705] lg:min-h-[520px] lg:border-l lg:border-t-0">
+
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(121,197,28,0.14),transparent_55%)]" />
+
+                <div className="absolute left-8 right-8 top-10 rounded-3xl border border-white/10 bg-[#0b100b] p-5 shadow-2xl sm:left-12 sm:right-12 sm:top-16">
+
+                  <div className="flex items-center justify-between border-b border-white/[0.07] pb-4">
+
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-[#79c51c]">
+                        RCS Marketplace
+                      </p>
+
+                      <p className="mt-1 text-lg font-black">
+                        My jobs
+                      </p>
+                    </div>
+
+                    <span className="rounded-lg bg-[#79c51c]/10 px-2 py-1 text-[9px] font-black text-[#79c51c]">
+                      ONLINE
+                    </span>
+
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+
+                    {[
+                      "House clearance",
+                      "Garden waste",
+                      "Furniture removal",
+                    ].map((job, i) => (
+                      <div
+                        key={job}
+                        className="rounded-2xl border border-white/[0.07] bg-[#050705] p-4"
+                      >
+
+                        <div className="flex items-center justify-between">
+
+                          <p className="text-sm font-black">
+                            {job}
+                          </p>
+
+                          <span className="text-[9px] font-black text-[#79c51c]">
+                            {i + 2} QUOTES
+                          </span>
+
+                        </div>
+
+                        <p className="mt-2 text-[10px] text-gray-600">
+                          Photos uploaded · Job posted online
+                        </p>
+
+                      </div>
+                    ))}
+
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          SERVICES
+      ========================================================= */}
+      <section className="border-y border-white/[0.07] bg-[#070a07] py-20 sm:py-28">
+
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+          <SectionIntro
+            eyebrow="What can RCS help with?"
+            title="Waste removal for real jobs."
+            text="From a few bags of rubbish to a full clearance, post the job with the details and photos needed for drivers to understand what you need."
+          />
+
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+            {services.map((service) => (
+              <ServiceCard
+                key={service.title}
+                {...service}
+              />
+            ))}
+
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          REAL RCS WORK
+      ========================================================= */}
+      <section className="py-20 sm:py-28">
+
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+          <SectionIntro
+            eyebrow="Real RCS clearances"
+            title="Real jobs. Real results."
+            text="The marketplace is backed by an actual waste-removal service. Here are examples of the type of clearance work RCS handles."
+          />
+
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+
+            <BeforeAfterCard
+              image="/before-after-garden.png"
+              title="Garden clearance"
+            />
+
+            <BeforeAfterCard
+              image="/before-after-room.png"
+              title="Room clearance"
+            />
+
+            <BeforeAfterCard
+              image="/before-after-storage.png"
+              title="Storage clearance"
+            />
+
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          WHY RCS
+      ========================================================= */}
+      <section className="border-y border-white/[0.07] bg-[#070a07] py-20 sm:py-28">
+
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+          <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+
+            <div>
+
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-[#79c51c]">
+                Why use RCS?
+              </p>
+
+              <h2 className="mt-4 text-4xl font-black uppercase leading-[0.95] sm:text-6xl">
+                Built to make waste removal easier.
+              </h2>
+
+              <p className="mt-6 max-w-xl text-base leading-7 text-gray-500">
+                RCS brings the customer, the job and the driver together in
+                one simple online process.
+              </p>
+
+              <Link
+                href="/customer/post-job"
+                className="mt-8 inline-flex rounded-xl bg-[#79c51c] px-6 py-4 text-xs font-black text-black transition hover:bg-[#91db32]"
+              >
+                POST YOUR JOB →
+              </Link>
+
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+
+              {[
+                [
+                  "01",
+                  "Post online",
+                  "Tell us what needs removing.",
+                ],
+                [
+                  "02",
+                  "Upload photos",
+                  "Give drivers a better idea of the job.",
+                ],
+                [
+                  "03",
+                  "Driver quotes",
+                  "Suitable drivers can submit their own prices.",
+                ],
+                [
+                  "04",
+                  "Online account",
+                  "Keep your job and information together.",
+                ],
+                [
+                  "05",
+                  "Job management",
+                  "Manage the process online.",
+                ],
+                [
+                  "06",
+                  "Local network",
+                  "Connect with suitable drivers in your area.",
+                ],
+              ].map(([number, title, text]) => (
+
+                <div
+                  key={number}
+                  className="rounded-2xl border border-white/[0.08] bg-[#080b08] p-6"
+                >
+
+                  <span className="text-xs font-black text-[#79c51c]">
+                    {number}
+                  </span>
+
+                  <h3 className="mt-5 text-base font-black uppercase">
+                    {title}
+                  </h3>
+
+                  <p className="mt-2 text-sm leading-6 text-gray-500">
+                    {text}
+                  </p>
+
+                </div>
+
+              ))}
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          MARKETPLACE EXPLANATION
+      ========================================================= */}
+      <section className="py-20 sm:py-28">
+
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+          <div className="rounded-[2rem] border border-white/[0.08] bg-[#080b08] p-7 sm:p-12 lg:p-16">
+
+            <div className="grid gap-12 lg:grid-cols-[1fr_1fr] lg:items-center">
+
+              <div>
+
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-[#79c51c]">
+                  More than a waste company
+                </p>
+
+                <h2 className="mt-4 text-4xl font-black uppercase leading-[0.95] sm:text-6xl">
+                  RCS is a{" "}
+                  <span className="text-[#79c51c]">
+                    marketplace.
+                  </span>
+                </h2>
+
+                <p className="mt-6 text-base leading-7 text-gray-400">
+                  Customers post what they need removed. Drivers can find
+                  suitable jobs, review the requirements and submit their own
+                  prices.
+                </p>
+
+                <p className="mt-5 text-base leading-7 text-gray-500">
+                  This gives customers another way to arrange waste removal
+                  while giving drivers more control over the work they choose
+                  to quote for.
+                </p>
+
+              </div>
+
+              <div className="space-y-3">
+
+                {[
+                  [
+                    "Simple for customers",
+                    "Post the job and let suitable drivers review it.",
+                  ],
+                  [
+                    "Flexible for drivers",
+                    "Choose the jobs you actually want to quote for.",
+                  ],
+                  [
+                    "Built to grow",
+                    "RCS is building a growing network of customers and drivers.",
+                  ],
+                ].map(([title, text], index) => (
+
+                  <div
+                    key={title}
+                    className="flex gap-5 rounded-2xl border border-white/[0.08] bg-[#050705] p-5"
+                  >
+
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#79c51c]/10 text-xs font-black text-[#79c51c]">
+                      0{index + 1}
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-black uppercase">
+                        {title}
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-gray-500">
+                        {text}
+                      </p>
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          DRIVER CTA
+      ========================================================= */}
+      <section className="border-y border-white/[0.07] bg-[#79c51c] text-black">
+
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-20 lg:px-8">
+
+          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+
+            <div>
+
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-black/60">
+                For waste removal drivers
+              </p>
+
+              <h2 className="mt-3 max-w-3xl text-4xl font-black uppercase leading-[0.95] tracking-tight sm:text-6xl">
+                Got a van? Want more local work?
+              </h2>
+
+              <p className="mt-5 max-w-2xl text-base font-medium leading-7 text-black/70">
+                Join the RCS driver network, review suitable jobs and submit
+                your own prices. You choose which jobs you want to quote for.
+              </p>
+
+            </div>
+
+            <Link
+              href="/driver/register"
+              className="inline-flex min-h-[58px] items-center justify-center rounded-2xl bg-black px-8 text-sm font-black text-white transition hover:bg-[#111]"
+            >
+              JOIN RCS AS A DRIVER
+              <span className="ml-2">→</span>
+            </Link>
+
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          REVIEWS
+      ========================================================= */}
+      <section className="py-20 sm:py-28">
+
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+
+            <div>
+
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-[#79c51c]">
                 Customer reviews
               </p>
 
-              <h2 className="mt-3 text-4xl font-black uppercase leading-[0.9] sm:text-6xl">
+              <h2 className="mt-3 text-4xl font-black uppercase tracking-tight sm:text-5xl">
                 What customers say.
               </h2>
 
-              <p className="mt-5 text-sm leading-7 text-gray-500">
-                Genuine recommendations from customers on the Rapid Clear
-                Solutions Facebook page.
-              </p>
             </div>
 
-            <div className="rounded-2xl border border-[#79c51c]/20 bg-[#0a0e0a] px-5 py-4">
-              <p className="text-sm font-black">100% recommend RCS</p>
-              <p className="mt-1 text-xs text-gray-500">
-                6 Facebook recommendations
-              </p>
-            </div>
+            <Link
+              href="https://www.facebook.com/profile.php?id=61590147416808&sk=reviews"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-black uppercase tracking-wider text-gray-500 hover:text-[#79c51c]"
+            >
+              View Facebook recommendations →
+            </Link>
+
           </div>
 
-          <div className="mt-8 grid gap-3 md:grid-cols-3">
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+
             <ReviewCard
               name="Jamie Penn"
               text="We would definitely recommend Rapid Clear Solutions! Their communication was fantastic from the very start, the price was very fair and they were incredibly efficient. They cleared a load of garden waste for us and made the whole process really easy from start to finish. Friendly, reliable and a great service all round. We wouldn’t hesitate to use them again. Highly recommended!"
@@ -644,136 +828,92 @@ export default function HomePage() {
               name="Simpson Craig"
               text="Managed to come a lot earlier from the time given which was better for me. The price was good and I will be using them again very soon. Thanks."
             />
-          </div>
 
-          <a
-            href="https://www.facebook.com/profile.php?id=61590147416808&sk=reviews"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-7 flex min-h-[52px] items-center justify-center rounded-2xl border border-white/[0.12] text-xs font-black uppercase tracking-wider transition hover:border-[#79c51c] hover:text-[#79c51c] sm:mx-auto sm:max-w-xs"
-          >
-            VIEW ALL FACEBOOK REVIEWS →
-          </a>
-        </div>
-      </section>
-
-      {/* SERVICES */}
-      <section className="hidden lg:block bg-[#050705] py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                What can we clear?
-              </p>
-
-              <h2 className="mt-3 text-4xl font-black uppercase leading-[0.9] sm:text-6xl">
-                Waste removal
-                <span className="block text-[#79c51c]">for real jobs.</span>
-              </h2>
-
-              <p className="mt-5 text-sm leading-7 text-gray-500 sm:text-base">
-                From household rubbish to clearances, post your job and tell
-                us what needs removing.
-              </p>
-            </div>
-
-            <Link
-              href="/services"
-              className="w-fit text-xs font-black uppercase tracking-wider text-[#79c51c]"
-            >
-              VIEW ALL SERVICES →
-            </Link>
-          </div>
-
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-            {services.map((service) => (
-              <ServiceCard key={service.number} {...service} />
-            ))}
           </div>
         </div>
       </section>
 
-      {/* LOCATIONS */}
-      <section className="hidden lg:block border-y border-white/[0.07] bg-[#080b08] py-16 sm:py-24">
+      {/* =========================================================
+          AREAS
+      ========================================================= */}
+      <section className="border-y border-white/[0.07] bg-[#070a07] py-20 sm:py-24">
+
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-                Areas we cover
-              </p>
 
-              <h2 className="mt-3 max-w-3xl text-4xl font-black uppercase leading-[0.9] sm:text-6xl">
-                Waste removal across the
-                <span className="block text-[#79c51c]">
-                  West Midlands.
-                </span>
-              </h2>
-            </div>
+          <SectionIntro
+            eyebrow="Areas we cover"
+            title="Waste removal across the West Midlands."
+            text="RCS is building its local driver network across the region. Check your postcode by starting a job."
+          />
 
-            <Link
-              href="/customer/post-job"
-              className="text-xs font-black uppercase tracking-wider text-[#79c51c]"
-            >
-              CHECK YOUR AREA →
-            </Link>
-          </div>
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
 
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {locations.map(([city, href]) => (
+            {locations.map(([name, href]) => (
+
               <Link
-                key={city}
+                key={name}
                 href={href}
-                className="group rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-5 transition hover:border-[#79c51c]/40"
+                className="rounded-2xl border border-white/[0.08] bg-[#050705] p-5 text-sm font-black uppercase transition hover:-translate-y-1 hover:border-[#79c51c]/40 hover:text-[#79c51c]"
               >
-                <p className="text-lg font-black">{city}</p>
+                {name}
 
-                <p className="mt-2 text-xs font-bold text-gray-600 transition group-hover:text-[#79c51c]">
-                  Waste removal →
-                </p>
+                <span className="mt-3 block text-[#79c51c]">
+                  ↗
+                </span>
               </Link>
+
             ))}
+
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="hidden lg:block bg-[#050705] py-16 sm:py-24">
+      {/* =========================================================
+          FAQ
+      ========================================================= */}
+      <section className="py-20 sm:py-28">
+
         <div className="mx-auto max-w-4xl px-5 sm:px-6">
-          <div className="text-center">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#79c51c]">
-              Frequently asked questions
-            </p>
 
-            <h2 className="mt-3 text-4xl font-black uppercase leading-[0.9] sm:text-6xl">
-              Got questions?
-            </h2>
-          </div>
+          <SectionIntro
+            eyebrow="Frequently asked questions"
+            title="Questions, answered."
+            text="A few things customers and drivers commonly want to know about the RCS Marketplace."
+          />
 
-          <div className="mt-8 space-y-2">
+          <div className="mt-10 space-y-3">
+
             {faqs.map(([question, answer], index) => {
+
               const open = openFaq === index;
 
               return (
                 <div
                   key={question}
-                  className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0e0a]"
+                  className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080b08]"
                 >
+
                   <button
                     type="button"
-                    onClick={() => setOpenFaq(open ? null : index)}
-                    className="flex w-full items-center justify-between gap-4 p-5 text-left sm:p-6"
+                    onClick={() =>
+                      setOpenFaq(open ? null : index)
+                    }
+                    aria-expanded={open}
+                    className="flex w-full items-center justify-between gap-5 px-5 py-5 text-left sm:px-6"
                   >
-                    <span className="text-sm font-black sm:text-base">
+
+                    <span className="text-sm font-black uppercase sm:text-base">
                       {question}
                     </span>
 
                     <span
-                      className={`shrink-0 text-xl text-[#79c51c] transition-transform ${
+                      className={`text-xl font-light text-[#79c51c] transition ${
                         open ? "rotate-45" : ""
                       }`}
                     >
                       +
                     </span>
+
                   </button>
 
                   {open && (
@@ -781,87 +921,88 @@ export default function HomePage() {
                       {answer}
                     </div>
                   )}
+
                 </div>
               );
             })}
+
           </div>
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="relative overflow-hidden bg-[#080b08] py-20 sm:py-28">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(121,197,28,0.13),transparent_45%)]" />
+      {/* =========================================================
+          FINAL CTA
+      ========================================================= */}
+      <section className="relative overflow-hidden border-t border-white/[0.07] bg-[#0a0e0a]">
 
-        <div className="relative mx-auto max-w-4xl px-5 text-center sm:px-6">
+        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-[#79c51c]/10 blur-3xl" />
+
+        <div className="relative mx-auto max-w-5xl px-5 py-24 text-center sm:px-6 sm:py-32">
+
           <p className="text-xs font-black uppercase tracking-[0.25em] text-[#79c51c]">
-            Get started today
+            Ready to get started?
           </p>
 
-          <h2 className="mt-4 text-5xl font-black uppercase leading-[0.86] tracking-tight sm:text-7xl">
+          <h2 className="mt-4 text-5xl font-black uppercase leading-[0.9] tracking-tight sm:text-7xl">
             Got waste?
-            <span className="block text-[#79c51c]">Let's clear it.</span>
+            <span className="block text-[#79c51c]">
+              Let&apos;s clear it.
+            </span>
           </h2>
 
-          <p className="mx-auto mt-6 max-w-xl text-sm leading-7 text-gray-500 sm:text-base">
-            Post your waste-removal job in minutes and get it in front of
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-gray-500">
+            Post your waste-removal job in minutes and put it in front of
             suitable RCS drivers.
           </p>
 
-          <div className="mt-8 grid gap-3 sm:mx-auto sm:max-w-xl sm:grid-cols-2">
+          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+
             <Link
               href="/customer/post-job"
-              className="flex min-h-[58px] items-center justify-center rounded-2xl bg-[#79c51c] px-8 text-sm font-black text-black transition hover:bg-[#91db32]"
+              className="rounded-2xl bg-[#79c51c] px-8 py-5 text-sm font-black text-black transition hover:bg-[#91db32]"
             >
-              POST A WASTE JOB →
+              POST YOUR WASTE JOB <Arrow />
             </Link>
 
             <Link
               href="/driver/register"
-              className="flex min-h-[58px] items-center justify-center rounded-2xl border border-[#79c51c] px-8 text-sm font-black text-[#79c51c] transition hover:bg-[#79c51c] hover:text-black"
+              className="rounded-2xl border border-white/15 px-8 py-5 text-sm font-black transition hover:border-[#79c51c] hover:text-[#79c51c]"
             >
-              JOIN AS A DRIVER →
+              JOIN AS A DRIVER <Arrow />
             </Link>
+
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-white/[0.07] bg-[#030403]">
-        <div className="mx-auto max-w-7xl px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-12 sm:px-6 lg:px-8">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="sm:col-span-2">
+      {/* =========================================================
+          FOOTER
+      ========================================================= */}
+      <footer className="border-t border-white/[0.07] bg-[#050705]">
+
+        <div className="mx-auto max-w-7xl px-5 py-12 sm:px-6 lg:px-8">
+
+          <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+
+            <div>
+
               <Image
                 src="/rapid-clear-logo.png"
                 alt="Rapid Clear Solutions"
-                width={220}
-                height={90}
-                className="h-12 w-auto object-contain"
+                width={70}
+                height={70}
+                className="h-14 w-14 object-contain"
               />
 
-              <p className="mt-4 max-w-md text-sm leading-7 text-gray-600">
+              <p className="mt-5 max-w-sm text-sm leading-6 text-gray-600">
                 Rapid Clear Solutions connects customers who need waste
                 removed with drivers looking for suitable work through the RCS
                 Marketplace.
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Link
-                  href="/customer/post-job"
-                  className="rounded-xl bg-[#79c51c] px-5 py-3 text-xs font-black text-black"
-                >
-                  POST A WASTE JOB →
-                </Link>
-
-                <Link
-                  href="/driver/register"
-                  className="rounded-xl border border-[#79c51c] px-5 py-3 text-xs font-black text-[#79c51c]"
-                >
-                  JOIN AS A DRIVER →
-                </Link>
-              </div>
             </div>
 
-            <FooterColumn
+            <FooterLinks
               title="Customers"
               links={[
                 ["Post a Waste Job", "/customer/post-job"],
@@ -870,145 +1011,206 @@ export default function HomePage() {
               ]}
             />
 
-            <FooterColumn
+            <FooterLinks
               title="Drivers"
               links={[
                 ["Become a Driver", "/driver/register"],
                 ["Driver Login", "/driver/login"],
-                ["How It Works", "#how-it-works"],
               ]}
             />
+
+            <FooterLinks
+              title="Company"
+              links={[
+                ["Contact", "/contact"],
+                ["Privacy", "/privacy"],
+                ["Terms", "/terms"],
+                ["Cookies", "/cookies"],
+                ["Admin Login", "/admin/login"],
+              ]}
+            />
+
           </div>
 
-          <div className="mt-10 flex flex-col gap-3 border-t border-white/[0.06] pt-5 text-xs text-gray-700 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-12 flex flex-col gap-3 border-t border-white/[0.07] pt-6 text-[10px] font-bold uppercase tracking-wider text-gray-700 sm:flex-row sm:items-center sm:justify-between">
+
             <span>
-              © {new Date().getFullYear()} Rapid Clear Solutions. All rights
-              reserved.
+              © {new Date().getFullYear()} Rapid Clear Solutions
             </span>
 
-            <div className="flex gap-4">
-              <Link href="/privacy" className="hover:text-[#79c51c]">
-                Privacy
-              </Link>
+            <span>
+              RCS Marketplace
+            </span>
 
-              <Link href="/terms" className="hover:text-[#79c51c]">
-                Terms
-              </Link>
-
-              <Link href="/cookies" className="hover:text-[#79c51c]">
-                Cookies
-              </Link>
-
-              <Link
-                href="/admin/login"
-                className="text-white/25 transition hover:text-[#79c51c]"
-              >
-                Admin Login
-              </Link>
-            </div>
           </div>
         </div>
       </footer>
 
-      {/* MOBILE CTA */}
-      <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#050705]/95 p-2 backdrop-blur-xl lg:hidden"
-        style={{
-          paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))",
-        }}
-      >
-        <div className="grid grid-cols-2 gap-2">
-          <Link
-            href="/customer/post-job"
-            className="flex min-h-[52px] items-center justify-center rounded-xl bg-[#79c51c] text-xs font-black text-black"
-          >
-            POST A JOB
-          </Link>
+      {/* =========================================================
+          MOBILE CTA
+      ========================================================= */}
+      <div className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-2 gap-px border-t border-white/10 bg-black/95 p-2 backdrop-blur-xl lg:hidden">
 
-          <Link
-            href="/driver/register"
-            className="flex min-h-[52px] items-center justify-center rounded-xl border border-[#79c51c] text-xs font-black text-[#79c51c]"
-          >
-            I'M A DRIVER
-          </Link>
-        </div>
+        <Link
+          href="/customer/post-job"
+          className="flex min-h-12 items-center justify-center rounded-xl bg-[#79c51c] text-[11px] font-black text-black"
+        >
+          POST A JOB
+        </Link>
+
+        <Link
+          href="/driver/register"
+          className="flex min-h-12 items-center justify-center rounded-xl border border-white/15 text-[11px] font-black text-white"
+        >
+          I&apos;M A DRIVER
+        </Link>
+
       </div>
     </main>
   );
 }
 
-/* -------------------------------- */
-/* COMPONENTS */
-/* -------------------------------- */
+/* ===============================================================
+   SECTION INTRO
+=============================================================== */
 
-function LiveStat({
-  value,
-  label,
+function SectionIntro({
+  eyebrow,
+  title,
+  text,
 }: {
-  value: string;
-  label: string;
+  eyebrow: string;
+  title: string;
+  text: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-4 sm:p-5">
-      <p className="text-2xl font-black text-[#79c51c] sm:text-3xl">
-        {value}
+    <div className="max-w-3xl">
+
+      <p className="text-xs font-black uppercase tracking-[0.24em] text-[#79c51c]">
+        {eyebrow}
       </p>
 
-      <p className="mt-1 text-[9px] font-black uppercase leading-tight tracking-wider text-gray-500 sm:text-xs">
-        {label}
+      <h2 className="mt-3 text-4xl font-black uppercase leading-[0.95] tracking-tight sm:text-6xl">
+        {title}
+      </h2>
+
+      <p className="mt-5 max-w-2xl text-base leading-7 text-gray-500">
+        {text}
       </p>
+
     </div>
   );
 }
 
-function JobActivityCard({
-  location,
-  type,
-  details,
-  quotes,
+/* ===============================================================
+   FLOW BOX
+=============================================================== */
+
+function FlowBox({
+  label,
+  text,
+  active = false,
 }: {
-  location: string;
-  type: string;
-  details: string;
-  quotes: string;
+  label: string;
+  text: string;
+  active?: boolean;
 }) {
   return (
-    <article className="min-w-[82%] snap-start rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-5 sm:min-w-0">
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#79c51c]">
-          <span className="h-2 w-2 rounded-full bg-[#79c51c]" />
-          {location}
-        </span>
+    <div
+      className={`rounded-2xl border p-5 ${
+        active
+          ? "border-[#79c51c]/40 bg-[#79c51c]/10"
+          : "border-white/[0.07] bg-[#050705]"
+      }`}
+    >
 
-        <span className="rounded-lg bg-[#79c51c]/10 px-2 py-1 text-[9px] font-black text-[#79c51c]">
-          LIVE
-        </span>
-      </div>
+      <p
+        className={`text-[10px] font-black uppercase tracking-widest ${
+          active
+            ? "text-[#79c51c]"
+            : "text-gray-600"
+        }`}
+      >
+        {label}
+      </p>
 
-      <h3 className="mt-6 text-lg font-black uppercase leading-tight">
-        {type}
-      </h3>
+      <p className="mt-3 text-sm font-black uppercase">
+        {text}
+      </p>
 
-      <p className="mt-2 text-sm text-gray-500">{details}</p>
-
-      <div className="mt-6 flex items-center justify-between border-t border-white/[0.07] pt-4">
-        <span className="text-xs font-black text-white">{quotes}</span>
-
-        <span className="text-[10px] font-black uppercase text-[#79c51c]">
-          View job →
-        </span>
-      </div>
-    </article>
+    </div>
   );
 }
 
+/* ===============================================================
+   AUDIENCE CARD
+=============================================================== */
+
+function AudienceCard({
+  eyebrow,
+  title,
+  text,
+  items,
+  href,
+  button,
+}: {
+  eyebrow: string;
+  title: string;
+  text: string;
+  items: string[];
+  href: string;
+  button: string;
+}) {
+  return (
+    <div className="rounded-[2rem] border border-white/[0.08] bg-[#0a0e0a] p-7 sm:p-10">
+
+      <p className="text-xs font-black uppercase tracking-[0.24em] text-[#79c51c]">
+        {eyebrow}
+      </p>
+
+      <h3 className="mt-4 text-3xl font-black uppercase leading-[0.95] sm:text-5xl">
+        {title}
+      </h3>
+
+      <p className="mt-5 text-sm leading-7 text-gray-500">
+        {text}
+      </p>
+
+      <div className="mt-7 space-y-3">
+
+        {items.map((item) => (
+          <div
+            key={item}
+            className="flex items-center gap-3 text-sm font-bold text-gray-300"
+          >
+            <Check />
+            {item}
+          </div>
+        ))}
+
+      </div>
+
+      <Link
+        href={href}
+        className="mt-8 inline-flex rounded-xl bg-[#79c51c] px-6 py-4 text-xs font-black text-black transition hover:bg-[#91db32]"
+      >
+        {button}
+        <span className="ml-2">→</span>
+      </Link>
+
+    </div>
+  );
+}
+
+/* ===============================================================
+   SERVICE CARD
+=============================================================== */
+
 function ServiceCard({
-  number,
   title,
   image,
   href,
 }: {
-  number: string;
   title: string;
   image: string;
   href: string;
@@ -1016,34 +1218,38 @@ function ServiceCard({
   return (
     <Link
       href={href}
-      className="group relative h-[170px] overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0e0a] sm:h-[210px]"
+      className="group relative min-h-[260px] overflow-hidden rounded-3xl border border-white/[0.08] bg-[#050705]"
     >
+
       <Image
         src={image}
         alt={title}
         fill
-        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
-        className="object-cover opacity-50 transition duration-500 group-hover:scale-105 group-hover:opacity-70"
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+        className="object-cover transition duration-700 group-hover:scale-105 group-hover:opacity-70"
       />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-[#050705] via-[#050705]/65 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
 
-      <span className="absolute right-2.5 top-2.5 rounded-lg bg-[#0a0e0a]/90 px-2.5 py-1.5 text-[9px] font-black text-[#79c51c]">
-        {number}
-      </span>
+      <div className="absolute inset-x-0 bottom-0 p-5">
 
-      <div className="absolute inset-x-0 bottom-0 p-4">
-        <h3 className="text-sm font-black uppercase leading-tight sm:text-lg">
+        <h3 className="text-lg font-black uppercase">
           {title}
         </h3>
 
-        <p className="mt-1.5 text-[10px] font-black text-[#79c51c]">
-          Explore →
-        </p>
+        <span className="mt-2 block text-xs font-black text-[#79c51c]">
+          VIEW SERVICE →
+        </span>
+
       </div>
+
     </Link>
   );
 }
+
+/* ===============================================================
+   BEFORE / AFTER CARD
+=============================================================== */
 
 function BeforeAfterCard({
   image,
@@ -1053,138 +1259,39 @@ function BeforeAfterCard({
   title: string;
 }) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080b08]">
+    <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-[#080b08]">
+
       <div className="relative aspect-[4/3]">
+
         <Image
           src={image}
-          alt={`${title} before and after`}
+          alt={title}
           fill
-          sizes="(max-width: 640px) 100vw, 33vw"
+          sizes="(max-width: 768px) 100vw, 33vw"
           className="object-cover"
         />
+
       </div>
 
-      <div className="flex items-center justify-between p-4">
-        <h3 className="text-sm font-black uppercase">{title}</h3>
+      <div className="p-5">
 
-        <span className="text-[10px] font-black text-[#79c51c]">
-          RCS WORK
-        </span>
-      </div>
-    </article>
-  );
-}
+        <p className="text-xs font-black uppercase tracking-wider text-[#79c51c]">
+          RCS clearance
+        </p>
 
-function ProcessCard({
-  number,
-  title,
-  text,
-}: {
-  number: string;
-  title: string;
-  text: string;
-}) {
-  return (
-    <article className="rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-6 sm:p-7">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-black text-[#79c51c]">{number}</span>
-        <span className="text-gray-700">→</span>
+        <h3 className="mt-2 text-lg font-black uppercase">
+          {title}
+        </h3>
+
       </div>
 
-      <h3 className="mt-8 text-xl font-black uppercase">{title}</h3>
-
-      <p className="mt-3 text-sm leading-7 text-gray-600">{text}</p>
-    </article>
-  );
-}
-
-function AudienceCard({
-  title,
-  label,
-  text,
-  items,
-  href,
-  button,
-  outline,
-}: {
-  title: string;
-  label: string;
-  text: string;
-  items: string[];
-  href: string;
-  button: string;
-  outline?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-3xl border p-6 sm:p-9 ${
-        outline
-          ? "border-[#79c51c]/30 bg-[#0a0e0a]"
-          : "border-white/[0.08] bg-[#0a0e0a]"
-      }`}
-    >
-      <p className="text-xs font-black uppercase tracking-[0.2em] text-[#79c51c]">
-        {label}
-      </p>
-
-      <h2 className="mt-4 text-3xl font-black uppercase leading-none sm:text-5xl">
-        {title}
-      </h2>
-
-      <p className="mt-5 max-w-md text-sm leading-7 text-gray-500">
-        {text}
-      </p>
-
-      <div className="mt-6 grid gap-3">
-        {items.map((item) => (
-          <div
-            key={item}
-            className="flex items-center gap-3 text-sm text-gray-400"
-          >
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#79c51c] text-[10px] font-black text-black">
-              ✓
-            </span>
-
-            {item}
-          </div>
-        ))}
-      </div>
-
-      <Link
-        href={href}
-        className={`mt-7 inline-flex min-h-[52px] items-center rounded-xl px-6 text-xs font-black transition ${
-          outline
-            ? "border border-[#79c51c] text-[#79c51c] hover:bg-[#79c51c] hover:text-black"
-            : "bg-[#79c51c] text-black hover:bg-[#91db32]"
-        }`}
-      >
-        {button}
-      </Link>
     </div>
   );
 }
 
-function MarketplaceItem({
-  number,
-  title,
-  text,
-}: {
-  number: string;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="flex gap-4 border-b border-white/[0.07] py-5 first:pt-0 last:border-b-0">
-      <span className="text-xs font-black text-[#79c51c]">{number}</span>
-
-      <div>
-        <h3 className="text-sm font-black uppercase">{title}</h3>
-
-        <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
-      </div>
-    </div>
-  );
-}
+/* ===============================================================
+   REVIEW CARD
+=============================================================== */
 
 function ReviewCard({
   name,
@@ -1194,50 +1301,60 @@ function ReviewCard({
   text: string;
 }) {
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-white/[0.08] bg-[#0a0e0a] p-6">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-black">{name}</p>
+    <div className="rounded-3xl border border-white/[0.08] bg-[#080b08] p-6">
 
-        <span className="text-[9px] font-black uppercase tracking-wider text-[#79c51c]">
-          Facebook recommendation
-        </span>
+      <div className="flex gap-1 text-[#79c51c]">
+        ★★★★★
       </div>
 
-      <p className="mt-5 flex-1 text-sm leading-7 text-gray-400">
+      <p className="mt-5 text-sm leading-7 text-gray-400">
         “{text}”
       </p>
 
-      <div className="mt-5 border-t border-white/[0.07] pt-4 text-xs font-bold text-gray-600">
-        Genuine customer feedback
-      </div>
-    </article>
+      <p className="mt-6 text-xs font-black uppercase tracking-wider text-white">
+        {name}
+      </p>
+
+      <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-gray-700">
+        RCS customer
+      </p>
+
+    </div>
   );
 }
 
-function FooterColumn({
+/* ===============================================================
+   FOOTER LINKS
+=============================================================== */
+
+function FooterLinks({
   title,
   links,
 }: {
   title: string;
-  links: string[][];
+  links: [string, string][];
 }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-white">
+
+      <p className="text-xs font-black uppercase tracking-wider text-white">
         {title}
       </p>
 
-      <div className="mt-5 flex flex-col gap-3 text-sm text-gray-600">
+      <div className="mt-5 space-y-3">
+
         {links.map(([label, href]) => (
           <Link
-            key={href}
+            key={label}
             href={href}
-            className="transition hover:text-[#79c51c]"
+            className="block text-sm text-gray-600 transition hover:text-[#79c51c]"
           >
             {label}
           </Link>
         ))}
+
       </div>
+
     </div>
   );
 }
