@@ -6,16 +6,8 @@ export const runtime = "nodejs";
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-const supabasePublishableKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  "https://www.rapidclearsolutions.co.uk";
 
 const MAX_FILE_SIZE =
   10 * 1024 * 1024;
@@ -36,28 +28,6 @@ function getAdminClient() {
   return createClient(
     supabaseUrl,
     supabaseServiceRoleKey,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  );
-}
-
-function getPublicClient() {
-  if (
-    !supabaseUrl ||
-    !supabasePublishableKey
-  ) {
-    throw new Error(
-      "Supabase public environment variables are missing."
-    );
-  }
-
-  return createClient(
-    supabaseUrl,
-    supabasePublishableKey,
     {
       auth: {
         autoRefreshToken: false,
@@ -176,7 +146,6 @@ export async function POST(
 
     if (
       !supabaseUrl ||
-      !supabasePublishableKey ||
       !supabaseServiceRoleKey
     ) {
       console.error(
@@ -458,9 +427,6 @@ export async function POST(
     admin =
       getAdminClient();
 
-    const publicClient =
-      getPublicClient();
-
     // --------------------------------------------------
     // CHECK EXISTING ACCOUNT
     // --------------------------------------------------
@@ -529,75 +495,47 @@ export async function POST(
     }
 
     // --------------------------------------------------
-    // CREATE SUPABASE AUTH ACCOUNT
+    // CREATE DRIVER AUTH ACCOUNT WITHOUT CONFIRMATION EMAIL
+    // Customer registrations continue to use the normal
+    // Supabase sign-up flow and email confirmation.
+    // Driver access is controlled separately by RCS admin approval.
     // --------------------------------------------------
 
-    const emailRedirectTo =
-      `${SITE_URL}/auth/confirm?next=/driver/login`;
-
     const {
-      data: signupData,
-      error: signupError,
-    } =
-      await publicClient.auth.signUp(
-        {
-          email,
-          password,
-          options: {
-            data: {
-              full_name:
-                fullName,
+      data: createdAuthData,
+      error: createAuthError,
+    } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        phone,
+        account_type: "driver",
+        waste_carrier_number: wasteCarrierNumber,
+        waste_carrier_type: wasteCarrierType,
+        waste_carrier_expiry: wasteCarrierExpiry,
+        vehicle_type: vehicleType,
+        vehicle_registration: vehicleRegistration,
+        vehicle_make: vehicleMake,
+        vehicle_model: vehicleModel,
+        vehicle_size: vehicleCapacity,
+      },
+    });
 
-              phone:
-                phone,
-
-              account_type:
-                "driver",
-
-              waste_carrier_number:
-                wasteCarrierNumber,
-
-              waste_carrier_type:
-                wasteCarrierType,
-
-              waste_carrier_expiry:
-                wasteCarrierExpiry,
-
-              vehicle_type:
-                vehicleType,
-
-              vehicle_registration:
-                vehicleRegistration,
-
-              vehicle_make:
-                vehicleMake,
-
-              vehicle_model:
-                vehicleModel,
-
-              vehicle_size:
-                vehicleCapacity,
-            },
-
-            emailRedirectTo,
-          },
-        }
-      );
-
-    if (signupError) {
+    if (createAuthError) {
       console.error(
-        "Driver signup error:",
-        signupError
+        "Driver account creation error:",
+        createAuthError
       );
 
       throw new Error(
-        signupError.message ||
+        createAuthError.message ||
           "We couldn't create your driver account."
       );
     }
 
-    const user =
-      signupData.user;
+    const user = createdAuthData.user;
 
     if (!user) {
       throw new Error(
@@ -731,7 +669,7 @@ export async function POST(
           email,
 
         emailConfirmationRequired:
-          !signupData.session,
+          false,
       },
       {
         status: 201,
